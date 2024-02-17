@@ -1,5 +1,8 @@
-#include <stddef.h>
-#include <stdint.h>
+// Author: Hubert Gruniaux
+// Date: 2/17/24
+// The following code is released in the public domain (where applicable).
+
+#include "uart.h"
 
 static uint32_t MMIO_BASE;
 
@@ -166,14 +169,4 @@ uart_puts(const char* str)
 {
   for (size_t i = 0; str[i] != '\0'; i++)
     uart_putc((unsigned char)str[i]);
-}
-
-void
-kmain(uint64_t dtb_ptr32, uint64_t x1, uint64_t x2, uint64_t x3)
-{
-  uart_init(2);
-  uart_puts("Hello, kernel World!\r\n");
-
-  while (1)
-    uart_putc(uart_getc());
 }
