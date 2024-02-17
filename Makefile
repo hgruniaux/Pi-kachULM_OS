@@ -1,0 +1,2 @@
+kernel:
+	$(MAKE) -C kernel
