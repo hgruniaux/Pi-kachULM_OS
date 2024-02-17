@@ -1,0 +1,46 @@
+# Ignore build directories
+_build/
+[Bb]uild/
+[Oo]ut/
+cmake-build-*/
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+[Bb]in/
+[Oo]bj/
+
+### CMake ###
+CMakeLists.txt.user
+CMakeCache.txt
+CMakeFiles
+CMakeScripts
+Testing
+Makefile
+cmake_install.cmake
+install_manifest.txt
+compile_commands.json
+CTestTestfile.cmake
+_deps
+
+# Ignore editor specific configurations
+.vscode/
+.vs/
+.idea/
+
+# Ignore C files
+*.d
+*.a
+*.lib
+*.o
+*.obj
+*.elf
+*.bin
+*.out
+*.exe
+
+# Debug files
+*.dSYM/
+*.su
+*.idb
+*.pdb

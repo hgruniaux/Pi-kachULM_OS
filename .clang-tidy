@@ -1,0 +1,14 @@
+Checks: '-*,clang-analyzer-*,bugprone-*,readability-*,modernize-*,-modernize-use-trailing-return-type,cppcoreguidelines-*'
+WarningAsErrors: '*'
+CheckOptions:
+    - key: bugprone-argument-comment.StrictMode
+      value: true
+    - key: bugprone-argument-comment.CommentBoolLiterals
+      value: true
+    - key: bugprone-argument-comment.CommentIntegerLiterals
+      value: true
+    - key: bugprone-argument-comment.CommentFloatLiterals
+      value: true
+    - key: bugprone-assert-side-effect.AssertMacros
+      value: assert, ASSERT, KASSERT
+FormatStyle: 'file'
