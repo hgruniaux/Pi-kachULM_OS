@@ -25,6 +25,8 @@ _start:
     cbnz    w2, 3b               // Loop if non-zero
 
     // Jump to our kmain() routine in C (make sure it doesn't return)
-4:  bl      kmain
+4:  bl      _init
+    bl      kmain
+    bl      _fini
     // In case it does return, halt the master core too
     b       1b
