@@ -24,51 +24,91 @@ constexpr const char* kWARNING_HEADER = "[" YELLOW "warning" RESET "]";
 constexpr const char* kERROR_HEADER = "[" RED "error" RESET "]";
 constexpr const char* kCRITICAL_HEADER = "[" BACK_RED "critical" RESET "]";
 
-void
-int_to_string(uint64_t num, char* str)
+/// Converts the given unsigned 64-bit integer @a value to a string and store
+/// the result into @a buffer. Returns the size of the output string.
+///
+/// The given @a buffer will be NUL-terminated, and in the worst case, must have
+/// at least space for 21 characters (20 for the digits of the biggest integer
+/// and 1 for the final NUL character).
+///
+/// If @a buffer is not big enough, behavior is undefined.
+size_t
+uint_to_string(uint64_t value, char* buffer)
 {
   // TODO: Maybe move this function to elsewhere.
 
-  int i = 0;
+  size_t i = 0;
 
   // Handle the case when the number is 0 separately
-  if (num == 0) {
-    str[i++] = '0';
+  if (value == 0) {
+    buffer[i++] = '0';
   }
 
   // Extract digits in reverse order
-  while (num > 0) {
-    int digit = num % 10;
-    str[i++] = digit + '0';
-    num /= 10;
+  while (value > 0) {
+    int digit = value % 10;
+    buffer[i++] = digit + '0';
+    value /= 10;
   }
 
   // Reverse the string to get the correct order
-  int start = 0, end = i - 1;
+  size_t start = 0, end = i - 1;
   while (start < end) {
-    char temp = str[start];
-    str[start] = str[end];
-    str[end] = temp;
+    char temp = buffer[start];
+    buffer[start] = buffer[end];
+    buffer[end] = temp;
     start++;
     end--;
   }
 
   // Null-terminate the string
-  str[i] = '\0';
+  buffer[i] = '\0';
+  return i;
 }
 
-void
-log(Severity severity,
-    const char* category,
-    const char* message,
-    std::source_location source_location)
+/// Converts the given floating-point @a value to a string and store
+/// the result into @a buffer. Returns the size of the output string.
+///
+/// The given @a buffer will be NUL-terminated, and in the worst case, must have
+/// at least space for 42 characters (20 for the integer part, 20 for the
+/// fractional part, 1 for the period and 1 for the final NUL character).
+///
+/// If @a buffer is not big enough, behavior is undefined.
+static size_t
+float_to_string(float value, char* buffer)
 {
-  // The log format we use:
-  //   [file_name:line_number] [category] [severity] message
+  // TODO: Maybe move this function to elsewhere.
+  // FIXME: this function only display 2 digits precision
 
+  char* it = buffer;
+  if (value < 0) {
+    *it++ = '-';
+    value *= -1;
+  }
+
+  // We add 0.005f to ensure correct rounding with 2 digits precision.
+  // So 1.899 is printed as 1.90 instead of 1.89.
+  value += 0.005f;
+
+  // Print the integer part.
+  uint64_t integer_part = value;
+  size_t written_bytes = uint_to_string(integer_part, it);
+  it += written_bytes;
+
+  *it++ = '.';
+  ++written_bytes;
+
+  // Print the fractional part. We only keep 2 digits after the period.
+  value = (value - integer_part) * 100 /* 2 digits */;
+  written_bytes += uint_to_string(value, it);
+  return written_bytes;
+}
+
+static void
+print_header(Severity severity, const char* category, std::source_location source_location)
+{
   // Print source location if any.
-  if (source_location.file_name() != nullptr &&
-      source_location.file_name()[0] != '\0') {
+  if (source_location.file_name() != nullptr && source_location.file_name()[0] != '\0') {
     uart_puts("[");
     uart_puts(source_location.file_name());
 
@@ -80,7 +120,7 @@ log(Severity severity,
       //   integer).
       //   - 1 character for the null terminator ('\0').
       char buffer[21] = { 0 };
-      int_to_string(source_location.line(), buffer);
+      uint_to_string(source_location.line(), buffer);
       uart_puts(buffer);
     }
 
@@ -123,22 +163,167 @@ log(Severity severity,
       // forget a severity level!
   }
   uart_puts(severity_header);
+}
+
+static void
+print_bool(bool value)
+{
+  if (value) {
+    uart_puts("true");
+  } else {
+    uart_puts("false");
+  }
+}
+
+static void
+print_char(char value)
+{
+  uart_putc(value);
+}
+
+static void
+print_uint64(uint64_t value)
+{
+  // 21 bytes is enough for an unsigned 64-bit integer:
+  //   - 20 characters for the digits (maximum digits in a 64-bit unsigned
+  //   integer).
+  //   - 1 character for the null terminator ('\0').
+  char buffer[21] = { 0 };
+  uint_to_string(value, buffer);
+  uart_puts(buffer);
+}
+
+static void
+print_int64(int64_t value)
+{
+  if (value < 0) {
+    uart_putc('-');
+    print_uint64(-value);
+  } else {
+    print_uint64(value);
+  }
+}
+
+static void
+print_float(float value)
+{
+  // TODO: maybe implement the ryu algorithm
+  char buffer[42] = { 0 };
+  float_to_string(value, buffer);
+  uart_puts(buffer);
+}
+
+static void
+print_double(double value)
+{
+  // TODO: maybe implement the ryu algorithm
+  print_float(value);
+}
+
+static void
+print_c_string(const char* value)
+{
+  uart_puts(value);
+}
+
+static void
+print_argument(const impl::Argument& argument)
+{
+  switch (argument.type) {
+    case impl::Argument::Type::BOOL:
+      print_bool(argument.data.bool_value);
+      return;
+    case impl::Argument::Type::CHAR:
+      print_char(argument.data.char_value);
+      return;
+    case impl::Argument::Type::INT64:
+      print_int64(argument.data.int64_value);
+      return;
+    case impl::Argument::Type::UINT64:
+      print_uint64(argument.data.uint64_value);
+      return;
+    case impl::Argument::Type::FLOAT:
+      print_float(argument.data.float_value);
+      return;
+    case impl::Argument::Type::DOUBLE:
+      print_double(argument.data.double_value);
+      return;
+    case impl::Argument::Type::C_STRING:
+      print_c_string(argument.data.c_string_value);
+      return;
+    case impl::Argument::Type::POINTER:
+      print_uint64(argument.data.uint64_value);
+      return;
+  }
+  KASSERT(false && "unknown argument type");
+}
+
+static void
+print_message(std::source_location source_location, const char* message, const impl::Argument* args, size_t args_count)
+{
+  size_t current_arg_index = 0;
+  const char* it = message;
+
+  while (*it != '\0') {
+    if (*it != '{') {
+      uart_putc(*it++);
+      continue;
+    }
+
+    ++it;
+    if (*it == '{') { // '{{', escaped '{'
+      ++it;
+      uart_putc('{');
+    } else if (*it == '}') { // An argument.
+      ++it;
+
+      if (current_arg_index >= args_count) {
+        uart_puts("\r\n"); // print end line, so the panic message is on its own line
+        // Oops, not enough arguments...
+        panic("not enough arguments to debug message", source_location);
+        return;
+      }
+
+      const impl::Argument& argument = args[current_arg_index];
+      print_argument(argument);
+      ++current_arg_index;
+    } else { // '{' followed by a dummy character... For now simply print the '{'
+      uart_putc(it[-1]);
+    }
+  }
+}
+
+void
+vlog(Severity severity,
+     const char* category,
+     const char* message,
+     std::source_location source_location,
+     const impl::Argument* args,
+     size_t args_count)
+{
+  // The log format we use:
+  //   [file_name:line_number] [category] [severity] message
+
+  print_header(severity, category, source_location);
 
   uart_puts(" ");
-  uart_puts(message);
+  print_message(source_location, message, args, args_count);
   // CR-LF is required here instead of just LF.
   // This is the way UART and QEMU terminal works.
   uart_puts("\r\n");
 }
 
-void
+[[noreturn]] void
 panic(const char* message, std::source_location source_location)
 {
   log(Severity::CRITICAL,
       nullptr,
-      RED BOLD "This is a kernel panic." RESET BOLD
-               " DO NOT PANIC. Keep calm and carry on." RESET,
+      RED BOLD "This is a kernel panic." RESET BOLD " DO NOT PANIC. Keep calm and carry on." RESET,
       source_location);
   log(Severity::CRITICAL, nullptr, message, source_location);
+
+  // Enter an infinite loop, so we don't return from this function.
+  while (true)
+    ;
 }
 } // namespace debug
