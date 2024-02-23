@@ -35,8 +35,11 @@ The debug library allows you to log information during the execution of the kern
 
 You can either use the C++ functions:
 - `debug::trace()`, `debug::info()`, ..., `debug::critical()`
-  Or the C++ macros:
+
+Or the C++ macros:
 - `LOG_TRACE()`, ..., `LOG_CRITICAL()`.
+
+Both support arguments: `LOG_DEBUG("cat", "{} test {} {}", true, 5, "foo")` will print `true test 5 foo`.
 
 Example:
 ```c++
@@ -46,6 +49,13 @@ void my_func() {
     if (oops) {
         LOG_WARNING("my_category", "oops should be false for better performance!");
     }
+
+    // Some messages are not in any specific category.
+    // In that case, you can just pass nullptr.
+    LOG_CRITICAL(nullptr, "this message has no category");
+
+    // The logging framework also support arguments.
+    LOG_DEBUG("argsssss", "this {} has {} coins", "foo", 5);
 }
 ```
 
