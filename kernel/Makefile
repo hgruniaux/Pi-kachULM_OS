@@ -1,7 +1,7 @@
 CFILES = $(wildcard *.c)
-CXXFILES = $(wildcard *.cxx)
+CXXFILES = $(wildcard *.cpp)
 COFILES = $(CFILES:.c=.o)
-CXXOFILES = $(CXXFILES:.cxx=.o)
+CXXOFILES = $(CXXFILES:.cpp=.o)
 CFLAGS = -Wall -Wextra -O2 -ffreestanding -nostdlib -nostartfiles
 CXXFLAGS = $(CFLAGS) -fno-rtti -fno-exceptions -std=gnu++20
 GCCPREFIX ?= aarch64-linux-gnu-
