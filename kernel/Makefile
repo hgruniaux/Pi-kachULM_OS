@@ -14,7 +14,7 @@ boot.o: boot.S
 $(COFILES): %.o: %.c
 	$(GCCPREFIX)gcc $(CFLAGS) -c $< -o $@
 
-$(CXXOFILES): %.o: %.cxx
+$(CXXOFILES): %.o: %.cpp
 	$(GCCPREFIX)g++ $(CXXFLAGS) -c $< -o $@
 
 kernel8.elf: boot.o $(COFILES) $(CXXOFILES)
