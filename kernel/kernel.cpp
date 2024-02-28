@@ -118,7 +118,7 @@ uart_init(int raspi)
   // Set it to 3Mhz so that we can consistently set the baud rate
   if (raspi >= 3) {
     // UART_CLOCK = 30000000;
-    unsigned int r = (((unsigned int)(&mbox) & ~0xF) | 8);
+    unsigned int r = (((*(unsigned int*)(&mbox)) & ~0xF) | 8);
     // wait until we can talk to the VC
     while (mmio_read(MBOX_STATUS) & 0x80000000) {
     }
@@ -168,10 +168,10 @@ uart_puts(const char* str)
     uart_putc((unsigned char)str[i]);
 }
 
-void
-kmain(uint64_t dtb_ptr32, uint64_t x1, uint64_t x2, uint64_t x3)
+extern "C" void
+kmain()
 {
-  uart_init(2);
+  uart_init(3);
   uart_puts("Hello, kernel World!\r\n");
 
   while (1)
