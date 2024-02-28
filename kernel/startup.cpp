@@ -1,9 +1,7 @@
-/*
- * crti.cxx for ARM - BPABI
- *
- * Implements ARM-specific code to invoke C++ global constructors on the ARM
- * platform, ensuring proper initialization of global and static objects before
- * program execution.
+/* Implements ARM-specific startup code. Notably, it invokes the C++ global 
+ * constructors/destructors, ensuring proper initialization of global and static
+ * objects before program execution. It also clears the BSS section and invokes
+ * the kernel entry point kmain().
  */
 
 #include <cstdint>
@@ -58,6 +56,7 @@ call_fini_array()
   }
 }
 
+// This function is defined in kernel.cpp. It is the real entry point of the kernel.
 extern "C" void
 kmain();
 
