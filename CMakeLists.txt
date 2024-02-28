@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
 
+include(cmake/GCCToolchain.cmake)
+
 project(os LANGUAGES C CXX ASM)
 
 # Enable C++20 (with GNU extensions)
@@ -11,6 +13,15 @@ set(CMAKE_CXX_EXTENSIONS ON)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS ON)
+
+# Enable checks
+option(ENABLE_CHECKS "Enable checks using clang-tidy" OFF)
+if (${ENABLE_CHECKS})
+  find_program(CLANG_TIDY clang-tidy)
+  if (CLANG_TIDY)
+    set(CMAKE_CXX_CLANG_TIDY clang-tidy --config-file=${CMAKE_CURRENT_SOURCE_DIR}/.clang-tidy)
+  endif ()
+endif ()
 
 file(GLOB_RECURSE KERNEL_SRC_FILES "kernel/*.S" "kernel/*.c" "kernel/*.cpp" "kernel/*.h" "kernel/*.hpp")
 add_executable(kernel8.elf ${KERNEL_SRC_FILES})
