@@ -20,7 +20,7 @@ Then, you just need you execute in the project directory:
 # Change aarch64-linux-gnu- by whatever is named GCC for aarch64 on your system.
 mkdir build
 cd build
-cmake .. -DCMAKE_TOOLCHAIN_FILE=../cmake/GCCToolchain.cmake -DGCC_PREFIX=aarch64-linux-gnu-
+cmake .. -DGCC_PREFIX=aarch64-linux-gnu-
 make
 ```
 
