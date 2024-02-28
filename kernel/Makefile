@@ -1,26 +1,31 @@
 CFILES = $(wildcard *.c)
-CXXFILES = $(wildcard *.cxx)
-OFILES = $(CFILES:.c=.o)
+CXXFILES = $(wildcard *.cpp)
+COFILES = $(CFILES:.c=.o)
+CXXOFILES = $(CXXFILES:.cpp=.o)
 CFLAGS = -Wall -Wextra -O2 -ffreestanding -nostdlib -nostartfiles
 CXXFLAGS = $(CFLAGS) -fno-rtti -fno-exceptions -std=gnu++20
 GCCPREFIX ?= aarch64-linux-gnu-
 
-all: clean kernel8.img
+all: kernel8.img
 
 boot.o: boot.S
-	$(GCCPREFIX)gcc $(GCCFLAGS) -c boot.S -o boot.o
+	$(GCCPREFIX)gcc $(CFLAGS) -c boot.S -o boot.o
 
-%.o: %.c
+$(COFILES): %.o: %.c
 	$(GCCPREFIX)gcc $(CFLAGS) -c $< -o $@
 
-%.o: %.cxx
+$(CXXOFILES): %.o: %.cxx
 	$(GCCPREFIX)g++ $(CXXFLAGS) -c $< -o $@
 
-kernel8.elf: boot.o $(OFILES)
-	$(GCCPREFIX)ld -nostdlib boot.o $(OFILES) -T link.ld -o kernel8.elf
+kernel8.elf: boot.o $(COFILES) $(CXXOFILES)
+	$(GCCPREFIX)ld -nostdlib boot.o $(COFILES) $(CXXOFILES) -T link.ld -o kernel8.elf
 
 kernel8.img: kernel8.elf
 	$(GCCPREFIX)objcopy -O binary kernel8.elf kernel8.img
 
 clean:
-	rm kernel8.elf *.o *.img > /dev/null 2> /dev/null || true
+	rm -f $(wildcard *.o)
+	rm -f kernel8.img
+	rm -f kernel8.elf
+
+.PHONY: all clean
