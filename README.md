@@ -18,10 +18,8 @@ To build the kernel you will need to install a aarch64 GCC compiler and `cmake`:
 Then, you just need you execute in the project directory:
 ```shell
 # Change aarch64-linux-gnu- by whatever is named GCC for aarch64 on your system.
-mkdir build
-cd build
-cmake .. -DGCC_PREFIX=aarch64-linux-gnu-
-make
+cmake -S . -Bbuild -DGCC_PREFIX=aarch64-linux-gnu-
+make -j -C build
 ```
 
 ## Testing the kernel
@@ -41,5 +39,5 @@ Or use QEMU. First, you need to install it:
 Then to run the kernel, just type:
 ```shell
 # You may need to change qemu-system-aarch64 by whatever is QEMU for aarch64 is named on your computer.
-qemu-system-aarch64 -M raspi3b -serial stdio -kernel build/kernel8.elf
+qemu-system-aarch64 -M raspi3b -serial stdio -kernel build/kernel/kernel8.bin
 ```
