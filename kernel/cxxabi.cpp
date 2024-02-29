@@ -11,9 +11,7 @@
 
 /// A standard entry point that a compiler may reference in virtual tables
 /// to indicate a pure virtual function.
-extern "C" [[noreturn]] void
-__cxa_pure_virtual()
-{
+extern "C" [[noreturn]] void __cxa_pure_virtual() {
   // From Itanium C++ ABI:
   //  > This routine will only be called if the user calls a non-overridden pure
   //  > virtual function, which has undefined behavior according to the C++
@@ -28,9 +26,7 @@ __cxa_pure_virtual()
 
 /// A standard entry point that a compiler will reference in virtual tables to
 /// indicate a deleted virtual function.
-extern "C" [[noreturn]] void
-__cxa_deleted_virtual()
-{
+extern "C" [[noreturn]] void __cxa_deleted_virtual() {
   // From Itanium C++ ABI:
   //  > This routine shall not return and while this ABI does not otherwise
   //  > specify its behavior, it is expected that it will terminate the program,
@@ -45,9 +41,7 @@ __cxa_deleted_virtual()
 //        can simply use atomics (the <atomic.h> or <atomic> headers are
 //        available in freestanding env).
 
-extern "C" int
-__cxa_guard_acquire(int64_t* guard_object)
-{
+extern "C" int __cxa_guard_acquire(int64_t* guard_object) {
   // From Itanium C++ ABI:
   //  > Returns 1 if the initialization is not yet complete; 0 otherwise. This
   //  > function is called before initialization takes place. If this function
@@ -58,9 +52,7 @@ __cxa_guard_acquire(int64_t* guard_object)
   return !*guard_object;
 }
 
-extern "C" void
-__cxa_guard_release(int64_t* guard_object)
-{
+extern "C" void __cxa_guard_release(int64_t* guard_object) {
   // From Itanium C++ ABI:
   //  > Sets the first byte of the guard object to a non-zero value. This
   //  > function is called after initialization is complete.
@@ -68,19 +60,16 @@ __cxa_guard_release(int64_t* guard_object)
   *guard_object = 1;
 }
 
-extern "C" void
-__cxa_guard_abort(int64_t*)
-{
+extern "C" void __cxa_guard_abort(int64_t*) {
   // From Itanium C++ ABI:
   //  > This function is called if the initialization terminates by throwing an
   //  > exception.
 }
 
-struct AtExitEntry
-{
+struct AtExitEntry {
   void (*destructor)(void*);
   void* object;
-}; // struct AtExitEntry
+};  // struct AtExitEntry
 
 /// The maximum count of functions that can be registered at the same
 /// time with __cxa_atexit().
@@ -88,9 +77,7 @@ static constexpr size_t kMaxAtExitFunctions = 128;
 static AtExitEntry atexit_entries[kMaxAtExitFunctions];
 static size_t atexit_entries_count = 0;
 
-extern "C" int
-__cxa_atexit(void (*f)(void*), void* p, void*)
-{
+extern "C" int __cxa_atexit(void (*f)(void*), void* p, void*) {
   // See https://itanium-cxx-abi.github.io/cxx-abi/abi.html#dso-dtor-runtime-api
 
   if (atexit_entries_count >= kMaxAtExitFunctions)
@@ -103,9 +90,7 @@ __cxa_atexit(void (*f)(void*), void* p, void*)
   return 0;
 }
 
-extern "C" void
-__cxa_finalize(void* f)
-{
+extern "C" void __cxa_finalize(void* f) {
   // See https://itanium-cxx-abi.github.io/cxx-abi/abi.html#dso-dtor-runtime-api
 
   size_t i = atexit_entries_count;
