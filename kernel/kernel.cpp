@@ -1,5 +1,11 @@
-#include <stddef.h>
-#include <stdint.h>
+// Author: Hubert Gruniaux
+// Date: 2/17/24
+// The following code is released in the public domain (where applicable).
+
+#include <cstddef>
+#include <cstdint>
+
+#include "kernel.hpp"
 
 static uint32_t MMIO_BASE;
 
