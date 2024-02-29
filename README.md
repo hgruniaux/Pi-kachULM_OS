@@ -43,5 +43,5 @@ Then to run the kernel, just type:
 
 ```shell
 # You may need to change qemu-system-aarch64 by whatever is QEMU for aarch64 is named on your computer.
-qemu-system-aarch64 -M raspi3b -serial stdio -kernel build/kernel/kernel8.bin
+qemu-system-aarch64 -M raspi3b -serial stdio -kernel build/kernel/kernel8.elf
 ```

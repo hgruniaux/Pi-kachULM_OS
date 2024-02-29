@@ -20,5 +20,8 @@ target_compile_options(kernel PRIVATE -ffreestanding -nostdlib)
 # Disable exceptions and RTTI in C++
 target_compile_options(kernel PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions -fno-rtti>)
 
-# Convert the elf file to a binary one
-add_custom_command(TARGET kernel POST_BUILD COMMAND ${CMAKE_OBJCOPY} -O binary ${CMAKE_CURRENT_BINARY_DIR}/kernel8.elf ${CMAKE_CURRENT_BINARY_DIR}/kernel8.bin COMMENT "Converting ELF to binary")
+# Extracting the elf file to a binary one
+add_custom_target(kernel-img
+        COMMAND ${CMAKE_OBJCOPY} -O binary ${CMAKE_CURRENT_BINARY_DIR}/kernel8.elf ${CMAKE_CURRENT_BINARY_DIR}/kernel8.bin
+        DEPENDS kernel
+        COMMENT "Converting ELF to binary")
