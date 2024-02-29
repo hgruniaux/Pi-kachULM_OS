@@ -16,17 +16,7 @@ _start:
     ldr     x1, =_start
     mov     sp, x1
 
-    // Clean the BSS section
-    ldr     x1, =__bss_start     // Start address
-    ldr     w2, =__bss_size      // Size of the section
-3:  cbz     w2, 4f               // Quit loop if zero
-    str     xzr, [x1], #8
-    sub     w2, w2, #1
-    cbnz    w2, 3b               // Loop if non-zero
-
-    // Jump to our kmain() routine in C (make sure it doesn't return)
-4:  bl      _init
-    bl      kmain
-    bl      _fini
+    // Enter the C and C++ world!
+4:  bl      _startup
     // In case it does return, halt the master core too
     b       1b

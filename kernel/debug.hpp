@@ -2,8 +2,7 @@
 // Date: 2/17/24
 // The following code is released in the public domain (where applicable).
 
-#ifndef OS_DEBUG_HXX
-#define OS_DEBUG_HXX
+#pragma once
 
 #include <cstddef>
 #include <cstdint>
@@ -11,10 +10,8 @@
 
 namespace debug {
 namespace impl {
-struct Argument
-{
-  enum class Type
-  {
+struct Argument {
+  enum class Type {
     /// The `bool` type.
     BOOL,
     /// The `char` type.
@@ -34,8 +31,7 @@ struct Argument
   };
 
   Type type;
-  union
-  {
+  union {
     bool bool_value;
     char char_value;
     int64_t int64_value;
@@ -46,7 +42,6 @@ struct Argument
     const void* pointer_value;
   } data;
 
-  // clang-format off
   Argument(bool value) : type(Type::BOOL) { data.bool_value = value; }
   Argument(char value) : type(Type::CHAR) { data.char_value = value; }
   Argument(int8_t value) : type(Type::INT64) { data.int64_value = value; }
@@ -61,90 +56,80 @@ struct Argument
   Argument(double value) : type(Type::DOUBLE) { data.double_value = value; }
   Argument(const char* value) : type(Type::C_STRING) { data.c_string_value = value; }
   Argument(const void* value) : type(Type::POINTER) { data.pointer_value = value; }
-  // clang-format on
-}; // class Argument
-} // namespace impl
+};  // class Argument
+}  // namespace impl
 
 /// The different severity levels supported by the debug module.
 ///
 /// The levels have no specific semantic. However, a different formatting is
 /// used for each of them and it is possible to block messages with a low
 /// severity.
-enum class Severity
-{
-  TRACE,
-  DEBUG,
-  INFO,
-  WARNING,
-  ERROR,
-  CRITICAL
-}; // enum class Severity
+enum class Severity { TRACE, DEBUG, INFO, WARNING, ERROR, CRITICAL };  // enum class Severity
 
-void
-vlog(Severity severity,
-     const char* category,
-     const char* message,
-     std::source_location source_location,
-     const impl::Argument* args,
-     size_t args_count);
+void vlog(Severity severity,
+          const char* category,
+          const char* message,
+          std::source_location source_location,
+          const impl::Argument* args,
+          size_t args_count);
 
-template<class... Args>
-inline void
-log(Severity severity,
-    const char* category,
-    const char* message,
-    std::source_location source_location,
-    const Args&... args)
-{
-  impl::Argument args_array[] = { args... };
+template <class... Args>
+inline void log(Severity severity,
+                const char* category,
+                const char* message,
+                std::source_location source_location,
+                const Args&... args) {
+  impl::Argument args_array[] = {args...};
   vlog(severity, category, message, source_location, args_array, sizeof...(Args));
 }
 
-template<class... Args>
-inline void
-trace(const char* category, const char* message, std::source_location source_location, const Args&... args)
-{
+template <class... Args>
+inline void trace(const char* category,
+                  const char* message,
+                  std::source_location source_location,
+                  const Args&... args) {
   log(Severity::TRACE, category, message, source_location, args...);
 }
 
-template<class... Args>
-inline void
-debug(const char* category, const char* message, std::source_location source_location, const Args&... args)
-{
+template <class... Args>
+inline void debug(const char* category,
+                  const char* message,
+                  std::source_location source_location,
+                  const Args&... args) {
   log(Severity::DEBUG, category, message, source_location, args...);
 }
 
-template<class... Args>
-inline void
-info(const char* category, const char* message, std::source_location source_location, const Args&... args)
-{
+template <class... Args>
+inline void info(const char* category, const char* message, std::source_location source_location, const Args&... args) {
   log(Severity::INFO, category, message, source_location, args...);
 }
 
-template<class... Args>
-inline void
-warning(const char* category, const char* message, std::source_location source_location, const Args&... args)
-{
+template <class... Args>
+inline void warning(const char* category,
+                    const char* message,
+                    std::source_location source_location,
+                    const Args&... args) {
   log(Severity::WARNING, category, message, source_location, args...);
 }
 
-template<class... Args>
-inline void
-error(const char* category, const char* message, std::source_location source_location, const Args&... args)
-{
+template <class... Args>
+inline void error(const char* category,
+                  const char* message,
+                  std::source_location source_location,
+                  const Args&... args) {
   log(Severity::ERROR, category, message, source_location, args...);
 }
 
-template<class... Args>
-inline void
-critical(const char* category, const char* message, std::source_location source_location, const Args&... args)
-{
+template <class... Args>
+inline void critical(const char* category,
+                     const char* message,
+                     std::source_location source_location,
+                     const Args&... args) {
   log(Severity::CRITICAL, category, message, source_location, args...);
 }
 
-[[noreturn]] void
-panic(const char* message, std::source_location source_location = std::source_location::current());
-} // namespace debug
+[[noreturn]] void panic(const char* message, std::source_location source_location = std::source_location::current());
+}  // namespace debug
 
 /// See debug::Severity::Trace.
 #define LOG_TRACE_LEVEL 0
@@ -168,53 +153,51 @@ panic(const char* message, std::source_location source_location = std::source_lo
 ///   - LOG_ERROR_LEVEL
 ///   - LOG_CRITICAL_LEVEL: only show critical messages
 #define LOG_MIN_LEVEL LOG_DEBUG_LEVEL
-#endif // LOG_MIN_LEVEL
+#endif  // LOG_MIN_LEVEL
 
 // For each logging function, we define a corresponding identical macro.
 // We can then select the minimum logging severity to log at compile time.
 
 #if LOG_TRACE_LEVEL >= LOG_MIN_LEVEL
-#define LOG_TRACE(category, message, ...)                                                                              \
+#define LOG_TRACE(category, message, ...) \
   ::debug::trace((category), (message), std::source_location::current() __VA_OPT__(, ) __VA_ARGS__)
 #else
 #define LOG_TRACE(category, message, ...)
 #endif
 
 #if LOG_DEBUG_LEVEL >= LOG_MIN_LEVEL
-#define LOG_DEBUG(category, message, ...)                                                                              \
+#define LOG_DEBUG(category, message, ...) \
   ::debug::debug((category), (message), std::source_location::current() __VA_OPT__(, ) __VA_ARGS__)
 #else
 #define LOG_DEBUG(category, message, ...)
 #endif
 
 #if LOG_INFO_LEVEL >= LOG_MIN_LEVEL
-#define LOG_INFO(category, message, ...)                                                                               \
+#define LOG_INFO(category, message, ...) \
   ::debug::info((category), (message), std::source_location::current() __VA_OPT__(, ) __VA_ARGS__)
 #else
 #define LOG_INFO(category, message, ...)
 #endif
 
 #if LOG_WARNING_LEVEL >= LOG_MIN_LEVEL
-#define LOG_WARNING(category, message, ...)                                                                            \
+#define LOG_WARNING(category, message, ...) \
   ::debug::warning((category), (message), std::source_location::current() __VA_OPT__(, ) __VA_ARGS__)
 #else
 #define LOG_WARNING(category, message, ...)
 #endif
 
 #if LOG_ERROR_LEVEL >= LOG_MIN_LEVEL
-#define LOG_ERROR(category, message, ...)                                                                              \
+#define LOG_ERROR(category, message, ...) \
   ::debug::error((category), (message), std::source_location::current() __VA_OPT__(, ) __VA_ARGS__)
 #else
 #define LOG_ERROR(category, message, ...)
 #endif
 
 #if LOG_CRITICAL_LEVEL >= LOG_MIN_LEVEL
-#define LOG_CRITICAL(category, message, ...)                                                                           \
+#define LOG_CRITICAL(category, message, ...) \
   ::debug::critical((category), (message), std::source_location::current() __VA_OPT__(, ) __VA_ARGS__)
 #else
 #define LOG_CRITICAL(category, message, ...)
 #endif
 
 #define KASSERT(cond) (void)((cond) || (::debug::panic("assertion failed: " #cond), 0))
-
-#endif // OS_DEBUG_HXX

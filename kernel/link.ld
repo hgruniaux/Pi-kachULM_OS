@@ -12,27 +12,27 @@ SECTIONS
         *(COMMON)
         __bss_end = .;
     }
+
     _end = .;
 
     /* Include the list of initialization functions sorted. */
-    .init_array :
+    .init_array ALIGN(4):
     {
-        crti.o(.init_array)
-        /* If we use constructor/desctructor priorities, the compiler will append
-           these priorities to the section name. So, we sort them as crti.cxx _init
-           and _fini calls them in the order found in the binary.  */
+        __init_array_start = .;
+        /* If we use constructor/destructor priorities, the compiler will append
+           these priorities to the section name. We need to sort them.  */
         KEEP (*(SORT(EXCLUDE_FILE(crti.o crtn.o) .init_array.*)))
         KEEP (*(EXCLUDE_FILE(crti.o crtn.o) .init_array))
-        crtn.o(.init_array)
+        __init_array_end = .;
     }
 
     /* Include the list of termination functions sorted. */
-    .fini_array :
+    .fini_array ALIGN(4):
     {
-        crti.o(.fini_array)
+        __fini_array_start = .;
         KEEP (*(SORT(EXCLUDE_FILE(crti.o crtn.o) .fini_array.*)))
         KEEP (*(EXCLUDE_FILE(crti.o crtn.o) .fini_array))
-        crtn.o(.fini_array)
+        __fini_array_end = .;
     }
 
    /DISCARD/ : { *(.comment) *(.gnu*) *(.note*) *(.eh_frame*) }

@@ -2,51 +2,45 @@
 // Date: 2/17/24
 // The following code is released in the public domain (where applicable).
 
-#include "uart.h"
+#include <cstddef>
+#include <cstdint>
+
+#include "kernel.hpp"
 
 static uint32_t MMIO_BASE;
 
 // The MMIO area base address, depends on board type
-static inline void
-mmio_init(int raspi)
-{
+static inline void mmio_init(int raspi) {
   switch (raspi) {
     case 2:
     case 3:
       MMIO_BASE = 0x3F000000;
-      break; // for raspi2 & 3
+      break;  // for raspi2 & 3
     case 4:
       MMIO_BASE = 0xFE000000;
-      break; // for raspi4
+      break;  // for raspi4
     default:
       MMIO_BASE = 0x20000000;
-      break; // for raspi1, raspi zero etc.
+      break;  // for raspi1, raspi zero etc.
   }
 }
 
 // Memory-Mapped I/O output
-static inline void
-mmio_write(uint32_t reg, uint32_t data)
-{
+static inline void mmio_write(uint32_t reg, uint32_t data) {
   *(volatile uint32_t*)(MMIO_BASE + reg) = data;
 }
 
 // Memory-Mapped I/O input
-static inline uint32_t
-mmio_read(uint32_t reg)
-{
+static inline uint32_t mmio_read(uint32_t reg) {
   return *(volatile uint32_t*)(MMIO_BASE + reg);
 }
 
 // Loop <delay> times in a way that the compiler won't optimize away
-static inline void
-delay(int32_t count)
-{
+static inline void delay(int32_t count) {
   asm volatile("__delay_%=: subs %[count], %[count], #1; bne __delay_%=\n" : "=r"(count) : [count] "0"(count) : "cc");
 }
 
-enum
-{
+enum {
   // The offsets for reach register.
   GPIO_BASE = 0x200000,
 
@@ -57,7 +51,7 @@ enum
   GPPUDCLK0 = (GPIO_BASE + 0x98),
 
   // The base address for UART.
-  UART0_BASE = (GPIO_BASE + 0x1000), // for raspi4 0xFE201000, raspi2 & 3 0x3F201000, and 0x20201000 for raspi1
+  UART0_BASE = (GPIO_BASE + 0x1000),  // for raspi4 0xFE201000, raspi2 & 3 0x3F201000, and 0x20201000 for raspi1
 
   // The offsets for reach register for the UART.
   UART0_DR = (UART0_BASE + 0x00),
@@ -87,11 +81,9 @@ enum
 };
 
 // A Mailbox message with set clock rate of PL011 to 3MHz tag
-volatile unsigned int __attribute__((aligned(16))) mbox[9] = { 9 * 4, 0, 0x38002, 12, 8, 2, 3000000, 0, 0 };
+volatile unsigned int __attribute__((aligned(16))) mbox[9] = {9 * 4, 0, 0x38002, 12, 8, 2, 3000000, 0, 0};
 
-void
-uart_init(int raspi)
-{
+void uart_init(int raspi) {
   mmio_init(raspi);
 
   // Disable UART0.
@@ -121,7 +113,7 @@ uart_init(int raspi)
   // Set it to 3Mhz so that we can consistently set the baud rate
   if (raspi >= 3) {
     // UART_CLOCK = 30000000;
-    unsigned int r = (((unsigned int)(&mbox) & ~0xF) | 8);
+    unsigned int r = (((*(unsigned int*)(&mbox)) & ~0xF) | 8);
     // wait until we can talk to the VC
     while (mmio_read(MBOX_STATUS) & 0x80000000) {
     }
@@ -146,27 +138,29 @@ uart_init(int raspi)
   mmio_write(UART0_CR, (1 << 0) | (1 << 8) | (1 << 9));
 }
 
-void
-uart_putc(unsigned char c)
-{
+void uart_putc(unsigned char c) {
   // Wait for UART to become ready to transmit.
   while (mmio_read(UART0_FR) & (1 << 5)) {
   }
   mmio_write(UART0_DR, c);
 }
 
-unsigned char
-uart_getc()
-{
+unsigned char uart_getc() {
   // Wait for UART to have received something.
   while (mmio_read(UART0_FR) & (1 << 4)) {
   }
   return mmio_read(UART0_DR);
 }
 
-void
-uart_puts(const char* str)
-{
+void uart_puts(const char* str) {
   for (size_t i = 0; str[i] != '\0'; i++)
     uart_putc((unsigned char)str[i]);
+}
+
+extern "C" void kmain() {
+  uart_init(3);
+  uart_puts("Hello, kernel World!\r\n");
+
+  while (1)
+    uart_putc(uart_getc());
 }

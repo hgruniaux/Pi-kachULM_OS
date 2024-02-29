@@ -2,8 +2,8 @@
 // Date: 2/17/24
 // The following code is released in the public domain (where applicable).
 
-#include "debug.hxx"
-#include "uart.h"
+#include "debug.hpp"
+#include "kernel.hpp"
 
 namespace debug {
 #define CSI "\x1b["
@@ -32,9 +32,7 @@ constexpr const char* kCRITICAL_HEADER = "[" BACK_RED "critical" RESET "]";
 /// and 1 for the final NUL character).
 ///
 /// If @a buffer is not big enough, behavior is undefined.
-size_t
-uint_to_string(uint64_t value, char* buffer)
-{
+size_t uint_to_string(uint64_t value, char* buffer) {
   // TODO: Maybe move this function to elsewhere.
 
   size_t i = 0;
@@ -74,9 +72,7 @@ uint_to_string(uint64_t value, char* buffer)
 /// fractional part, 1 for the period and 1 for the final NUL character).
 ///
 /// If @a buffer is not big enough, behavior is undefined.
-static size_t
-float_to_string(float value, char* buffer)
-{
+static size_t float_to_string(float value, char* buffer) {
   // TODO: Maybe move this function to elsewhere.
   // FIXME: this function only display 2 digits precision
 
@@ -104,9 +100,7 @@ float_to_string(float value, char* buffer)
   return written_bytes;
 }
 
-static void
-print_header(Severity severity, const char* category, std::source_location source_location)
-{
+static void print_header(Severity severity, const char* category, std::source_location source_location) {
   // Print source location if any.
   if (source_location.file_name() != nullptr && source_location.file_name()[0] != '\0') {
     uart_puts("[");
@@ -119,7 +113,7 @@ print_header(Severity severity, const char* category, std::source_location sourc
       //   - 20 characters for the digits (maximum digits in a 64-bit unsigned
       //   integer).
       //   - 1 character for the null terminator ('\0').
-      char buffer[21] = { 0 };
+      char buffer[21] = {0};
       uint_to_string(source_location.line(), buffer);
       uart_puts(buffer);
     }
@@ -165,9 +159,7 @@ print_header(Severity severity, const char* category, std::source_location sourc
   uart_puts(severity_header);
 }
 
-static void
-print_bool(bool value)
-{
+static void print_bool(bool value) {
   if (value) {
     uart_puts("true");
   } else {
@@ -175,27 +167,21 @@ print_bool(bool value)
   }
 }
 
-static void
-print_char(char value)
-{
+static void print_char(char value) {
   uart_putc(value);
 }
 
-static void
-print_uint64(uint64_t value)
-{
+static void print_uint64(uint64_t value) {
   // 21 bytes is enough for an unsigned 64-bit integer:
   //   - 20 characters for the digits (maximum digits in a 64-bit unsigned
   //   integer).
   //   - 1 character for the null terminator ('\0').
-  char buffer[21] = { 0 };
+  char buffer[21] = {0};
   uint_to_string(value, buffer);
   uart_puts(buffer);
 }
 
-static void
-print_int64(int64_t value)
-{
+static void print_int64(int64_t value) {
   if (value < 0) {
     uart_putc('-');
     print_uint64(-value);
@@ -204,31 +190,23 @@ print_int64(int64_t value)
   }
 }
 
-static void
-print_float(float value)
-{
+static void print_float(float value) {
   // TODO: maybe implement the ryu algorithm
-  char buffer[42] = { 0 };
+  char buffer[42] = {0};
   float_to_string(value, buffer);
   uart_puts(buffer);
 }
 
-static void
-print_double(double value)
-{
+static void print_double(double value) {
   // TODO: maybe implement the ryu algorithm
   print_float(value);
 }
 
-static void
-print_c_string(const char* value)
-{
+static void print_c_string(const char* value) {
   uart_puts(value);
 }
 
-static void
-print_argument(const impl::Argument& argument)
-{
+static void print_argument(const impl::Argument& argument) {
   switch (argument.type) {
     case impl::Argument::Type::BOOL:
       print_bool(argument.data.bool_value);
@@ -258,9 +236,10 @@ print_argument(const impl::Argument& argument)
   KASSERT(false && "unknown argument type");
 }
 
-static void
-print_message(std::source_location source_location, const char* message, const impl::Argument* args, size_t args_count)
-{
+static void print_message(std::source_location source_location,
+                          const char* message,
+                          const impl::Argument* args,
+                          size_t args_count) {
   size_t current_arg_index = 0;
   const char* it = message;
 
@@ -271,14 +250,14 @@ print_message(std::source_location source_location, const char* message, const i
     }
 
     ++it;
-    if (*it == '{') { // '{{', escaped '{'
+    if (*it == '{') {  // '{{', escaped '{'
       ++it;
       uart_putc('{');
-    } else if (*it == '}') { // An argument.
+    } else if (*it == '}') {  // An argument.
       ++it;
 
       if (current_arg_index >= args_count) {
-        uart_puts("\r\n"); // print end line, so the panic message is on its own line
+        uart_puts("\r\n");  // print end line, so the panic message is on its own line
         // Oops, not enough arguments...
         panic("not enough arguments to debug message", source_location);
         return;
@@ -287,20 +266,18 @@ print_message(std::source_location source_location, const char* message, const i
       const impl::Argument& argument = args[current_arg_index];
       print_argument(argument);
       ++current_arg_index;
-    } else { // '{' followed by a dummy character... For now simply print the '{'
+    } else {  // '{' followed by a dummy character... For now simply print the '{'
       uart_putc(it[-1]);
     }
   }
 }
 
-void
-vlog(Severity severity,
-     const char* category,
-     const char* message,
-     std::source_location source_location,
-     const impl::Argument* args,
-     size_t args_count)
-{
+void vlog(Severity severity,
+          const char* category,
+          const char* message,
+          std::source_location source_location,
+          const impl::Argument* args,
+          size_t args_count) {
   // The log format we use:
   //   [file_name:line_number] [category] [severity] message
 
@@ -313,17 +290,13 @@ vlog(Severity severity,
   uart_puts("\r\n");
 }
 
-[[noreturn]] void
-panic(const char* message, std::source_location source_location)
-{
-  log(Severity::CRITICAL,
-      nullptr,
-      RED BOLD "This is a kernel panic." RESET BOLD " DO NOT PANIC. Keep calm and carry on." RESET,
-      source_location);
+[[noreturn]] void panic(const char* message, std::source_location source_location) {
+  log(Severity::CRITICAL, nullptr,
+      RED BOLD "This is a kernel panic." RESET BOLD " DO NOT PANIC. Keep calm and carry on." RESET, source_location);
   log(Severity::CRITICAL, nullptr, message, source_location);
 
   // Enter an infinite loop, so we don't return from this function.
   while (true)
     ;
 }
-} // namespace debug
+}  // namespace debug
