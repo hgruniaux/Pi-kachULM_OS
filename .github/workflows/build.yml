@@ -38,7 +38,7 @@ jobs:
                     key: ${{github.job}}-${{matrix.os}}-${{matrix.type}}
 
             -   name: Configure Project
-                run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{matrix.type}} -DENABLE_CHECKS=ON -DCLANG_TOOLS_EXTRA_ARGS="-I /tmp/arm-gnu-toolchain-13.2.Rel1-x86_64-aarch64-none-elf/include" -DGCC_PREFIX=aarch64-none-elf- -DGCC_SUFFIX= -D CMAKE_C_COMPILER_LAUNCHER=ccache -D CMAKE_CXX_COMPILER_LAUNCHER=ccache
+                run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{matrix.type}} -DENABLE_CHECKS=ON -DCLANG_TOOLS_EXTRA_ARGS="-I/tmp/arm-gnu-toolchain-13.2.Rel1-x86_64-aarch64-none-elf/include" -DGCC_PREFIX=aarch64-none-elf- -DGCC_SUFFIX= -D CMAKE_C_COMPILER_LAUNCHER=ccache -D CMAKE_CXX_COMPILER_LAUNCHER=ccache
 
             -   name: Build Project
                 run: make -j -C ${{github.workspace}}/build
