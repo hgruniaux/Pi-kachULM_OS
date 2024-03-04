@@ -11,17 +11,19 @@ jobs:
         name: Build Project
         runs-on: ${{ matrix.os }}
         steps:
+            -   name: Install aarch64-none-elf-gcc-13
+                run: |
+                    wget -P /tmp https://developer.arm.com/-/media/Files/downloads/gnu/13.2.rel1/binrel/arm-gnu-toolchain-13.2.rel1-x86_64-aarch64-none-elf.tar.xz
+                    tar -xf /tmp/arm-gnu-toolchain-13.2.rel1-x86_64-aarch64-none-elf.tar.xz -C /tmp
+                    echo "/tmp/arm-gnu-toolchain-13.2.Rel1-x86_64-aarch64-none-elf/bin" >> $GITHUB_PATH
+
+            -   name: GCC Version
+                run: |
+                    echo "$PATH"
+                    aarch64-none-elf-g++ --version
+
             -   name: Checkout
                 uses: actions/checkout@v4.1.1
-
-            -   name: Add PPT for GCC-13
-                run: sudo add-apt-repository ppa:ubuntu-toolchain-r/ppa
-
-            -   name: Update System
-                run: sudo apt update
-
-            -   name: Install GCC 13
-                run: sudo apt install gcc-13-aarch64-linux-gnu g++-13-aarch64-linux-gnu
 
             # Install required cross-gen tools and QEMU.
             -   uses: awalsh128/cache-apt-pkgs-action@latest
