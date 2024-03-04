@@ -24,6 +24,7 @@ jobs:
             -   uses: awalsh128/cache-apt-pkgs-action@latest
                 with:
                     packages: gcc-13-aarch64-linux-gnu g++-13-aarch64-linux-gnu qemu-system-arm ccache
+                    execute_install_scripts: true
                     version: 1.0
 
             # Use CCache to cache compilation results.
