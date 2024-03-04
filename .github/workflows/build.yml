@@ -34,22 +34,6 @@ jobs:
             -   name: Clang-tidy Version Check
                 run: clang-tidy --version
 
-            -   name: Clang-tidy Version Check
-                run: clang-tidy-15 --version
-
-            -   name: List included directories
-                run: |
-                    INC_DIRS=$(aarch64-none-elf-gcc -xc++ /dev/null -E -Wp,-v 2>&1 | sed -n 's,^ ,,p')
-                    echo "Directories: \"$INC_DIRS\""
-                    FINAL_DIRS=""
-                    for dir in $INC_DIRS
-                    do
-                        FINAL_DIRS="$(realpath $dir):$FINAL_DIRS"
-                    done
-                    FINAL_DIRS="${FINAL_DIRS::-1}"
-                    echo "Final Dirs: \"$FINAL_DIRS\""
-                    echo "FINAL_DIRS=\"$FINAL_DIRS\"" >> "$GITHUB_ENV"
-
             -   name: Checkout
                 uses: actions/checkout@v4.1.1
 
@@ -68,12 +52,8 @@ jobs:
             -   name: Configure Project
                 run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{matrix.type}} -DENABLE_CHECKS=ON -DCMAKE_SYSROOT="/tmp/aarch64-gcc/aarch64-none-elf" -DGCC_PREFIX=aarch64-none-elf- -DGCC_SUFFIX= -D CMAKE_C_COMPILER_LAUNCHER=ccache -D CMAKE_CXX_COMPILER_LAUNCHER=ccache
 
-            -   name: Include Check
-                run: |
-                    echo "We have: $FINAL_DIRS"
-
             -   name: Build Project
-                run: CPATH=$FINAL_DIRS make -C build VERBOSE=1
+                run: make -C build VERBOSE=1
 
 
             # - name: Test Project
