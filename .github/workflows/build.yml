@@ -21,7 +21,7 @@ jobs:
                     tar -xf /tmp/gcc.tar.xz -C /tmp
                     mv "/tmp/$DIR_NAME" "$GCC_INSTALL_DIR"
                     echo "Setting up systems variables..."
-                    echo "$GCC_INSTALL_DIR" >> "$GITHUB_PATH"  # Add install dir to path
+                    echo "$GCC_INSTALL_DIR/bin" >> "$GITHUB_PATH"  # Add install dir to path
                     # Pass down gcc install directory
                     echo "GCC_INSTALL_DIR=$GCC_INSTALL_DIR" >> "$GITHUB_ENV"
                     # Setup include dirs for clang-tidy
