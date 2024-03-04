@@ -27,30 +27,17 @@ jobs:
 
             -   name: Checkout
                 uses: actions/checkout@v4.1.1
-
-            # Install required cross-gen tools and QEMU.
+                
             -   uses: awalsh128/cache-apt-pkgs-action@latest
                 with:
-                    packages: qemu-system-arm ccache
+                    packages: qemu-system-arm
                     version: 1.0
-
-            # Use CCache to cache compilation results.
-            -   name: ccache
-                uses: hendrikmuhs/ccache-action@v1.2
-                with:
-                    key: ${{github.job}}-${{matrix.os}}-${{matrix.type}}
-
-            - name: Checl
-              run: |
-                  ls /tmp/aarch64-gcc/aarch64-none-elf
-                  ls /tmp/aarch64-gcc/aarch64-none-elf/include
 
             -   name: Configure Project
                 run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{matrix.type}} -DENABLE_CHECKS=ON -DCMAKE_SYSROOT="/tmp/aarch64-gcc/aarch64-none-elf" -DGCC_PREFIX=aarch64-none-elf- -DGCC_SUFFIX= -D CMAKE_C_COMPILER_LAUNCHER=ccache -D CMAKE_CXX_COMPILER_LAUNCHER=ccache
 
             -   name: Build Project
                 run: CPATH=$FINAL_DIRS make -C build VERBOSE=1
-
 
             # - name: Test Project
             #  runs: ctest --test-dir build
