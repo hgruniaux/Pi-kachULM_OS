@@ -15,10 +15,10 @@ jobs:
                 uses: actions/checkout@v4.1.1
 
             -   name: Add PPT for GCC-13
-                run: add-apt-repository ppa:ubuntu-toolchain-r/ppa
+                run: sudo add-apt-repository ppa:ubuntu-toolchain-r/ppa
 
             -   name: Update System
-                run: apt update
+                run: sudo apt update
 
             # Install required cross-gen tools and QEMU.
             -   uses: awalsh128/cache-apt-pkgs-action@latest
