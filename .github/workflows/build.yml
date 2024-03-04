@@ -13,13 +13,26 @@ jobs:
         steps:
             -   name: Install aarch64-none-elf-gcc-13
                 run: |
-                    wget -P /tmp https://developer.arm.com/-/media/Files/downloads/gnu/13.2.rel1/binrel/arm-gnu-toolchain-13.2.rel1-x86_64-aarch64-none-elf.tar.xz
-                    tar -xf /tmp/arm-gnu-toolchain-13.2.rel1-x86_64-aarch64-none-elf.tar.xz -C /tmp
-                    echo "/tmp/arm-gnu-toolchain-13.2.Rel1-x86_64-aarch64-none-elf/bin" >> $GITHUB_PATH
+                    echo "Downloading: $GCC_URL"
+                    wget -q -O /tmp/gcc.tar.xz "$GCC_URL"
+                    DIR_NAME="$(tar -tf /tmp/gcc.tar.xz | head -1 | cut -f1 -d"/")"
+                    echo "Top-level directory: $DIR_NAME"
+                    echo "Extracting archive..."
+                    tar -xf /tmp/gcc.tar.xz -C /tmp
+                    mv "/tmp/$DIR_NAME" "$GCC_INSTALL_DIR"
+                    echo "Setting up systems variables..."
+                    echo "$GCC_INSTALL_DIR" >> "$GITHUB_PATH"  # Add install dir to path
+                    # Pass down gcc install directory
+                    echo "GCC_INSTALL_DIR=$GCC_INSTALL_DIR" >> "$GITHUB_ENV"
+                    # Setup include dirs for clang-tidy
+                    echo "CPLUS_INCLUDE_PATH=\"$GCC_INSTALL_DIR/aarch64-none-elf/include/c++/13.2.1/:$GCC_INSTALL_DIR/aarch64-none-elf/include/:$GCC_INSTALL_DIR/aarch64-none-elf/include/c++/13.2.1/aarch64-none-elf/\" >> "$GITHUB_ENV"
+
+                env:
+                    GCC_URL: https://developer.arm.com/-/media/Files/downloads/gnu/13.2.rel1/binrel/arm-gnu-toolchain-13.2.rel1-x86_64-aarch64-none-elf.tar.xz
+                    GCC_INSTALL_DIR: /tmp/aarch64-gcc
 
             -   name: GCC Version
                 run: |
-                    echo "$PATH"
                     aarch64-none-elf-g++ --version
 
             -   name: Checkout
@@ -38,7 +51,7 @@ jobs:
                     key: ${{github.job}}-${{matrix.os}}-${{matrix.type}}
 
             -   name: Configure Project
-                run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{matrix.type}} -DENABLE_CHECKS=ON -DCLANG_TOOLS_EXTRA_ARGS="-- --sysroot /tmp/arm-gnu-toolchain-13.2.Rel1-x86_64-aarch64-none-elf" -DGCC_PREFIX=aarch64-none-elf- -DGCC_SUFFIX= -D CMAKE_C_COMPILER_LAUNCHER=ccache -D CMAKE_CXX_COMPILER_LAUNCHER=ccache
+                run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{matrix.type}} -DENABLE_CHECKS=ON -DCMAKE_SYSROOT="$GCC_INSTALL_DIR/aarch64-none-elf" -DGCC_PREFIX=aarch64-none-elf- -DGCC_SUFFIX= -D CMAKE_C_COMPILER_LAUNCHER=ccache -D CMAKE_CXX_COMPILER_LAUNCHER=ccache
 
             -   name: Build Project
                 run: make -j -C ${{github.workspace}}/build
