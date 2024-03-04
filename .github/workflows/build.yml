@@ -20,11 +20,13 @@ jobs:
             -   name: Update System
                 run: sudo apt update
 
+            -   name: Install GCC 13
+                run: sudo apt install gcc-13-aarch64-linux-gnu g++-13-aarch64-linux-gnu
+
             # Install required cross-gen tools and QEMU.
             -   uses: awalsh128/cache-apt-pkgs-action@latest
                 with:
-                    packages: gcc-13-aarch64-linux-gnu g++-13-aarch64-linux-gnu qemu-system-arm ccache
-                    execute_install_scripts: true
+                    packages: qemu-system-arm ccache
                     version: 1.0
 
             # Use CCache to cache compilation results.
