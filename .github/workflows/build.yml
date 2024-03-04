@@ -34,6 +34,11 @@ jobs:
             -   name: GCC Version
                 run: |
                     aarch64-none-elf-g++ --version
+                    echo "Include dirs: $CPLUS_INCLUDE_PATH"
+                    echo "GCC install dir: $GCC_INSTALL_DIR"
+
+            -   name: Abort
+                run: exit -1
 
             -   name: Checkout
                 uses: actions/checkout@v4.1.1
