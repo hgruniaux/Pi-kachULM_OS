@@ -31,7 +31,7 @@ extern FunctionPointer __fini_array_end[];
  * constructors. */
 void call_init_array() {
   // Call the constructors.
-  auto array = __init_array_start;
+  auto* array = __init_array_start;
   while (array < __init_array_end) {
     (*array)();
     array++;
@@ -43,7 +43,7 @@ void call_init_array() {
  * destructors. */
 void call_fini_array() {
   // Call the destructors.
-  auto array = __fini_array_start;
+  auto* array = __fini_array_start;
   while (array < __fini_array_end) {
     (*array)();
     array++;
