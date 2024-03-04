@@ -38,7 +38,7 @@ jobs:
                 run: clang-tidy-15 --version
 
             -   name: Update Clang Tidy ?
-                run: apt update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends clang-tidy-16
+                run: sudo apt update && sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends clang-tidy-16
 
             -   name: List included directories
                 run: |
