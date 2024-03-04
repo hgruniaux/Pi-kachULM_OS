@@ -14,10 +14,16 @@ jobs:
             -   name: Checkout
                 uses: actions/checkout@v4.1.1
 
+            -   name: Add PPT for GCC-13
+                run: add-apt-repository ppa:ubuntu-toolchain-r/ppa
+
+            -   name: Update System
+                run: apt update
+
             # Install required cross-gen tools and QEMU.
             -   uses: awalsh128/cache-apt-pkgs-action@latest
                 with:
-                    packages: gcc-aarch64-linux-gnu g++-aarch64-linux-gnu qemu-system-arm
+                    packages: gcc-13-aarch64-linux-gnu g++-13-aarch64-linux-gnu qemu-system-arm
                     version: 1.0
 
             # Use CCache to cache compilation results.
@@ -27,7 +33,7 @@ jobs:
                     key: ${{github.job}}-${{matrix.os}}-${{matrix.type}}
 
             -   name: Configure Project
-                run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{matrix.type}} -DENABLE_CHECKS=ON -DGCC_PREFIX=aarch64-linux-gnu- -DGCC_SUFFIX= -D CMAKE_C_COMPILER_LAUNCHER=ccache -D CMAKE_CXX_COMPILER_LAUNCHER=ccache
+                run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{matrix.type}} -DENABLE_CHECKS=ON -DGCC_PREFIX=aarch64-linux-gnu- -DGCC_SUFFIX=-13 -D CMAKE_C_COMPILER_LAUNCHER=ccache -D CMAKE_CXX_COMPILER_LAUNCHER=ccache
 
             -   name: Build Project
                 run: make -j -C ${{github.workspace}}/build
