@@ -21,9 +21,9 @@ endif()
 # Enable checks
 option(ENABLE_CHECKS "Enable checks using clang-tidy" OFF)
 if (${ENABLE_CHECKS})
-    find_program(CLANG_TIDY clang-tidy)
+    find_program(CLANG_TIDY clang-tidy-15)
     if (CLANG_TIDY)
-        set(CMAKE_CXX_CLANG_TIDY clang-tidy --config-file=${CMAKE_CURRENT_SOURCE_DIR}/.clang-tidy -extra-arg=-I${CMAKE_SYSROOT}/include -extra-arg=-I${CMAKE_SYSROOT}/include/c++/13.2.1 -extra-arg=-I${CMAKE_SYSROOT}/include/c++/13.2.1/aarch64-none-elf)
+        set(CMAKE_CXX_CLANG_TIDY ${CLANG_TIDY} --config-file=${CMAKE_CURRENT_SOURCE_DIR}/.clang-tidy -extra-arg=-I${CMAKE_SYSROOT}/include -extra-arg=-I${CMAKE_SYSROOT}/include/c++/13.2.1 -extra-arg=-I${CMAKE_SYSROOT}/include/c++/13.2.1/aarch64-none-elf)
     endif ()
 endif ()
 
