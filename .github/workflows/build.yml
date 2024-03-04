@@ -17,7 +17,7 @@ jobs:
             # Install required cross-gen tools and QEMU.
             -   uses: awalsh128/cache-apt-pkgs-action@latest
                 with:
-                    packages: crossbuild-essential-arm64 qemu-system-arm
+                    packages: gcc-aarch64-linux-gnu g++-aarch64-linux-gnu qemu-system-arm
                     version: 1.0
 
             # Use CCache to cache compilation results.
