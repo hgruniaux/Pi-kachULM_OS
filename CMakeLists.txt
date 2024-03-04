@@ -19,7 +19,7 @@ option(ENABLE_CHECKS "Enable checks using clang-tidy" OFF)
 if (${ENABLE_CHECKS})
     find_program(CLANG_TIDY clang-tidy)
     if (CLANG_TIDY)
-        set(CMAKE_CXX_CLANG_TIDY clang-tidy --config-file=${CMAKE_CURRENT_SOURCE_DIR}/.clang-tidy)
+        set(CMAKE_CXX_CLANG_TIDY clang-tidy --config-file=${CMAKE_CURRENT_SOURCE_DIR}/.clang-tidy ${CLANG_TOOLS_EXTRA_ARGS})
     endif ()
 endif ()
 
