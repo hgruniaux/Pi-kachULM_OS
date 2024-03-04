@@ -34,6 +34,12 @@ jobs:
             -   name: Clang-tidy Version Check
                 run: clang-tidy --version
 
+            -   name: Clang-tidy Version Check
+                run: clang-tidy-15 --version
+
+            -   name: Update Clang Tidy ?
+                run: apt update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends clang-tidy-16
+
             -   name: List included directories
                 run: |
                     INC_DIRS=$(aarch64-none-elf-gcc -xc++ /dev/null -E -Wp,-v 2>&1 | sed -n 's,^ ,,p')
