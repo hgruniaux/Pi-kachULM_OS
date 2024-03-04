@@ -1,5 +1,10 @@
-file(GLOB_RECURSE KERNEL_SRC_FILES "*.S" "*.cpp" "*.hpp")
-add_executable(kernel ${KERNEL_SRC_FILES})
+add_executable(kernel boot.S
+        kernel.hpp kernel.cpp
+        debug.hpp debug.cpp
+        cxxabi.cpp
+        startup.cpp
+)
+
 set_target_properties(kernel PROPERTIES OUTPUT_NAME "kernel8.elf")
 
 # Use the linker script.
