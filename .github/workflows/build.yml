@@ -40,6 +40,11 @@ jobs:
                 with:
                     key: ${{github.job}}-${{matrix.os}}-${{matrix.type}}
 
+            - name: Checl
+              run: |
+                  ls /tmp/aarch64-gcc/aarch64-none-elf
+                  ls /tmp/aarch64-gcc/aarch64-none-elf/include
+
             -   name: Configure Project
                 run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{matrix.type}} -DENABLE_CHECKS=ON -DCMAKE_SYSROOT="/tmp/aarch64-gcc/aarch64-none-elf" -DGCC_PREFIX=aarch64-none-elf- -DGCC_SUFFIX= -D CMAKE_C_COMPILER_LAUNCHER=ccache -D CMAKE_CXX_COMPILER_LAUNCHER=ccache
 
