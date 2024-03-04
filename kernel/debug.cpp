@@ -3,7 +3,7 @@
 // The following code is released in the public domain (where applicable).
 
 #include "debug.hpp"
-#include "kernel.hpp"
+#include "uart.hpp"
 
 namespace debug {
 #define CSI "\x1b["
@@ -103,33 +103,33 @@ static size_t float_to_string(float value, char* buffer) {
 static void print_header(Severity severity, const char* category, std::source_location source_location) {
   // Print source location if any.
   if (source_location.file_name() != nullptr && source_location.file_name()[0] != '\0') {
-    uart_puts("[");
-    uart_puts(source_location.file_name());
+    UART::puts("[");
+    UART::puts(source_location.file_name());
 
     // The C++ standard recommends to the set the line number to 0 if unknown.
     if (source_location.line() > 0) {
-      uart_puts(":");
+      UART::puts(":");
       // 21 bytes is enough for an unsigned 64-bit integer:
       //   - 20 characters for the digits (maximum digits in a 64-bit unsigned
       //   integer).
       //   - 1 character for the null terminator ('\0').
       char buffer[21] = {0};
       uint_to_string(source_location.line(), buffer);
-      uart_puts(buffer);
+      UART::puts(buffer);
     }
 
     // We can also print the function name. However, the GCC implementation
     // uses the __PRETTY_FUNCTION__ format which is a bit too verbose! So, for
     // now, we only print the file name and the line number.
 
-    uart_puts("] ");
+    UART::puts("] ");
   }
 
   // Print category name if any.
   if (category != nullptr && category[0] != '\0') {
-    uart_puts("[");
-    uart_puts(category);
-    uart_puts("] ");
+    UART::puts("[");
+    UART::puts(category);
+    UART::puts("] ");
   }
 
   // Print the message severity.
@@ -156,19 +156,19 @@ static void print_header(Severity severity, const char* category, std::source_lo
       // NOTE: avoid defining the default case. Let the compiler warn us when we
       // forget a severity level!
   }
-  uart_puts(severity_header);
+  UART::puts(severity_header);
 }
 
 static void print_bool(bool value) {
   if (value) {
-    uart_puts("true");
+    UART::puts("true");
   } else {
-    uart_puts("false");
+    UART::puts("false");
   }
 }
 
 static void print_char(char value) {
-  uart_putc(value);
+  UART::write_one(value);
 }
 
 static void print_uint64(uint64_t value) {
@@ -178,12 +178,12 @@ static void print_uint64(uint64_t value) {
   //   - 1 character for the null terminator ('\0').
   char buffer[21] = {0};
   uint_to_string(value, buffer);
-  uart_puts(buffer);
+  UART::puts(buffer);
 }
 
 static void print_int64(int64_t value) {
   if (value < 0) {
-    uart_putc('-');
+    UART::write_one('-');
     print_uint64(-value);
   } else {
     print_uint64(value);
@@ -194,7 +194,7 @@ static void print_float(float value) {
   // TODO: maybe implement the ryu algorithm
   char buffer[42] = {0};
   float_to_string(value, buffer);
-  uart_puts(buffer);
+  UART::puts(buffer);
 }
 
 static void print_double(double value) {
@@ -203,7 +203,7 @@ static void print_double(double value) {
 }
 
 static void print_c_string(const char* value) {
-  uart_puts(value);
+  UART::puts(value);
 }
 
 static void print_argument(const impl::Argument& argument) {
@@ -245,19 +245,19 @@ static void print_message(std::source_location source_location,
 
   while (*it != '\0') {
     if (*it != '{') {
-      uart_putc(*it++);
+      UART::write_one(*it++);
       continue;
     }
 
     ++it;
     if (*it == '{') {  // '{{', escaped '{'
       ++it;
-      uart_putc('{');
+      UART::write_one('{');
     } else if (*it == '}') {  // An argument.
       ++it;
 
       if (current_arg_index >= args_count) {
-        uart_puts("\r\n");  // print end line, so the panic message is on its own line
+        UART::puts("\r\n");  // print end line, so the panic message is on its own line
         // Oops, not enough arguments...
         panic("not enough arguments to debug message", source_location);
         return;
@@ -267,7 +267,7 @@ static void print_message(std::source_location source_location,
       print_argument(argument);
       ++current_arg_index;
     } else {  // '{' followed by a dummy character... For now simply print the '{'
-      uart_putc(it[-1]);
+      UART::write_one(it[-1]);
     }
   }
 }
@@ -283,11 +283,11 @@ void vlog(Severity severity,
 
   print_header(severity, category, source_location);
 
-  uart_puts(" ");
+  UART::puts(" ");
   print_message(source_location, message, args, args_count);
   // CR-LF is required here instead of just LF.
   // This is the way UART and QEMU terminal works.
-  uart_puts("\r\n");
+  UART::puts("\r\n");
 }
 
 [[noreturn]] void panic(const char* message, std::source_location source_location) {
