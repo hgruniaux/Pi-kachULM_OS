@@ -1,8 +1,11 @@
 add_executable(kernel boot.S
-        kernel.hpp kernel.cpp
+        kernel.cpp
         debug.hpp debug.cpp
         cxxabi.cpp
         startup.cpp
+        mmio.hpp mmio.cpp
+        uart.hpp uart.cpp
+        mailbox.hpp mailbox.cpp
 )
 
 set_target_properties(kernel PROPERTIES OUTPUT_NAME "kernel8.elf")
