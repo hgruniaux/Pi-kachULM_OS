@@ -25,8 +25,14 @@ jobs:
             -   name: Setup variables
                 run: echo "/tmp/aarch64-gcc/bin" >> "$GITHUB_PATH"
 
-            -   name: GCC Version
+            -   name: GCC Version Check
                 run: aarch64-none-elf-g++ --version
+
+            -   name: CMake Version Check
+                run: cmake --version
+
+            -   name: Clang-tidy Version Check
+                run: clang-tidy --version
 
             -   name: List included directories
                 run: |
@@ -59,11 +65,13 @@ jobs:
             -   name: Configure Project
                 run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{matrix.type}} -DENABLE_CHECKS=ON -DCMAKE_SYSROOT="/tmp/aarch64-gcc/aarch64-none-elf" -DGCC_PREFIX=aarch64-none-elf- -DGCC_SUFFIX= -D CMAKE_C_COMPILER_LAUNCHER=ccache -D CMAKE_CXX_COMPILER_LAUNCHER=ccache
 
-            -   name: Build Project
+            -   name: Include Check
                 run: |
                     echo "We have: $FINAL_DIRS"
-                    export CPLUS_INCLUDE_PATH="$FINAL_DIRS"
-                    make -j -C ${{github.workspace}}/build
+
+            -   name: Build Project
+                run: CPATH=$FINAL_DIRS make -C build VERBOSE=1
+
 
             # - name: Test Project
             #  runs: ctest --test-dir build
