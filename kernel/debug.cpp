@@ -44,7 +44,7 @@ size_t uint_to_string(uint64_t value, char* buffer) {
 
   // Extract digits in reverse order
   while (value > 0) {
-    int digit = value % 10;
+    const unsigned int digit = value % 10ull;
     buffer[i++] = digit + '0';
     value /= 10;
   }
@@ -87,7 +87,7 @@ static size_t float_to_string(float value, char* buffer) {
   value += 0.005f;
 
   // Print the integer part.
-  uint64_t integer_part = value;
+  const auto integer_part = (uint64_t)value;
   size_t written_bytes = uint_to_string(integer_part, it);
   it += written_bytes;
 
@@ -95,8 +95,8 @@ static size_t float_to_string(float value, char* buffer) {
   ++written_bytes;
 
   // Print the fractional part. We only keep 2 digits after the period.
-  value = (value - integer_part) * 100 /* 2 digits */;
-  written_bytes += uint_to_string(value, it);
+  value = (value - (float)integer_part) * 100 /* 2 digits */;
+  written_bytes += uint_to_string((uint64_t)value, it);
   return written_bytes;
 }
 
@@ -199,7 +199,7 @@ static void print_float(float value) {
 
 static void print_double(double value) {
   // TODO: maybe implement the ryu algorithm
-  print_float(value);
+  print_float((float)value);
 }
 
 static void print_c_string(const char* value) {
