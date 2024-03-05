@@ -29,7 +29,7 @@ if (${ENABLE_CHECKS})
 
     find_program(CLANG_TIDY NAMES clang-tidy clang-tidy-15 clang-tidy-16 clang-tidy-17 clang-tidy-18 clang-tidy-19 VALIDATOR check_clang_tidy_version)
     if (CLANG_TIDY)
-        set(CMAKE_CXX_CLANG_TIDY ${CLANG_TIDY} --config-file=${CMAKE_CURRENT_SOURCE_DIR}/.clang-tidy -extra-arg=-I${CMAKE_SYSROOT}/include -extra-arg=-I${CMAKE_SYSROOT}/include/c++/13.2.1 -extra-arg=-I${CMAKE_SYSROOT}/include/c++/13.2.1/aarch64-none-elf)
+        set(CMAKE_CXX_CLANG_TIDY ${CLANG_TIDY} --config-file=${CMAKE_CURRENT_SOURCE_DIR}/.clang-tidy)
     else ()
         message(FATAL_ERROR "ENABLE_CHECKS is ON but no valid version of clang-tidy was found")
     endif ()
