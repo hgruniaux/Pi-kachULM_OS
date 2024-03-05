@@ -51,7 +51,7 @@ volatile unsigned int __attribute__((aligned(16))) mbox[9] = {9 * 4, 0, 0x38002,
 void init() {
   // Disable UART0.
   MMIO::write(UART0_CR, 0x00000000);
-  // Setup the GPIO pin 14 && 15.
+  // Set up the GPIO pin 14 && 15.
 
   // Disable pull up/down for all GPIO pins & delay for 150 cycles.
   MMIO::write(GPPUD, 0x00000000);
@@ -75,7 +75,7 @@ void init() {
   // For Raspi3 and 4 the UART_CLOCK is system-clock dependent by default.
   // Set it to 3Mhz so that we can consistently set the baud rate
   // UART_CLOCK = 30000000;
-  unsigned int r = (((*(unsigned int*)(&mbox)) & ~0xF));
+  const uint32_t r = (((*(uint32_t*)(&mbox)) & ~0xF));
   MailBox::send(MailBox::Channel::TagArmToVC, r);
   while (MailBox::receive(MailBox::Channel::TagArmToVC) != r) {
   }

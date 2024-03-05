@@ -49,7 +49,7 @@ extern "C" int __cxa_guard_acquire(int64_t* guard_object) {
   //  > called with the same argument. The first byte of the guard_object is not
   //  > modified by this function.
 
-  return !*guard_object;
+  return static_cast<int>(*guard_object == 0);
 }
 
 extern "C" void __cxa_guard_release(int64_t* guard_object) {
@@ -93,12 +93,10 @@ extern "C" int __cxa_atexit(void (*f)(void*), void* p, void*) {
 extern "C" void __cxa_finalize(void* f) {
   // See https://itanium-cxx-abi.github.io/cxx-abi/abi.html#dso-dtor-runtime-api
 
-  size_t i = atexit_entries_count;
-
   if (f == nullptr) {
     // According to the Itanium C++ ABI, if f is null then we must call
     // all destructors (noy yet called).
-    while (i--) {
+    for (size_t i = atexit_entries_count; i-- > 0;) {
       if (atexit_entries[i].destructor != nullptr) {
         atexit_entries[i].destructor(atexit_entries[i].object);
       }
@@ -108,7 +106,7 @@ extern "C" void __cxa_finalize(void* f) {
     return;
   }
 
-  while (i--) {
+  for (size_t i = atexit_entries_count; i-- > 0;) {
     if (atexit_entries[i].destructor == f) {
       atexit_entries[i].destructor(atexit_entries[i].object);
       atexit_entries[i].destructor = nullptr;
