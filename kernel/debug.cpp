@@ -55,7 +55,7 @@ size_t uint_to_string(uint64_t value, char* buffer) {
   // Extract digits in reverse order
   while (value > 0) {
     const char digit = (char)(value % 10ull);
-    buffer[i++] = digit + '0';
+    buffer[i++] = (char)(digit + '0');
     value /= 10;
   }
 
