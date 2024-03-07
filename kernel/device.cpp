@@ -50,7 +50,7 @@ bool Device::init() {
   return success;
 }
 
-bool Device::set_led_status(Device::Led led, bool is_on) {
+bool Device::set_led_status(Device::Led led, bool on) {
   KASSERT(led == Led::ACT || led == Led::PWR);
 
   struct SetLedStatusTagBuffer {
@@ -62,11 +62,12 @@ bool Device::set_led_status(Device::Led led, bool is_on) {
 
   using SetLedStatusTag = MailBox::PropertyTag<0x00038041, SetLedStatusTagBuffer>;
 
+  const uint32_t status = on ? 1 : 0;
   MailBox::PropertyMessage<SetLedStatusTag> message;
   message.tag.buffer.pin = (uint32_t)(led);
-  message.tag.buffer.status = (uint32_t)(is_on);
+  message.tag.buffer.status = status;
   const bool success = MailBox::send_property(message);
-  return success && (message.tag.buffer.status == (uint32_t)is_on);
+  return success && (message.tag.buffer.status == status);
 }
 
 uint32_t Device::get_current_temp() const {
@@ -81,4 +82,38 @@ uint32_t Device::get_current_temp() const {
   MailBox::PropertyMessage<GetTempTag> message;
   const bool success = MailBox::send_property(message);
   return success ? message.tag.buffer.value : 0;
+}
+
+bool Device::set_power_state(uint32_t device_id, bool on, bool wait) {
+  struct SetPowerStateTagBuffer {
+    uint32_t device_id = 0;
+    uint32_t state = 0;
+  };  // struct SetPowerStateTagBuffer
+
+  using SetPowerStateTag = MailBox::PropertyTag<0x00028001, SetPowerStateTagBuffer>;
+
+  MailBox::PropertyMessage<SetPowerStateTag> message;
+  message.tag.buffer.device_id = device_id;
+  message.tag.buffer.state = (uint32_t)on | ((uint32_t)wait << 1);
+  const bool success = MailBox::send_property(message);
+  return success
+    && ((message.tag.buffer.state & 0x1) == (uint32_t)on) // check if the device is in the expected state
+    && ((message.tag.buffer.state & 0x2) != 0); // check if the device exists
+}
+
+bool Device::set_turbo(bool on) {
+  struct SetTurboTagBuffer {
+    // Always 0.
+    uint32_t id = 0;
+    // 1 to enable Turbo, 0 otherwise.
+    uint32_t level = 0;
+  };  // struct SetTurboTagBuffer
+
+  using SetTurboTag = MailBox::PropertyTag<0x00038009, SetTurboTagBuffer>;
+
+  const uint32_t level = on ? 1 : 0;
+  MailBox::PropertyMessage<SetTurboTag> message;
+  message.tag.buffer.level = level;
+  const bool success = MailBox::send_property(message);
+  return success && (message.tag.buffer.level == level);
 }
