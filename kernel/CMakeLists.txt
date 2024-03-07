@@ -6,6 +6,8 @@ add_executable(kernel boot.S
         mmio.hpp mmio.cpp
         uart.hpp uart.cpp
         mailbox.hpp mailbox.cpp
+        device.hpp
+        device.cpp
 )
 
 set_target_properties(kernel PROPERTIES OUTPUT_NAME "kernel8.elf")
