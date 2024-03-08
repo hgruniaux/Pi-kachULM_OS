@@ -4,6 +4,9 @@ include(cmake/GCCToolchain.cmake)
 
 project(Pi-kachULM_OS LANGUAGES CXX ASM)
 
+set(RASPI_VERSION 3 CACHE STRING "The target Raspberry Pi version (either 3 or 4)")
+add_definitions(-DRASPI_VERSION=${RASPI_VERSION})
+
 # Enable C++20 (with GNU extensions)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)

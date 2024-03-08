@@ -4,7 +4,12 @@ namespace MMIO {
 uint32_t BASE;
 
 void init() {
-  // TODO: Change BASE to 0xFE000000 when under Raspiberry PI 4
+#if RASPI_VERSION == 3
   BASE = 0x3F000000;
+#elif RASPI_VERSION == 4
+  BASE = 0xFE000000;
+#else
+#error the macro RASPI_VERSION must be defined either to 3 or 4
+#endif
 }
 }  // namespace MMIO
