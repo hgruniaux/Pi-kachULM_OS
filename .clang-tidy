@@ -3,6 +3,7 @@ Checks: '
   clang-analyzer-*,
   bugprone-*,
   -bugprone-reserved-identifier,
+  -bugprone-easily-swappable-parameters,
   readability-duplicate-include,
   readability-else-after-return,
   readability-redundant-access-specifiers,
