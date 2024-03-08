@@ -33,6 +33,6 @@ target_compile_options(kernel PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions 
 
 # Extracting the elf file to a binary one
 add_custom_target(kernel-img
-        COMMAND ${CMAKE_OBJCOPY} -O binary ${CMAKE_CURRENT_BINARY_DIR}/kernel8.elf ${CMAKE_CURRENT_BINARY_DIR}/kernel8.bin
+        COMMAND ${CMAKE_OBJCOPY} -O binary ${CMAKE_CURRENT_BINARY_DIR}/kernel8.elf ${CMAKE_CURRENT_BINARY_DIR}/kernel8.img
         DEPENDS kernel
         COMMENT "Converting ELF to binary")
