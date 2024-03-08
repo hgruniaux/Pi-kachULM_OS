@@ -8,6 +8,8 @@ add_executable(kernel boot.S
         mailbox.hpp mailbox.cpp
         device.hpp
         device.cpp
+        framebuffer.hpp
+        framebuffer.cpp
 )
 
 set_target_properties(kernel PROPERTIES OUTPUT_NAME "kernel8.elf")
