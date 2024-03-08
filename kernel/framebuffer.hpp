@@ -91,7 +91,6 @@ class FrameBuffer {
   /** @brief Sends a SET_VIRTUAL_OFFSET request to VideoCore. */
   bool set_virtual_offset(uint32_t x, uint32_t y);
 
- private:
   uint32_t* m_buffer = nullptr;
   uint32_t m_buffer_size = 0;  // in bytes, size of either front or back buffer
   uint32_t m_width = 0;        // in pixels
