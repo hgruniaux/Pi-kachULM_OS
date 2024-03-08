@@ -37,8 +37,6 @@ static constexpr uint32_t CHANNEL_MASK = (1 << CHANNEL_WIDTH) - 1;
 }
 
 uint32_t receive(Channel channel) {
-  LOG_TRACE("try to receive from channel {} of mailbox", (uint8_t)channel);
-
   uint32_t status;
   uint32_t response;
 
@@ -57,8 +55,6 @@ uint32_t receive(Channel channel) {
 }
 
 void send(Channel channel, uint32_t message) {
-  LOG_TRACE("try to send '{}' to channel {} of mailbox", message, (uint8_t)channel);
-
   uint32_t status;
 
   // Wait until we can send a mail.
