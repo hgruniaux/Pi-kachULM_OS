@@ -1,8 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
 
-include(cmake/GCCToolchain.cmake)
-#include(cmake/ClangToolchain.cmake)
-
 project(Pi-kachULM_OS LANGUAGES CXX ASM)
 
 # Enable C++20 (with GNU extensions)

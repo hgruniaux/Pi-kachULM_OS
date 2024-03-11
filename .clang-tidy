@@ -61,6 +61,6 @@ Checks: '
   misc-confusable-identifiers,
   google-runtime-int,
   cppcoreguidelines-missing-std-forward'
-#WarningsAsErrors: '*'
+WarningsAsErrors: '*'
 InheritParentConfig: false
 FormatStyle: 'file'

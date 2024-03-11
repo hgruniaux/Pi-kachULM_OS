@@ -1,5 +1,5 @@
 set(CMAKE_SYSTEM_NAME Generic)
-set(CMAKE_SYSTEM_PROCESSOR arm)
+set(CMAKE_SYSTEM_PROCESSOR aarch64)
 
 set(GCC_PREFIX aarch64-linux-gnu- CACHE STRING "Prefix added to each GNU binutils and GCC invocations")
 set(GCC_SUFFIX -13 CACHE STRING "Suffix added to each GNU binutils and GCC invocations")

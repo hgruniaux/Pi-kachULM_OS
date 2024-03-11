@@ -1,5 +1,5 @@
 set(CMAKE_SYSTEM_NAME Generic)
-set(CMAKE_SYSTEM_PROCESSOR arm)
+set(CMAKE_SYSTEM_PROCESSOR aarch64)
 
 set(CLANG_SUFFIX -17 CACHE STRING "Suffix added to each llvm invocations")
 set(CLANG_TRIPLE aarch64-linux-gnu CACHE STRING "Triple used by clang")

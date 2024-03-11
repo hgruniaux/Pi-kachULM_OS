@@ -13,14 +13,14 @@ To build the kernel you will need to install a aarch64 GCC compiler and `cmake`:
   ```shell
   brew install gcc make cmake
   ```
-  should suffice if you are on a M1/M2 CPU.
+  should suffice if you are on a M1/M2 CPU. [To be tested]
 - On Windows, good luck. See MinGW or search internet.
 
 Then, you just need you execute in the project directory:
 
 ```shell
 # Change aarch64-linux-gnu- by whatever is named GCC for aarch64 on your system.
-cmake -S . -Bbuild -DGCC_PREFIX=aarch64-linux-gnu-
+cmake -S . -Bbuild -DGCC_PREFIX=aarch64-linux-gnu- --toolchain=cmake/GCCToolchain.cmake
 make -j -C build
 ```
 
