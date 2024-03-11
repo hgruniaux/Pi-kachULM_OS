@@ -63,7 +63,10 @@ bool FrameBuffer::init(uint32_t width, uint32_t height) {
 
   // Read back the responses. The GPU may have changed some requested parameters.
   m_width = message.set_virtual_size_tag.buffer.width;
-  m_height = message.set_virtual_size_tag.buffer.height;
+  if (m_use_double_buffering)
+    m_height = message.set_virtual_size_tag.buffer.height / 2;
+  else
+    m_height = message.set_virtual_size_tag.buffer.height;
   m_pitch = message.get_pitch_tag.buffer / sizeof(m_buffer[0]);
   m_buffer_size = message.allocate_tag.buffer.response.size;
   m_buffer = (uint32_t*)(uintptr_t)message.allocate_tag.buffer.response.base_address;
