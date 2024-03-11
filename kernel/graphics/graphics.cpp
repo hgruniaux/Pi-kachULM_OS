@@ -78,11 +78,11 @@ void fill_rect(uint32_t x, uint32_t y, uint32_t w, uint32_t h, Color color) {
   return ((x + multiple - 1) / multiple) * multiple;
 }
 
-void draw_text(const char* text, Color color, uint32_t x, uint32_t y) {
-  draw_text(PKFFile(fonts_myfont_pkf), text, color, x, y);
+uint32_t draw_text(const char* text, Color color, uint32_t x, uint32_t y) {
+  return draw_text(PKFFile(fonts_myfont_pkf), text, color, x, y);
 }
 
-void draw_text(PKFFile font, const char* text, Color color, uint32_t x, uint32_t y) {
+uint32_t draw_text(PKFFile font, const char* text, Color color, uint32_t x, uint32_t y) {
   uint32_t current_x = x;
   uint32_t current_y = y;
 
@@ -92,6 +92,8 @@ void draw_text(PKFFile font, const char* text, Color color, uint32_t x, uint32_t
   const uint32_t line_height = font.get_line_height();
 
   auto& fb = FrameBuffer::get();
+  const uint32_t fb_width = fb.get_width();
+  const uint32_t fb_height = fb.get_width();
 
   const uint8_t red = (color.argb >> 16) & 0xff;
   const uint8_t green = (color.argb >> 8) & 0xff;
@@ -101,6 +103,9 @@ void draw_text(PKFFile font, const char* text, Color color, uint32_t x, uint32_t
     const char ch = *it;
 
     if (ch >= PKFFile::FIRST_CHARACTER && ch <= PKFFile::LAST_CHARACTER) {
+      if (current_x >= fb_width)
+        continue;
+
       const uint8_t* glyph = font.get_glyph(ch);
       for (uint32_t i = 0; i < char_width; ++i) {
         for (uint32_t j = 0; j < char_height; ++j) {
@@ -131,6 +136,11 @@ void draw_text(PKFFile font, const char* text, Color color, uint32_t x, uint32_t
           break;
       }
     }
+
+    if (current_y >= fb_height)
+      return current_x;
   }
+
+  return current_x;
 }
 }  // namespace graphics

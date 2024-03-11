@@ -51,6 +51,6 @@ void draw_rect(uint32_t x, uint32_t y, uint32_t w, uint32_t h, Color color);
  */
 void fill_rect(uint32_t x, uint32_t y, uint32_t w, uint32_t h, Color color);
 
-void draw_text(const char* text, Color color, uint32_t x, uint32_t y);
-void draw_text(PKFFile font, const char* text, Color color, uint32_t x, uint32_t y);
+uint32_t draw_text(const char* text, Color color, uint32_t x, uint32_t y);
+uint32_t draw_text(PKFFile font, const char* text, Color color, uint32_t x, uint32_t y);
 }  // namespace graphics
