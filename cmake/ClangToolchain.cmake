@@ -7,6 +7,10 @@ set(CLANG_TRIPLE aarch64-linux-gnu CACHE STRING "Triple used by clang")
 set(CMAKE_C_COMPILER_ID Clang)
 set(CMAKE_CXX_COMPILER_ID Clang)
 
+# Do no test the toolchain
+set(CMAKE_C_COMPILER_FORCED TRUE)
+set(CMAKE_CXX_COMPILER_FORCED TRUE)
+
 set(CMAKE_ASM_COMPILER clang${CLANG_SUFFIX})
 set(CMAKE_C_COMPILER clang${CLANG_SUFFIX})
 set(CMAKE_CXX_COMPILER clang++${CLANG_SUFFIX})

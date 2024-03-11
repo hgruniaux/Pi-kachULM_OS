@@ -20,12 +20,13 @@ jobs:
                     version: 1.0
 
             -   name: Configure Project
-                run: cmake -B ${{github.workspace}}/build \
-                    --toolchain=cmake/GCCToolchain.cmake \
-                    -DCMAKE_BUILD_TYPE=${{matrix.type}} \
-                    -DENABLE_CHECKS=ON \
-                    -DGCC_PREFIX=aarch64-linux-gnu- \
-                    -DGCC_SUFFIX=-12
+                run: |
+                    cmake -B ${{github.workspace}}/build \
+                        --toolchain=cmake/GCCToolchain.cmake \
+                        -DCMAKE_BUILD_TYPE=${{matrix.type}} \
+                        -DENABLE_CHECKS=ON \
+                        -DGCC_PREFIX=aarch64-linux-gnu- \
+                        -DGCC_SUFFIX=-12
 
             -   name: Build Project
                 run: make -j -C build VERBOSE=1
