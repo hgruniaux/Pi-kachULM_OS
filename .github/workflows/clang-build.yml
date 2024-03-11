@@ -25,7 +25,7 @@ jobs:
                         --toolchain=cmake/ClangToolchain.cmake \
                         -DCMAKE_BUILD_TYPE=${{matrix.type}} \
                         -DENABLE_CHECKS=ON \
-                        -CLANG_SUFFIX=-15 \
+                        -DCLANG_SUFFIX=-15 \
                         -DCLANG_TRIPLE=aarch64-linux-gnu
 
             -   name: Build Project
