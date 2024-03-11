@@ -10,6 +10,12 @@ add_executable(kernel boot.S
         device.cpp
         framebuffer.hpp
         framebuffer.cpp
+        graphics/pkf.hpp
+        graphics/pkf.cpp
+
+        ../fonts/myfont.cpp
+        graphics/graphics.hpp
+        graphics/graphics.cpp
 )
 
 set_target_properties(kernel PROPERTIES OUTPUT_NAME "kernel8.elf")
