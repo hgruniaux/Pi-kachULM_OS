@@ -25,7 +25,7 @@ target_compile_options(kernel PRIVATE ${CPU_OPTIONS})
 target_compile_options(kernel PRIVATE -ffreestanding -nostdlib)
 
 # Disable exceptions and RTTI in C++
-target_compile_options(kernel PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions -fno-rtti>)
+target_compile_options(kernel PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions -fno-rtti -fno-builtin>)
 
 # Extracting the elf file to a binary one
 add_custom_target(kernel-img

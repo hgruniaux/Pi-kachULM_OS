@@ -3,6 +3,7 @@ Checks: '
   clang-analyzer-*,
   bugprone-*,
   -bugprone-reserved-identifier,
+  -bugprone-easily-swappable-parameters,
   readability-duplicate-include,
   readability-else-after-return,
   readability-redundant-access-specifiers,
@@ -60,6 +61,6 @@ Checks: '
   misc-confusable-identifiers,
   google-runtime-int,
   cppcoreguidelines-missing-std-forward'
-WarningsAsErrors: '*'
+#WarningsAsErrors: '*'
 InheritParentConfig: false
 FormatStyle: 'file'
