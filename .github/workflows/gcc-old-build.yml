@@ -1,4 +1,4 @@
-name: Build
+name: GCC 12 Build
 on:
     push:
 jobs:
