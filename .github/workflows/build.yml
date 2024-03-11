@@ -11,30 +11,14 @@ jobs:
         name: Build Project
         runs-on: ${{ matrix.os }}
         steps:
-            -   name: Download aarch64-none-elf-gcc-13
-                run: wget -O /tmp/gcc.tar.xz "$GCC_URL"
-                env:
-                    GCC_URL: https://developer.arm.com/-/media/Files/downloads/gnu/13.2.rel1/binrel/arm-gnu-toolchain-13.2.rel1-x86_64-aarch64-none-elf.tar.xz
-
-            -   name: Create target directory
-                run: mkdir -p /tmp/aarch64-gcc
-
-            -   name: Extract gcc archive
-                run: tar --strip-component=1 -xf /tmp/gcc.tar.xz -C /tmp/aarch64-gcc
-
-            -   name: Setup variables
-                run: echo "/tmp/aarch64-gcc/bin" >> "$GITHUB_PATH"
-
-            -   name: Checkout
-                uses: actions/checkout@v4.1.1
-
+            -   uses: actions/checkout@v4.1.1
             -   uses: awalsh128/cache-apt-pkgs-action@latest
                 with:
-                    packages: qemu-system-arm
+                    packages: crossbuild-essential-arm64 qemu-system-arm
                     version: 1.0
 
             -   name: Configure Project
-                run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{matrix.type}} -DENABLE_CHECKS=ON -DCMAKE_SYSROOT="/tmp/aarch64-gcc/aarch64-none-elf" -DGCC_PREFIX=aarch64-none-elf- -DGCC_SUFFIX=
+                run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{matrix.type}} -DENABLE_CHECKS=ON
 
             -   name: Build Project
                 run: make -j -C build VERBOSE=1
