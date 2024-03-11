@@ -1,50 +1,44 @@
-#include <cstddef>
-#include <cstdint>
-
+#include "debug.hpp"
+#include "device.hpp"
+#include "framebuffer.hpp"
+#include "graphics/graphics.hpp"
+#include "graphics/pkf.hpp"
 #include "mmio.hpp"
 #include "uart.hpp"
-#include "mailbox.hpp"
+
+// Loop <delay> times in a way that the compiler won't optimize away
+static inline void delay(int32_t count) {
+  asm volatile("__delay_%=: subs %[count], %[count], #1; bne __delay_%=\n" : "=r"(count) : [count] "0"(count) : "cc");
+}
 
 extern "C" void kmain() {
   MMIO::init();
   UART::init();
-  UART::puts("Hello, kernel World!\r\n");
 
-  struct GetBoardModelTag {
-    uint32_t tag = 0x00010001;
-    uint32_t tag_size = sizeof(GetBoardModelTag);
-    uint32_t board_model = 0;
-  }; // struct GetBoardModelTag
+  Device device;
+  LOG_INFO("Device initialization: {}", device.init());
 
-  struct GetBoardRevisionTag {
-    uint32_t tag = 0x00010002;
-    uint32_t tag_size = sizeof(GetBoardRevisionTag);
-    uint32_t board_revision = 0;
-  }; // struct GetBoardRevisionTag
+  LOG_INFO("Board model: {}", device.get_board_model());
+  LOG_INFO("Board revision: {}", device.get_board_revision());
+  LOG_INFO("Board serial: {}", device.get_board_serial());
+  LOG_INFO("ARM memory: {} bytes at {}", device.get_arm_memory_info().size, device.get_arm_memory_info().base_address);
+  LOG_INFO("VC memory: {} bytes at {}", device.get_vc_memory_info().size, device.get_vc_memory_info().base_address);
+  LOG_INFO("Temp: {} °C / {} °C", device.get_current_temp() / 1000.0f, device.get_max_temp() / 1000.0f);
 
-  struct GetBoardMACAddressTag {
-    uint32_t tag = 0x00010003;
-    uint32_t tag_size = sizeof(GetBoardMACAddressTag);
-    uint8_t mac_address[8] = { 0 };
-  }; // struct GetBoardRevisionTag
+  FrameBuffer& framebuffer = FrameBuffer::get();
+  if (!framebuffer.init(640, 480)) {
+    LOG_CRITICAL("failed to initialize framebuffer");
+  }
 
-  struct alignas(16) Request {
-    uint32_t buffer_size = 0;
-    uint32_t request = 0;
-    GetBoardModelTag board_model_tag;
-    GetBoardRevisionTag board_revision_tag;
-    GetBoardMACAddressTag board_mac_address_tag;
-    uint32_t end_tag = 0;
-  };
+  auto line_color = graphics::make_color(255, 125, 0, 128);
+  graphics::draw_line(50, 50, 200, 400, line_color);
+  graphics::fill_rect(70, 80, 100, 200, line_color);
 
-  Request request;
-  request.buffer_size = sizeof(Request);
-  MailBox::send(MailBox::Channel::TagArmToVC, (uint32_t)((uintptr_t)&request) >> 4);
-  MailBox::receive(MailBox::Channel::TagArmToVC);
+  auto text_color = graphics::make_color(20, 170, 200);
+  graphics::draw_text("OS> kill", text_color, 50, 50);
+  graphics::draw_text("OS> dump info", text_color, 50, 70);
+  graphics::draw_text("OS> test", text_color, 50, 90);
 
-  LOG_INFO("Board model: {}", request.board_model_tag.board_model);
-  LOG_INFO("Board revision: {}", request.board_revision_tag.board_revision);
-
-  while (true)
-    UART::write_one(UART::read_one());
+  while (true) {
+  }
 }
