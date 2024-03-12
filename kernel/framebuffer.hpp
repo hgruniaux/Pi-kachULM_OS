@@ -97,10 +97,10 @@ class FrameBuffer {
   bool set_virtual_offset(uint32_t x, uint32_t y);
 
   uint32_t* m_buffer = nullptr;
-  uint32_t m_buffer_size = 0;  // in bytes, the size of either front or back buffer
+  uint32_t m_buffer_size = 0;  // in count of uint32_t, the size of either front or back buffer
   uint32_t m_width = 0;        // in pixels
   uint32_t m_height = 0;       // in pixels
   uint32_t m_pitch = 0;        // length of a row, in pixels (this may be greater than the frame width)
-  bool is_front = true;
+  bool m_is_screen0 = true;    // display screen when using double buffering
   bool m_use_double_buffering = false;
 };  // class FrameBuffer

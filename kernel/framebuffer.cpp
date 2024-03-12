@@ -48,13 +48,13 @@ bool FrameBuffer::init(uint32_t width, uint32_t height) {
   // Allocate a virtual buffer double the size in case of double buffering.
   const uint32_t requested_virtual_height = m_use_double_buffering ? height * 2 : height;
 
-  PropertyMessage message;
+  PropertyMessage message = {};
   message.set_physical_size_tag.buffer.width = width;
   message.set_physical_size_tag.buffer.height = height;
   message.set_virtual_size_tag.buffer.width = width;
   message.set_virtual_size_tag.buffer.height = requested_virtual_height;
   message.set_depth_tag.buffer = 32;        // 32-bits per pixel (8-bits per component)
-  message.set_pixel_order_tag.buffer = 0;   // BGR (so we have 0xRRGGBB, yep this seems inverted but is not)
+  message.set_pixel_order_tag.buffer = 0;   // BGR (so we have 0xRRGGBB, yep, this seems inverted but is not)
   message.set_alpha_mode_tag.buffer = 0x0;  // 0 = fully opaque
   message.allocate_tag.buffer.alignment = alignof(max_align_t);  // Which value to choose?
   const bool success = MailBox::send_property(message);
@@ -68,11 +68,11 @@ bool FrameBuffer::init(uint32_t width, uint32_t height) {
   else
     m_height = message.set_virtual_size_tag.buffer.height;
   m_pitch = message.get_pitch_tag.buffer / sizeof(m_buffer[0]);
-  m_buffer_size = message.allocate_tag.buffer.response.size;
+  m_buffer_size = message.allocate_tag.buffer.response.size / sizeof(uint32_t);
   m_buffer = (uint32_t*)(uintptr_t)message.allocate_tag.buffer.response.base_address;
 
   // Initially clear the framebuffer with black color. In case the VideoCore gives us
-  // a no-initialized framebuffer.
+  // an uninitialized framebuffer.
   // This is called before double buffering initialization, so both the front and back
   // buffers are cleared.
   clear(0x00000000);
@@ -89,9 +89,10 @@ bool FrameBuffer::init(uint32_t width, uint32_t height) {
 
   if (m_use_double_buffering) {
     // Display the screen 0.
+    m_is_screen0 = true;
     set_virtual_offset(0, 0);
     // Switch to screen 1 (the back buffer)
-    m_buffer_size = m_height * m_pitch * (uint32_t)sizeof(uint32_t);
+    m_buffer_size = m_height * m_pitch;
     m_buffer += m_buffer_size;
   }
 
@@ -128,7 +129,7 @@ void FrameBuffer::present() {
   if (!m_use_double_buffering)
     return;
 
-  if (is_front) {
+  if (m_is_screen0) {
     // We are displaying screen0, switch to screen1.
     set_virtual_offset(0, m_height);
     // Swap back buffer <-> front buffer.
@@ -138,7 +139,7 @@ void FrameBuffer::present() {
     m_buffer += m_buffer_size;
   }
 
-  is_front = !is_front;
+  m_is_screen0 = !m_is_screen0;
 }
 
 bool FrameBuffer::set_virtual_offset(uint32_t x, uint32_t y) {
@@ -149,9 +150,10 @@ bool FrameBuffer::set_virtual_offset(uint32_t x, uint32_t y) {
 
   using SetVirtualOffsetTag = MailBox::PropertyTag<0x00048009, SetVirtualOffsetTagBuffer>;
 
-  MailBox::PropertyMessage<SetVirtualOffsetTag> message;
+  MailBox::PropertyMessage<SetVirtualOffsetTag> message = {};
   message.tag.buffer.x = x;
   message.tag.buffer.y = y;
   const bool success = MailBox::send_property(message);
-  return success && message.tag.buffer.x == x && message.tag.buffer.y == y;
+  return success && MailBox::check_tag_status(message.tag.status) && message.tag.buffer.x == x &&
+         message.tag.buffer.y == y;
 }
