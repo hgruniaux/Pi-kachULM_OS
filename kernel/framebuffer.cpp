@@ -116,15 +116,6 @@ void FrameBuffer::set_pixel(uint32_t x, uint32_t y, uint32_t color) {
   m_buffer[x + m_pitch * y] = color;
 }
 
-void FrameBuffer::fill_rect(uint32_t x, uint32_t y, uint32_t width, uint32_t height, uint32_t color) {
-  KASSERT(x < m_width && y < m_height && (x + width) <= m_width && (y + height) <= m_height);
-  for (uint32_t i = x; i < x + width; ++i) {
-    for (uint32_t j = y; j < y + height; ++j) {
-      set_pixel(i, j, color);
-    }
-  }
-}
-
 void FrameBuffer::present() {
   if (!m_use_double_buffering)
     return;
