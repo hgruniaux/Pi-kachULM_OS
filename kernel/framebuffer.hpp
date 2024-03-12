@@ -83,10 +83,16 @@ class FrameBuffer {
    * is enabled. Otherwise, this function does nothing. */
   void present();
 
+  /** @brief Gets the internal framebuffer buffer. */
+  [[nodiscard]] uint32_t* get_buffer() { return m_buffer; }
+  [[nodiscard]] const uint32_t* get_buffer() const { return m_buffer; }
+
   /** @brief Gets the framebuffer width, in pixels. */
   [[nodiscard]] uint32_t get_width() const { return m_width; }
   /** @brief Gets the framebuffer height, in pixels. */
   [[nodiscard]] uint32_t get_height() const { return m_height; }
+  /** @brief Gets the framebuffer pitch, in pixels. */
+  [[nodiscard]] uint32_t get_pitch() const { return m_pitch; }
 
  private:
   // Private constructor so there can be only once instance of Framebuffer
