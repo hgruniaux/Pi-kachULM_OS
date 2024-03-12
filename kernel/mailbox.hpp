@@ -36,6 +36,11 @@ struct alignas(16) PropertyMessage {
   uint32_t end_tag = 0;
 };  // struct PropertyMessage
 
+[[nodiscard]] static inline bool check_tag_status(uint32_t status) {
+  // bit 31 should be set to 1
+  return (status >> 31) == 1;
+}
+
 template <class Message>
 bool send_property(Message& message) {
   static_assert(alignof(Message) >= 16, "property messages must be 16-bytes aligned");
