@@ -4,7 +4,7 @@
 
 namespace UART {
 /** The UART clock frequency. Set to 3Mhz. */
-constexpr uint32_t UART_CLOCK = 3000000;
+//constexpr uint32_t UART_CLOCK = 3000000; // unused
 
 // Loop <delay> times in a way that the compiler won't optimize away
 static inline void delay(int32_t count) {

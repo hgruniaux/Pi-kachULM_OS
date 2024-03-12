@@ -1,5 +1,5 @@
 set(CMAKE_SYSTEM_NAME Generic)
-set(CMAKE_SYSTEM_PROCESSOR arm)
+set(CMAKE_SYSTEM_PROCESSOR aarch64)
 
 set(GCC_PREFIX aarch64-linux-gnu- CACHE STRING "Prefix added to each GNU binutils and GCC invocations")
 set(GCC_SUFFIX -13 CACHE STRING "Suffix added to each GNU binutils and GCC invocations")
@@ -10,6 +10,8 @@ set(CMAKE_OBJCOPY ${GCC_PREFIX}objcopy)
 
 set(CMAKE_C_COMPILER_ID GNU)
 set(CMAKE_CXX_COMPILER_ID GNU)
+
+# Do no test the toolchain
 set(CMAKE_C_COMPILER_FORCED TRUE)
 set(CMAKE_CXX_COMPILER_FORCED TRUE)
 
@@ -24,5 +26,5 @@ execute_process(
         OUTPUT_STRIP_TRAILING_WHITESPACE
 )
 
-string(REGEX REPLACE "[ \n\t]+" ";" INCLUDE_COMPILER_HEADERS ${COMPILER_HEADERS})
+string(REGEX REPLACE "[ \n\t]+" ";" INCLUDE_COMPILER_HEADERS "${COMPILER_HEADERS}")
 set(CMAKE_CXX_STANDARD_INCLUDE_DIRECTORIES ${INCLUDE_COMPILER_HEADERS})

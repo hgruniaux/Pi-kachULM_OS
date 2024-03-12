@@ -17,7 +17,7 @@ static constexpr uint32_t BASE1 = BASE + 0x20;
 /** The read/write register address for the mailbox 0. */
 static constexpr uint32_t MBOX1_RW = BASE1 + 0x00;
 /** The status register address for the mailbox 0. */
-static constexpr uint32_t MBOX1_STATUS = BASE1 + 0x18;
+//static constexpr uint32_t MBOX1_STATUS = BASE1 + 0x18; // unused
 
 static constexpr uint32_t CHANNEL_BITS = 4;
 static constexpr uint32_t CHANNEL_MASK = (1 << CHANNEL_BITS) - 1;

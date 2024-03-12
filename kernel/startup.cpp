@@ -51,7 +51,7 @@ void call_fini_array() {
 }
 
 // This function is defined in kernel.cpp. It is the real entry point of the kernel.
-extern "C" void kmain();
+extern "C" [[noreturn]] void kmain();
 
 /** The C and C++ world entry point. It is called from the boot.S assembly script. */
 extern "C" void _startup() {
