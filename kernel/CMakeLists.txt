@@ -37,6 +37,10 @@ target_compile_options(kernel PRIVATE -ffreestanding -nostdlib)
 # Disable exceptions and RTTI in C++
 target_compile_options(kernel PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions -fno-rtti>)
 
+# Use relative paths in __FILE__ macros and debug information.
+# This allow smaller and more readable logs.
+target_compile_options(kernel PRIVATE -ffile-prefix-map=${CMAKE_SOURCE_DIR}/=./)
+
 # Extracting the elf file to a binary one
 add_custom_target(kernel-img
         COMMAND ${CMAKE_OBJCOPY} -O binary ${CMAKE_CURRENT_BINARY_DIR}/kernel8.elf ${CMAKE_CURRENT_BINARY_DIR}/kernel8.img
