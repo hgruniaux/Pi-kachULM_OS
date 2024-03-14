@@ -11,7 +11,7 @@ static inline void delay(int32_t count) {
   asm volatile("__delay_%=: subs %[count], %[count], #1; bne __delay_%=\n" : "=r"(count) : [count] "0"(count) : "cc");
 }
 
-extern "C" void kmain() {
+extern "C" [[noreturn]] void kmain() {
   MMIO::init();
   UART::init();
 
@@ -30,14 +30,20 @@ extern "C" void kmain() {
     LOG_CRITICAL("failed to initialize framebuffer");
   }
 
-  auto line_color = graphics::make_color(255, 125, 0, 128);
-  graphics::draw_line(50, 50, 200, 400, line_color);
-  graphics::fill_rect(70, 80, 100, 200, line_color);
+  const uint32_t fb_width = framebuffer.get_width();
+  const uint32_t fb_height = framebuffer.get_height();
 
-  auto text_color = graphics::make_color(20, 170, 200);
-  graphics::draw_text("OS> kill", text_color, 50, 50);
-  graphics::draw_text("OS> dump info", text_color, 50, 70);
-  graphics::draw_text("OS> test", text_color, 50, 90);
+  graphics::Painter painter;
+
+  const char* text = "Hello kernel World from Graphics!";
+  const PKFFile font = painter.get_font();
+  const uint32_t text_width = font.get_horizontal_advance(text);
+  const uint32_t text_height = font.get_char_height();
+
+  // Draw the text at the middle of screen
+  painter.clear(graphics::Color::WHITE);
+  painter.set_pen(graphics::Color::BLACK);
+  painter.draw_text((fb_width - text_width) / 2, (fb_height - text_height) / 2, text);
 
   while (true) {
   }
