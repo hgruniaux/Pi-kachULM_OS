@@ -24,12 +24,12 @@ template <class T>
   return ((x + multiple - 1) / multiple) * multiple;
 }
 
-Painter::Painter() {
+Painter::Painter() : m_font(fonts_myfont_pkf) {
   auto& fb = FrameBuffer::get();
   create(fb.get_buffer(), fb.get_width(), fb.get_height(), fb.get_pitch());
 }
 
-Painter::Painter(uint32_t* buffer, uint32_t width, uint32_t height, uint32_t pitch) {
+Painter::Painter(uint32_t* buffer, uint32_t width, uint32_t height, uint32_t pitch) : m_font(fonts_myfont_pkf) {
   create(buffer, width, height, pitch);
 }
 
@@ -158,15 +158,13 @@ uint32_t Painter::draw_text(uint32_t x, uint32_t y, uint32_t w, const char* text
 }
 
 uint32_t Painter::draw_text(uint32_t x, uint32_t y, uint32_t w, const char* text, Color color) {
-  PKFFile font = PKFFile(fonts_myfont_pkf);
-
   uint32_t current_x = x;
   uint32_t current_y = y;
 
-  const uint32_t char_width = font.get_char_width();
-  const uint32_t char_height = font.get_char_height();
-  const uint32_t advance = font.get_horizontal_advance();
-  const uint32_t line_height = font.get_line_height();
+  const uint32_t char_width = m_font.get_char_width();
+  const uint32_t char_height = m_font.get_char_height();
+  const uint32_t advance = m_font.get_horizontal_advance();
+  const uint32_t line_height = m_font.get_line_height();
 
   for (const char* it = text; *it != '\0'; ++it) {
     const char ch = *it;
@@ -183,7 +181,7 @@ uint32_t Painter::draw_text(uint32_t x, uint32_t y, uint32_t w, const char* text
         current_y += line_height;
       }
 
-      const uint8_t* glyph = font.get_glyph(ch);
+      const uint8_t* glyph = m_font.get_glyph(ch);
       draw_alpha_map(current_x, current_y, glyph, char_width, char_height, color);
       current_x += advance;
     } else {
