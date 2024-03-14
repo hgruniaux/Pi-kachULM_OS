@@ -35,7 +35,7 @@ target_compile_options(kernel PRIVATE ${CPU_OPTIONS})
 target_compile_options(kernel PRIVATE -ffreestanding -nostdlib)
 
 # Disable exceptions and RTTI in C++
-target_compile_options(kernel PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions -fno-rtti>)
+target_compile_options(kernel PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions -fno-rtti -fno-builtin>)
 
 # Use relative paths in __FILE__ macros and debug information.
 # This allow smaller and more readable logs.

@@ -6,14 +6,22 @@
 #include "mmio.hpp"
 #include "uart.hpp"
 
-// Loop <delay> times in a way that the compiler won't optimize away
-static inline void delay(int32_t count) {
-  asm volatile("__delay_%=: subs %[count], %[count], #1; bne __delay_%=\n" : "=r"(count) : [count] "0"(count) : "cc");
+// To move in a distinct file with the libk++
+extern "C" void* memset(void* dest, int ch, size_t count) {
+  auto* p = static_cast<unsigned char*>(dest);
+  auto* p_end = static_cast<unsigned char*>(dest) + count;
+
+  while (p != p_end) {
+    *(p++) = static_cast<unsigned char>(ch);
+  }
+
+  return dest;
 }
 
 extern "C" [[noreturn]] void kmain() {
   MMIO::init();
   UART::init();
+  UART::puts("Hello, kernel World from UART!\r\n");
 
   Device device;
   LOG_INFO("Device initialization: {}", device.init());
@@ -46,5 +54,6 @@ extern "C" [[noreturn]] void kmain() {
   painter.draw_text((fb_width - text_width) / 2, (fb_height - text_height) / 2, text);
 
   while (true) {
+    UART::write_one(UART::read_one());
   }
 }

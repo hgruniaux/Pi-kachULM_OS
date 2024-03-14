@@ -1,7 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
 
-include(cmake/GCCToolchain.cmake)
-
 project(Pi-kachULM_OS LANGUAGES CXX ASM)
 
 set(RASPI_VERSION 3 CACHE STRING "The target Raspberry Pi version (either 3 or 4)")
