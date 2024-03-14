@@ -10,10 +10,10 @@ add_executable(kernel boot.S
         device.cpp
         framebuffer.hpp
         framebuffer.cpp
-        graphics/pkf.hpp
-        graphics/pkf.cpp
+        graphics/pkfont.hpp
+        graphics/pkfont.cpp
 
-        ../fonts/myfont.cpp
+        ../fonts/firacode_16.cpp
         graphics/graphics.hpp
         graphics/graphics.cpp
 )

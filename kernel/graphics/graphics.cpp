@@ -2,7 +2,7 @@
 #include "../framebuffer.hpp"
 #include "pkfont.hpp"
 
-extern const uint8_t fonts_myfont_pkf[100];
+extern const uint8_t firacode_16_pkf[100];
 
 namespace graphics {
 [[gnu::always_inline, nodiscard]] static inline int32_t abs(int32_t x) {
@@ -24,12 +24,12 @@ template <class T>
   return ((x + multiple - 1) / multiple) * multiple;
 }
 
-Painter::Painter() : m_font(fonts_myfont_pkf) {
+Painter::Painter() : m_font(firacode_16_pkf) {
   auto& fb = FrameBuffer::get();
   create(fb.get_buffer(), fb.get_width(), fb.get_height(), fb.get_pitch());
 }
 
-Painter::Painter(uint32_t* buffer, uint32_t width, uint32_t height, uint32_t pitch) : m_font(fonts_myfont_pkf) {
+Painter::Painter(uint32_t* buffer, uint32_t width, uint32_t height, uint32_t pitch) : m_font(firacode_16_pkf) {
   create(buffer, width, height, pitch);
 }
 
