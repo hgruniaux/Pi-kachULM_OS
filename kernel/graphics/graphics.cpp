@@ -165,7 +165,7 @@ uint32_t Painter::draw_text(uint32_t x, uint32_t y, uint32_t w, const char* text
 
   const uint32_t char_width = font.get_char_width();
   const uint32_t char_height = font.get_char_height();
-  const uint32_t advance = font.get_advance();
+  const uint32_t advance = font.get_horizontal_advance();
   const uint32_t line_height = font.get_line_height();
 
   for (const char* it = text; *it != '\0'; ++it) {
