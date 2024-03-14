@@ -2,7 +2,7 @@
 #include "device.hpp"
 #include "framebuffer.hpp"
 #include "graphics/graphics.hpp"
-#include "graphics/pkf.hpp"
+#include "graphics/pkfont.hpp"
 #include "mmio.hpp"
 #include "uart.hpp"
 
@@ -36,7 +36,7 @@ extern "C" [[noreturn]] void kmain() {
   graphics::Painter painter;
 
   const char* text = "Hello kernel World from Graphics!";
-  const PKFFile font = painter.get_font();
+  const PKFont font = painter.get_font();
   const uint32_t text_width = font.get_horizontal_advance(text);
   const uint32_t text_height = font.get_char_height();
 

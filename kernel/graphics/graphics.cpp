@@ -1,6 +1,6 @@
 #include "graphics.hpp"
 #include "../framebuffer.hpp"
-#include "pkf.hpp"
+#include "pkfont.hpp"
 
 extern const uint8_t fonts_myfont_pkf[100];
 
@@ -169,7 +169,7 @@ uint32_t Painter::draw_text(uint32_t x, uint32_t y, uint32_t w, const char* text
   for (const char* it = text; *it != '\0'; ++it) {
     const char ch = *it;
 
-    if (ch >= PKFFile::FIRST_CHARACTER && ch <= PKFFile::LAST_CHARACTER) {
+    if (ch >= PKFont::FIRST_CHARACTER && ch <= PKFont::LAST_CHARACTER) {
       // Early clipping
       if (current_x > m_clipping.x_max)
         continue;

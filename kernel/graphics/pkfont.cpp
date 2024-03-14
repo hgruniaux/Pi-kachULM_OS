@@ -1,8 +1,8 @@
-#include "pkf.hpp"
+#include "pkfont.hpp"
 
 #include <cstddef>
 
-uint32_t PKFFile::get_horizontal_advance(const char* text, uint32_t length) const {
+uint32_t PKFont::get_horizontal_advance(const char* text, uint32_t length) const {
   if (length == UINT32_MAX) {
     // FIXME: replace this with strlen()
     length = 0;
@@ -16,7 +16,7 @@ uint32_t PKFFile::get_horizontal_advance(const char* text, uint32_t length) cons
   return get_horizontal_advance() * length;
 }
 
-uint32_t PKFFile::get_width(const char* text, uint32_t length) const {
+uint32_t PKFont::get_width(const char* text, uint32_t length) const {
   if (length == UINT32_MAX) {
     // FIXME: replace this with strlen()
     length = 0;
@@ -30,7 +30,7 @@ uint32_t PKFFile::get_width(const char* text, uint32_t length) const {
   return get_char_width() * length;
 }
 
-const uint8_t* PKFFile::get_glyph(char code) const {
+const uint8_t* PKFont::get_glyph(char code) const {
   if (code < FIRST_CHARACTER || code > LAST_CHARACTER)
     return nullptr;  // the font does not contain this glyph
 

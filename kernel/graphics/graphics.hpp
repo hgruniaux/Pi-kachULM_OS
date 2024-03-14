@@ -2,7 +2,7 @@
 
 #include <cstdint>
 
-#include "pkf.hpp"
+#include "pkfont.hpp"
 
 namespace graphics {
 /** @brief Represents a ARGB color that can be used in the Kernel graphics API. */
@@ -88,9 +88,9 @@ class Painter {
   void set_pen(uint8_t r, uint8_t g, uint8_t b, uint8_t a = 0xff) { set_pen(make_color(r, g, b, a)); }
 
   /** @brief Gets the current font used to draw text. */
-  [[nodiscard]] PKFFile get_font() const { return m_font; }
+  [[nodiscard]] PKFont get_font() const { return m_font; }
   /** @brief Sets the font to draw text to @a font. */
-  void set_font(PKFFile font) { m_font = font; }
+  void set_font(PKFont font) { m_font = font; }
 
   /** @brief Clears the framebuffer with the given @a clear_color. */
   void clear(Color clear_color = make_color(0, 0, 0));
@@ -132,7 +132,7 @@ class Painter {
     uint32_t y_max;
   };  // struct BBox
 
-  PKFFile m_font;
+  PKFont m_font;
   uint32_t* m_buffer;  // framebuffer, in 0xAARRGGBB format
   uint32_t m_width;    // width of the framebuffer, in pixels
   uint32_t m_height;   // height of the framebuffer, in pixels

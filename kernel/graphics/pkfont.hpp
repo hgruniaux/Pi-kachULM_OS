@@ -13,7 +13,7 @@ struct alignas(16) PKFHeader {
   uint32_t line_height;
 };  // struct PKFHeader
 
-class PKFFile {
+class PKFont {
  public:
   /** @brief First ASCII character included in the font. */
   static constexpr uint8_t FIRST_CHARACTER = 0x21;
@@ -24,7 +24,7 @@ class PKFFile {
    *
    * The length of the @a buffer is implicit. Moreover, this function expect
    * the @a buffer is well-defined (the function is not safe). */
-  constexpr PKFFile(const uint8_t* buffer) : m_buffer(buffer) {}
+  constexpr PKFont(const uint8_t* buffer) : m_buffer(buffer) {}
 
   /** @brief Gets the width of a character in pixels.
    *
@@ -75,4 +75,4 @@ class PKFFile {
 
  private:
   const uint8_t* m_buffer;
-};  // class PKFFile
+};  // class PKFont
