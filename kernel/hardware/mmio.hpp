@@ -13,12 +13,9 @@ void init();
   // The GCC warning can be ignored because the address "BASE + reg"
   // can always be represented by a 32-bit pointer. And we need to keep pointers
   // to uint32_t because MMIO registers are 32-bits width.
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wint-to-pointer-cast"
   // We need to keep volatile to avoid the compiler
   // to optimize out the memory write.
-  *(volatile uint32_t*)(BASE + reg) = value;
-#pragma GCC diagnostic pop
+  *(volatile uint32_t*)(uintptr_t)(BASE + reg) = value;
 }
 
 /** Reads from the memory-mapped IO @a reg register. */
@@ -26,11 +23,8 @@ void init();
   // The GCC warning can be ignored because the address "BASE + reg"
   // can always be represented by a 32-bit pointer. And we need to keep pointers
   // to uint32_t because MMIO registers are 32-bits width.
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wint-to-pointer-cast"
   // We need to keep volatile to avoid the compiler
   // to optimize out the memory read.
-  return *(volatile uint32_t*)(BASE + reg);
-#pragma GCC diagnostic pop
+  return *(volatile uint32_t*)(uintptr_t)(BASE + reg);
 }
 };  // namespace MMIO
