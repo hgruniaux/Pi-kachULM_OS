@@ -19,11 +19,6 @@ template <class T>
   return (x < y) ? y : x;
 }
 
-/** @brief Rounds @a x to the next multiple of @a multiple. */
-[[gnu::always_inline, nodiscard]] static uint32_t round_up(uint32_t x, uint32_t multiple) {
-  return ((x + multiple - 1) / multiple) * multiple;
-}
-
 Painter::Painter() : m_font(firacode_16_pkf) {
   auto& fb = FrameBuffer::get();
   create(fb.get_buffer(), fb.get_width(), fb.get_height(), fb.get_pitch());
