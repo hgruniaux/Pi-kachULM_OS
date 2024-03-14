@@ -19,7 +19,7 @@ template <class T>
   return (x < y) ? y : x;
 }
 
-/** Rounds @x to the next multiple of @a multiple. */
+/** @brief Rounds @a x to the next multiple of @a multiple. */
 [[gnu::always_inline, nodiscard]] static uint32_t round_up(uint32_t x, uint32_t multiple) {
   return ((x + multiple - 1) / multiple) * multiple;
 }
