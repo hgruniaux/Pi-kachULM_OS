@@ -5,7 +5,7 @@
 
 namespace MINI_UART {
 /** Initializes Mini UART. */
-void init(uint32_t baudrate);
+void init(uint64_t baud_rate);
 /** Writes the given @a value into Mini UART. */
 void write_one(uint8_t value);
 /** Reads a single byte from UART1. */
@@ -18,4 +18,4 @@ void read(uint8_t* buffer, size_t buffer_length);
 /** Same as write() but takes a C NUL-terminated string.
  * Note that to print a new line, you must emit CR LF instead of only LF. */
 void puts(const char* buffer);
-};  // namespace UART
+};  // namespace MINI_UART

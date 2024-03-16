@@ -7,24 +7,28 @@
 // Offset from the peripheral base, taken from BCM2835-ARM-Peripherals.pdf, page 90-91
 
 static constexpr int32_t GPFSEL = 0x200000;  // GPIO Function Select Base
-                                             // GPFSEL + 0  = 0x200000, GPIO Function Select 0
-                                             // GPFSEL + 4  = 0x200004, GPIO Function Select 1
-                                             // GPFSEL + 8  = 0x200008, GPIO Function Select 2
-                                             // GPFSEL + 12 = 0x20000C, GPIO Function Select 3
-                                             // GPFSEL + 16 = 0x200010, GPIO Function Select 4
-                                             // GPFSEL + 20 = 0x200014, GPIO Function Select 5
+
+// GPFSEL + 0  = 0x200000, GPIO Function Select 0
+// GPFSEL + 4  = 0x200004, GPIO Function Select 1
+// GPFSEL + 8  = 0x200008, GPIO Function Select 2
+// GPFSEL + 12 = 0x20000C, GPIO Function Select 3
+// GPFSEL + 16 = 0x200010, GPIO Function Select 4
+// GPFSEL + 20 = 0x200014, GPIO Function Select 5
 
 static constexpr int32_t GPSET = 0x20001C;  // GPIO Pin Output Set Base
-                                            //  GPSET + 0 = 0x20001C, GPIO Pin Output Set 0
-                                            //  GPSET + 4 = 0x200020, GPIO Pin Output Set 1
+
+//  GPSET + 0 = 0x20001C, GPIO Pin Output Set 0
+//  GPSET + 4 = 0x200020, GPIO Pin Output Set 1
 
 static constexpr int32_t GPCLR = 0x200028;  // GPIO Pin Output Clear Base
-                                            //  GPCLR + 0 = 0x200028, GPIO Pin Output Clear 1
-                                            //  GPCLR + 4 = 0x20002C, GPIO Pin Output Clear 1
+
+//  GPCLR + 0 = 0x200028, GPIO Pin Output Clear 1
+//  GPCLR + 4 = 0x20002C, GPIO Pin Output Clear 1
 
 static constexpr int32_t GPLEV = 0x200034;  // GPIO Pin Level Base
-                                            //  GPLEV + 0 = 0x200034, GPIO Pin Level 0
-                                            //  GPLEV + 4 = 0x200038, GPIO Pin Level 1
+
+//  GPLEV + 0 = 0x200034, GPIO Pin Level 0
+//  GPLEV + 4 = 0x200038, GPIO Pin Level 1
 
 // static constexpr int32_t GPEDS = 0x200040;  // GPIO Pin Event Detect Status Base
 //  GPEDS + 0 = 0x200040, GPIO Pin Event Detect Status 0
@@ -57,6 +61,7 @@ static constexpr int32_t GPLEV = 0x200034;  // GPIO Pin Level Base
 static constexpr int32_t GPPUD = 0x200094;  // GPIO Pin Pull-up/down Enable
 
 static constexpr int32_t GPPUDCLK = 0x200098;  // GPIO Pin Pull-up/down Enable Clock
+
 //  GPPUDCLK + 0 = 0x200098, GPIO Pin Pull-up/down Enable Clock 0
 //  GPPUDCLK + 4 = 0x20009C, GPIO Pin Pull-up/down Enable Clock 1
 

@@ -1,7 +1,8 @@
 #include "mmio.hpp"
+#include <cstdint>
 
 namespace MMIO {
-uint32_t BASE;
+uint64_t BASE;
 
 void init() {
   // TODO: Change BASE to 0xFE000000 when under Raspiberry PI 4
