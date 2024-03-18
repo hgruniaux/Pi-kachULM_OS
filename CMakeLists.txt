@@ -33,4 +33,5 @@ if (${ENABLE_CHECKS})
     endif ()
 endif ()
 
+add_subdirectory(libk)
 add_subdirectory(kernel)
