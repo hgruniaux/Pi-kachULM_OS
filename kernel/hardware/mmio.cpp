@@ -1,7 +1,8 @@
 #include "mmio.hpp"
+#include <cstdint>
 
 namespace MMIO {
-uint32_t BASE;
+uint64_t BASE;
 
 void init() {
 #if RASPI_VERSION == 3

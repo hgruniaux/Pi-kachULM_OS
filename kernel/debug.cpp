@@ -1,5 +1,5 @@
 #include "debug.hpp"
-#include "uart.hpp"
+#include "hardware/uart.hpp"
 
 namespace debug {
 // We don't use DEBUG_IMPL_LOGGER(default) because we wants a nullptr logger name. So it is not displayed by vlog().

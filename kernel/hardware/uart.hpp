@@ -4,8 +4,8 @@
 #include <cstdint>
 
 namespace UART {
-/** Initializes the UART0 channel. */
-void init();
+/** Initializes the PL011 UART0 channel. */
+void init(uint32_t baud_rate);
 /** Writes the given @a value into UART0. */
 void write_one(uint8_t value);
 /** Reads a single byte from UART0. */
