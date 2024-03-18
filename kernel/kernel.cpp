@@ -31,7 +31,7 @@ extern "C" [[noreturn]] void kmain() {
   LOG_INFO("Board serial: {}", device.get_board_serial());
   LOG_INFO("ARM memory: {} bytes at {}", device.get_arm_memory_info().size, device.get_arm_memory_info().base_address);
   LOG_INFO("VC memory: {} bytes at {}", device.get_vc_memory_info().size, device.get_vc_memory_info().base_address);
-  LOG_INFO("Temp: {} °C / {} °C", device.get_current_temp() / 1000.0f, device.get_max_temp() / 1000.0f);
+//  LOG_INFO("Temp: {} °C / {} °C", device.get_current_temp() / 1000.0f, device.get_max_temp() / 1000.0f);
 
   FrameBuffer& framebuffer = FrameBuffer::get();
   if (!framebuffer.init(640, 480)) {

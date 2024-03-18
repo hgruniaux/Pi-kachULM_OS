@@ -1,4 +1,5 @@
 #include "mailbox.hpp"
+#include <cstdint>
 #include "../debug.hpp"
 #include "mmio.hpp"
 

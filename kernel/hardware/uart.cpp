@@ -30,34 +30,34 @@ static constexpr int32_t UART0_LCRH = UART0_BASE + 0x2c;
 static constexpr int32_t UART0_CR = UART0_BASE + 0x30;
 
 /** UART0 Interrupt FIFO Level Select Register (size: 32) */
-static constexpr int32_t UART0_IFLS = UART0_BASE + 0x34;
+// static constexpr int32_t UART0_IFLS = UART0_BASE + 0x34;
 
 /** UART0 Interrupt Mask Set Clear Register (size: 32) */
-static constexpr int32_t UART0_IMSC = UART0_BASE + 0x38;
+// static constexpr int32_t UART0_IMSC = UART0_BASE + 0x38;
 
 /** UART0 Raw Interrupt Status Register (size: 32) */
-static constexpr int32_t UART0_RIS = UART0_BASE + 0x3c;
+// static constexpr int32_t UART0_RIS = UART0_BASE + 0x3c;
 
 /** UART0 Masked Interrupt Status Register (size: 32) */
-static constexpr int32_t UART0_MIS = UART0_BASE + 0x40;
+// static constexpr int32_t UART0_MIS = UART0_BASE + 0x40;
 
 /** UART0 Interrupt Clear Register (size: 32) */
-static constexpr int32_t UART0_ICR = UART0_BASE + 0x44;
+// static constexpr int32_t UART0_ICR = UART0_BASE + 0x44;
 
 /** UART0 DMA Control Register (size: 32) */
-static constexpr int32_t UART0_DMACR = UART0_BASE + 0x48;
+// static constexpr int32_t UART0_DMACR = UART0_BASE + 0x48;
 
 /** UART0 Test Control Register (size: 32) */
-static constexpr int32_t UART0_ITCR = UART0_BASE + 0x80;
+// static constexpr int32_t UART0_ITCR = UART0_BASE + 0x80;
 
 /** UART0 Integration Test Input Register (size: 32) */
-static constexpr int32_t UART0_ITIP = UART0_BASE + 0x84;
+// static constexpr int32_t UART0_ITIP = UART0_BASE + 0x84;
 
 /** UART0 Integration Test Output Register (size: 32) */
-static constexpr int32_t UART0_ITOP = UART0_BASE + 0x88;
+// static constexpr int32_t UART0_ITOP = UART0_BASE + 0x88;
 
 /** UART0 Test Data Register (size: 32) */
-static constexpr int32_t UART0_TDR = UART0_BASE + 0x8c;
+// static constexpr int32_t UART0_TDR = UART0_BASE + 0x8c;
 
 void init(uint32_t baud_rate) {
   // Set the UART Clock to 4MHz
@@ -79,9 +79,6 @@ void init(uint32_t baud_rate) {
   GPIO::set_mode(GPIO::Pin::BCM14, GPIO::Mode::ALT0);
   GPIO::set_mode(GPIO::Pin::BCM15, GPIO::Mode::ALT0);
 
-  // Clear pending interrupts.
-  MMIO::write(UART0_ICR, 0x7FF);
-
   // IntegerPart = clock / (16 * baud rate)   <- Integer division
   // FractionalPart = 64 * (clock % (16 * baud rate)) / (16 * baud rate) = 4 * (clock % (16 * baud rate)) / (baud rate)
   const uint32_t integer_part = msg.tag.buffer.rate / (16 * baud_rate);
@@ -91,9 +88,6 @@ void init(uint32_t baud_rate) {
 
   // Enable FIFO & 8 bit data transmission (1 stop bit, no parity).
   MMIO::write(UART0_LCRH, (1 << 4) | (1 << 5) | (1 << 6));
-
-  // Mask all interrupts.
-  MMIO::write(UART0_IMSC, (1 << 1) | (1 << 4) | (1 << 5) | (1 << 6) | (1 << 7) | (1 << 8) | (1 << 9) | (1 << 10));
 
   // Enable UART0, receive & transfer part of UART.
   MMIO::write(UART0_CR, (1 << 0) | (1 << 8) | (1 << 9));

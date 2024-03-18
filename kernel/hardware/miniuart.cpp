@@ -73,12 +73,12 @@ void init(uint32_t baud_rate) {
   MMIO::write(AUX_MU_CNTL_REG, 3);
 }
 
-void write_one(uint8_t c) {
+void write_one(uint8_t value) {
   while ((MMIO::read(AUX_MU_LSR_REG) & 0x20) == 0) {
     // sleep
   }
 
-  MMIO::write(AUX_MU_IO_REG, c);
+  MMIO::write(AUX_MU_IO_REG, value);
 }
 
 uint8_t read_one() {

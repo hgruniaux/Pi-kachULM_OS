@@ -1,25 +1,10 @@
 #include "device.hpp"
+#include <cstddef>
 #include <cstdint>
 #include "debug.hpp"
 #include "hardware/mailbox.hpp"
 
-// To move in a distinct file with the libk++
-extern "C" void* memcpy(void* dest, const void* src, size_t count) {
-  const uint8_t* p_src = (const uint8_t*)src;
-  uint8_t* p_dst = (uint8_t*)dest;
-  uint8_t* p_end = p_dst + count;
-
-  while (p_dst != p_end) {
-    *(p_dst++) = *(p_src++);
-  }
-
-  return dest;
-}
-
 bool Device::init() {
-  // Tag buffers must be aligned to 32-bits. But uint64_t requires a minimal
-  // alignment of 64-bits. Therefore, we use __attribute__((packed)) to force
-  // the 4-bytes alignment.
   struct GetBoardSerialTagBuffer {
     uint8_t serial_data[8];
   };
@@ -58,14 +43,9 @@ bool Device::init() {
   m_board_model = message.board_model_tag.buffer;
   m_board_revision = message.board_revision_tag.buffer;
 
-  union {
-    uint8_t serial_data[8];
-    uint64_t serial;
-  } m;
-  for (int i = 0; i < 8; ++i) {
-        m.serial_data[i] = message.board_serial_tag.buffer.serial_data[i];
+  for (size_t i = 0; i < 8; ++i) {
+    m_board_serial.serial_data[i] = message.board_serial_tag.buffer.serial_data[i];
   }
-  m_board_serial = m.serial;
 
   m_arm_memory_info.size = message.arm_memory_tag.buffer.size;
   m_arm_memory_info.base_address = message.arm_memory_tag.buffer.base_address;

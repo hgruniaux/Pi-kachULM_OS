@@ -31,7 +31,7 @@ class Device {
 
   [[nodiscard]] uint32_t get_board_model() const { return m_board_model; }
   [[nodiscard]] uint32_t get_board_revision() const { return m_board_revision; }
-  [[nodiscard]] uint64_t get_board_serial() const { return m_board_serial; }
+  [[nodiscard]] uint64_t get_board_serial() const { return m_board_serial.serial; }
 
   /** @brief The two onboard supported LEDs. */
   enum class Led : uint8_t {
@@ -85,7 +85,10 @@ class Device {
   // Cached values:
   MemoryInfo m_arm_memory_info = {};
   MemoryInfo m_vc_memory_info = {};
-  uint64_t m_board_serial;
+  union {
+    uint8_t serial_data[8];
+    uint64_t serial;
+  } m_board_serial;
   uint32_t m_board_model;
   uint32_t m_board_revision;
   uint32_t m_max_temp;

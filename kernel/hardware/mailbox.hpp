@@ -22,18 +22,18 @@ void send(Channel channel, uint32_t message);
 
 template <uint32_t Id, class Buffer>
 struct alignas(alignof(uint32_t)) PropertyTag {
-  uint32_t id = Id;
-  uint32_t buffer_size = sizeof(Buffer);
+  [[maybe_unused]] uint32_t id = Id;
+  [[maybe_unused]] uint32_t buffer_size = sizeof(Buffer);
   volatile uint32_t status = 0;  // Can be modified by the GPU
   volatile Buffer buffer = {};   // Can be modified by the GPU
 };
 
 template <class Tag>
 struct alignas(16) PropertyMessage {
-  uint32_t buffer_size = sizeof(PropertyMessage);
+  [[maybe_unused]] uint32_t buffer_size = sizeof(PropertyMessage);
   volatile uint32_t status = 0;  // Can be modified by the GPU
   volatile Tag tag = {};         // Can be modified by the GPU
-  uint32_t end_tag = 0;
+  [[maybe_unused]] uint32_t end_tag = 0;
 };
 
 [[nodiscard]] static inline bool check_tag_status(uint32_t status) {
