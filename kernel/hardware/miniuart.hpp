@@ -5,7 +5,7 @@
 
 namespace MINI_UART {
 /** Initializes Mini UART. */
-void init(uint64_t baud_rate);
+void init(uint32_t baud_rate);
 /** Writes the given @a value into Mini UART. */
 void write_one(uint8_t value);
 /** Reads a single byte from UART1. */

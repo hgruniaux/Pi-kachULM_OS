@@ -7,7 +7,7 @@
 
 namespace MINI_UART {
 /** Auxiliary Interrupt status (size: 3) */
-static constexpr int32_t AUX_IRQ = 0x215000;
+// static constexpr int32_t AUX_IRQ = 0x215000;
 
 /** Auxiliary enables (size: 3) */
 static constexpr int32_t AUX_ENABLES = 0x215004;
@@ -19,7 +19,7 @@ static constexpr int32_t AUX_MU_IO_REG = 0x215040;
 static constexpr int32_t AUX_MU_IER_REG = 0x215044;
 
 /** Mini UART Interrupt Identify (size: 8) */
-static constexpr int32_t AUX_MU_IIR_REG = 0x215048;
+// static constexpr int32_t AUX_MU_IIR_REG = 0x215048;
 
 /** Mini UART Line Control (size: 8) */
 static constexpr int32_t AUX_MU_LCR_REG = 0x21504C;
@@ -30,17 +30,8 @@ static constexpr int32_t AUX_MU_MCR_REG = 0x215050;
 /** Mini UART Line Status (size: 8) */
 static constexpr int32_t AUX_MU_LSR_REG = 0x215054;
 
-/** Mini UART Modem Status (size: 8) */
-static constexpr int32_t AUX_MU_MSR_REG = 0x215058;
-
-/** Mini UART Scratch (size: 8) */
-static constexpr int32_t AUX_MU_SCRATCH = 0x21505C;
-
 /** Mini UART Extra Control (size: 8) */
 static constexpr int32_t AUX_MU_CNTL_REG = 0x215060;
-
-/** Mini UART Extra Status (size: 32) */
-static constexpr int32_t AUX_MU_STAT_REG = 0x215064;
 
 /** Mini UART Baud rate (size: 16) */
 static constexpr int32_t AUX_MU_BAUD_REG = 0x215068;
@@ -51,7 +42,7 @@ static constexpr uint64_t CORE_CLOCK = 250'000'000;
 static constexpr uint64_t CORE_CLOCK = 200'000'000;
 #endif
 
-void init(uint64_t baud_rate) {
+void init(uint32_t baud_rate) {
   // We deactivate Pull Up/Down fot the pins 14 and 15
   GPIO::set_pull_up_down(GPIO::Pin::BCM14, GPIO::PUD_Mode::Off);
   GPIO::set_pull_up_down(GPIO::Pin::BCM15, GPIO::PUD_Mode::Off);
@@ -76,7 +67,7 @@ void init(uint64_t baud_rate) {
   MMIO::write(AUX_MU_MCR_REG, 0);
 
   // Set baud rate
-  MMIO::write(AUX_MU_BAUD_REG, CORE_CLOCK / (8 * baud_rate) - 1);
+  MMIO::write(AUX_MU_BAUD_REG, CORE_CLOCK / ((uint64_t)8 * baud_rate) - 1);
 
   // Finally, enable transmitter and receiver
   MMIO::write(AUX_MU_CNTL_REG, 3);

@@ -1,89 +1,93 @@
 #include "uart.hpp"
+#include <cstddef>
+#include <cstdint>
+#include "../debug.hpp"
+#include "gpio.hpp"
 #include "mailbox.hpp"
 #include "mmio.hpp"
 
 namespace UART {
-/** The UART clock frequency. Set to 3Mhz. */
-//constexpr uint32_t UART_CLOCK = 3000000; // unused
 
-// Loop <delay> times in a way that the compiler won't optimize away
-static inline void delay(int32_t count) {
-  asm volatile("__delay_%=: subs %[count], %[count], #1; bne __delay_%=\n" : "=r"(count) : [count] "0"(count) : "cc");
-}
+/** Base of all PL011 UART0 registers */
+static constexpr int32_t UART0_BASE = 0x201000;
 
-enum {
-  // The offsets for reach register.
-  GPIO_BASE = 0x200000,
+/** UART0 Data Register (size: 32) */
+static constexpr int32_t UART0_DR = UART0_BASE + 0x0;
 
-  // Controls actuation of pull up/down to ALL GPIO pins.
-  GPPUD = (GPIO_BASE + 0x94),
+/** UART0 Flag Register (size: 32) */
+static constexpr int32_t UART0_FR = UART0_BASE + 0x18;
 
-  // Controls actuation of pull up/down for specific GPIO pin.
-  GPPUDCLK0 = (GPIO_BASE + 0x98),
+/** UART0 Integer Baud rate divisor (size: 32) */
+static constexpr int32_t UART0_IBRD = UART0_BASE + 0x24;
 
-  // The base address for UART.
-  UART0_BASE = (GPIO_BASE + 0x1000),  // for raspi4 0xFE201000, raspi2 & 3 0x3F201000, and 0x20201000 for raspi1
+/** UART0 Fractional Baud rate divisor (size: 32) */
+static constexpr int32_t UART0_FBRD = UART0_BASE + 0x28;
 
-  // The offsets for reach register for the UART.
-  UART0_DR = (UART0_BASE + 0x00),
-  UART0_RSRECR = (UART0_BASE + 0x04),
-  UART0_FR = (UART0_BASE + 0x18),
-  UART0_ILPR = (UART0_BASE + 0x20),
-  UART0_IBRD = (UART0_BASE + 0x24),
-  UART0_FBRD = (UART0_BASE + 0x28),
-  UART0_LCRH = (UART0_BASE + 0x2C),
-  UART0_CR = (UART0_BASE + 0x30),
-  UART0_IFLS = (UART0_BASE + 0x34),
-  UART0_IMSC = (UART0_BASE + 0x38),
-  UART0_RIS = (UART0_BASE + 0x3C),
-  UART0_MIS = (UART0_BASE + 0x40),
-  UART0_ICR = (UART0_BASE + 0x44),
-  UART0_DMACR = (UART0_BASE + 0x48),
-  UART0_ITCR = (UART0_BASE + 0x80),
-  UART0_ITIP = (UART0_BASE + 0x84),
-  UART0_ITOP = (UART0_BASE + 0x88),
-  UART0_TDR = (UART0_BASE + 0x8C),
-};
+/** UART0 Line Control Register (size: 32) */
+static constexpr int32_t UART0_LCRH = UART0_BASE + 0x2c;
 
-// A Mailbox message with set clock rate of PL011 to 3MHz tag
-volatile unsigned int __attribute__((aligned(16))) mbox[9] = {9 * 4, 0, 0x38002, 12, 8, 2, 3000000, 0, 0};
+/** UART0 Control Register (size: 32) */
+static constexpr int32_t UART0_CR = UART0_BASE + 0x30;
 
-void init() {
-  // Disable UART0.
-  MMIO::write(UART0_CR, 0x00000000);
-  // Set up the GPIO pin 14 && 15.
+/** UART0 Interrupt FIFO Level Select Register (size: 32) */
+static constexpr int32_t UART0_IFLS = UART0_BASE + 0x34;
 
-  // Disable pull up/down for all GPIO pins & delay for 150 cycles.
-  MMIO::write(GPPUD, 0x00000000);
-  delay(150);
+/** UART0 Interrupt Mask Set Clear Register (size: 32) */
+static constexpr int32_t UART0_IMSC = UART0_BASE + 0x38;
 
-  // Disable pull up/down for pin 14,15 & delay for 150 cycles.
-  MMIO::write(GPPUDCLK0, (1 << 14) | (1 << 15));
-  delay(150);
+/** UART0 Raw Interrupt Status Register (size: 32) */
+static constexpr int32_t UART0_RIS = UART0_BASE + 0x3c;
 
-  // Write 0 to GPPUDCLK0 to make it take effect.
-  MMIO::write(GPPUDCLK0, 0x00000000);
+/** UART0 Masked Interrupt Status Register (size: 32) */
+static constexpr int32_t UART0_MIS = UART0_BASE + 0x40;
+
+/** UART0 Interrupt Clear Register (size: 32) */
+static constexpr int32_t UART0_ICR = UART0_BASE + 0x44;
+
+/** UART0 DMA Control Register (size: 32) */
+static constexpr int32_t UART0_DMACR = UART0_BASE + 0x48;
+
+/** UART0 Test Control Register (size: 32) */
+static constexpr int32_t UART0_ITCR = UART0_BASE + 0x80;
+
+/** UART0 Integration Test Input Register (size: 32) */
+static constexpr int32_t UART0_ITIP = UART0_BASE + 0x84;
+
+/** UART0 Integration Test Output Register (size: 32) */
+static constexpr int32_t UART0_ITOP = UART0_BASE + 0x88;
+
+/** UART0 Test Data Register (size: 32) */
+static constexpr int32_t UART0_TDR = UART0_BASE + 0x8c;
+
+void init(uint32_t baud_rate) {
+  // Set the UART Clock to 4MHz
+  struct GetClockRateBuffer {
+    uint32_t clock_id = 0;
+    uint32_t rate = 0;
+  };
+  using GetClockRateTag = MailBox::PropertyTag<0x00030002, GetClockRateBuffer>;
+
+  MailBox::PropertyMessage<GetClockRateTag> msg;
+  msg.tag.buffer.clock_id = 0x000000002;
+  send_property(msg);
+
+  // Deactivate Pull Up/Down on pin 14 and 15
+  GPIO::set_pull_up_down(GPIO::Pin::BCM14, GPIO::PUD_Mode::Off);
+  GPIO::set_pull_up_down(GPIO::Pin::BCM15, GPIO::PUD_Mode::Off);
+
+  // Set pin 14 and 15 to mode Alternate0
+  GPIO::set_mode(GPIO::Pin::BCM14, GPIO::Mode::ALT0);
+  GPIO::set_mode(GPIO::Pin::BCM15, GPIO::Mode::ALT0);
 
   // Clear pending interrupts.
   MMIO::write(UART0_ICR, 0x7FF);
 
-  // Set integer & fractional part of baud rate.
-  // Divider = UART_CLOCK/(16 * Baud)
-  // Fraction part register = (Fractional part * 64) + 0.5
-  // Baud = 115200.
-
-  // For Raspi3 and 4 the UART_CLOCK is system-clock dependent by default.
-  // Set it to 3Mhz so that we can consistently set the baud rate
-  // UART_CLOCK = 30000000;
-  const uint32_t r = (((*(uint32_t*)(&mbox)) & ~0xF));
-  MailBox::send(MailBox::Channel::TagArmToVC, r);
-  while (MailBox::receive(MailBox::Channel::TagArmToVC) != r) {
-  }
-
-  // Divider = 3000000 / (16 * 115200) = 1.627 = ~1.
-  MMIO::write(UART0_IBRD, 1);
-  // Fractional part register = (.627 * 64) + 0.5 = 40.6 = ~40.
-  MMIO::write(UART0_FBRD, 40);
+  // IntegerPart = clock / (16 * baud rate)   <- Integer division
+  // FractionalPart = 64 * (clock % (16 * baud rate)) / (16 * baud rate) = 4 * (clock % (16 * baud rate)) / (baud rate)
+  const uint32_t integer_part = msg.tag.buffer.rate / (16 * baud_rate);
+  const uint32_t fractional_part = 4 * (msg.tag.buffer.rate % (16 * baud_rate)) / baud_rate;
+  MMIO::write(UART0_IBRD, integer_part);
+  MMIO::write(UART0_FBRD, fractional_part);
 
   // Enable FIFO & 8 bit data transmission (1 stop bit, no parity).
   MMIO::write(UART0_LCRH, (1 << 4) | (1 << 5) | (1 << 6));

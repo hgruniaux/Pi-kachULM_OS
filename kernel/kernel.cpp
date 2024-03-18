@@ -1,5 +1,5 @@
-#include "mmio.hpp"
-#include "uart.hpp"
+#include "hardware/mmio.hpp"
+#include "hardware/uart.hpp"
 
 // To move in a distinct file with the libk++
 extern "C" void* memset(void* dest, int ch, size_t count) {
@@ -15,7 +15,7 @@ extern "C" void* memset(void* dest, int ch, size_t count) {
 
 extern "C" [[noreturn]] void kmain() {
   MMIO::init();
-  UART::init();
+  UART::init(115200);
   UART::puts("Hello, kernel World!\r\n");
 
   while (true) {

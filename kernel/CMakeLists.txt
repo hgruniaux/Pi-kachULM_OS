@@ -1,11 +1,23 @@
-add_executable(kernel boot.S
-        kernel.cpp
-        debug.hpp debug.cpp
-        cxxabi.cpp
-        startup.cpp
-        mmio.hpp mmio.cpp
-        uart.hpp uart.cpp
-        mailbox.hpp mailbox.cpp
+add_executable(kernel boot.S kernel.cpp cxxabi.cpp startup.cpp
+        debug.hpp
+        debug.cpp
+
+        hardware/mmio.hpp
+        hardware/mmio.cpp
+
+        hardware/gpio.hpp
+        hardware/gpio.cpp
+
+        hardware/utils.hpp
+
+        hardware/miniuart.hpp
+        hardware/miniuart.cpp
+
+        hardware/mailbox.hpp
+        hardware/mailbox.cpp
+
+        hardware/uart.hpp
+        hardware/uart.cpp
 )
 
 set_target_properties(kernel PROPERTIES OUTPUT_NAME "kernel8.elf")
