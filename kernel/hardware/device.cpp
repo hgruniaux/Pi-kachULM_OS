@@ -1,12 +1,12 @@
 #include "device.hpp"
 #include <cstddef>
 #include <cstdint>
-#include "debug.hpp"
-#include "hardware/mailbox.hpp"
+#include "../debug.hpp"
+#include "mailbox.hpp"
 
 bool Device::init() {
   struct GetBoardSerialTagBuffer {
-    uint8_t serial_data[8];
+    uint32_t serial_data[2];
   };
 
   using GetGetBoardModelTag = MailBox::PropertyTag<0x00010001, uint32_t>;
@@ -18,7 +18,7 @@ bool Device::init() {
   struct GetMaxTemperatureTagBuffer {
     uint32_t id = 0;
     uint32_t value = 0;
-  };  // struct GetMaxTemperatureTagBuffer
+  };
 
   using GetMaxTemperatureTag = MailBox::PropertyTag<0x0003000a, GetMaxTemperatureTagBuffer>;
 
@@ -32,7 +32,7 @@ bool Device::init() {
     volatile GetVCMemoryTag vc_memory_tag = {};               // Can be modified by the GPU
     volatile GetMaxTemperatureTag max_temp_tag = {};          // Can be modified by the GPU
     uint32_t end_tag = 0;
-  };  // struct PropertyMessage
+  };
 
   PropertyMessage message;
   const bool success = MailBox::send_property(message);
@@ -43,9 +43,8 @@ bool Device::init() {
   m_board_model = message.board_model_tag.buffer;
   m_board_revision = message.board_revision_tag.buffer;
 
-  for (size_t i = 0; i < 8; ++i) {
-    m_board_serial.serial_data[i] = message.board_serial_tag.buffer.serial_data[i];
-  }
+  m_board_serial = (uint64_t)(message.board_serial_tag.buffer.serial_data[1]) << 32 |
+                   (uint64_t)message.board_serial_tag.buffer.serial_data[0];
 
   m_arm_memory_info.size = message.arm_memory_tag.buffer.size;
   m_arm_memory_info.base_address = message.arm_memory_tag.buffer.base_address;

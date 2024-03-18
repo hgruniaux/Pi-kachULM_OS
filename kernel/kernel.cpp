@@ -1,10 +1,10 @@
-#include "hardware/mmio.hpp"
-#include "hardware/uart.hpp"
 #include "debug.hpp"
-#include "device.hpp"
-#include "framebuffer.hpp"
 #include "graphics/graphics.hpp"
 #include "graphics/pkfont.hpp"
+#include "hardware/device.hpp"
+#include "hardware/framebuffer.hpp"
+#include "hardware/mmio.hpp"
+#include "hardware/uart.hpp"
 
 // To move in a distinct file with the libk++
 extern "C" void* memset(void* dest, int ch, size_t count) {

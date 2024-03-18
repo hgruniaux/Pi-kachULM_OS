@@ -1,6 +1,6 @@
 #include "framebuffer.hpp"
-#include "debug.hpp"
-#include "hardware/mailbox.hpp"
+#include "../debug.hpp"
+#include "mailbox.hpp"
 
 DEBUG_IMPL_LOGGER(framebuffer_logger);
 

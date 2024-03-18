@@ -1,5 +1,5 @@
 #include "graphics.hpp"
-#include "../framebuffer.hpp"
+#include "../hardware/framebuffer.hpp"
 #include "pkfont.hpp"
 
 extern const uint8_t firacode_16_pkf[100];

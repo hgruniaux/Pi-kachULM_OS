@@ -19,10 +19,12 @@ add_executable(kernel boot.S kernel.cpp cxxabi.cpp startup.cpp
         hardware/uart.hpp
         hardware/uart.cpp
 
-        device.hpp
-        device.cpp
-        framebuffer.hpp
-        framebuffer.cpp
+        hardware/device.hpp
+        hardware/device.cpp
+
+        hardware/framebuffer.hpp
+        hardware/framebuffer.cpp
+
         graphics/pkfont.hpp
         graphics/pkfont.cpp
 
