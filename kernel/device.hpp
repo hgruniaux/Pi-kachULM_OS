@@ -83,7 +83,8 @@ class Device {
 
  private:
   // Cached values:
-  MemoryInfo m_arm_memory_info, m_vc_memory_info;
+  MemoryInfo m_arm_memory_info = {};
+  MemoryInfo m_vc_memory_info = {};
   uint64_t m_board_serial;
   uint32_t m_board_model;
   uint32_t m_board_revision;

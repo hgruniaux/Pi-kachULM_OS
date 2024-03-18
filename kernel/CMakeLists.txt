@@ -19,13 +19,6 @@ add_executable(kernel boot.S kernel.cpp cxxabi.cpp startup.cpp
         hardware/uart.hpp
         hardware/uart.cpp
 
-        kernel.cpp
-        debug.hpp debug.cpp
-        cxxabi.cpp
-        startup.cpp
-        mmio.hpp mmio.cpp
-        uart.hpp uart.cpp
-        mailbox.hpp mailbox.cpp
         device.hpp
         device.cpp
         framebuffer.hpp

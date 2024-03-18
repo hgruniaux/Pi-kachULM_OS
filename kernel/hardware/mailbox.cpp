@@ -1,5 +1,5 @@
 #include "mailbox.hpp"
-#include "debug.hpp"
+#include "../debug.hpp"
 #include "mmio.hpp"
 
 namespace MailBox {

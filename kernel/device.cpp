@@ -1,14 +1,28 @@
 #include "device.hpp"
+#include <cstdint>
 #include "debug.hpp"
-#include "mailbox.hpp"
+#include "hardware/mailbox.hpp"
+
+// To move in a distinct file with the libk++
+extern "C" void* memcpy(void* dest, const void* src, size_t count) {
+  const uint8_t* p_src = (const uint8_t*)src;
+  uint8_t* p_dst = (uint8_t*)dest;
+  uint8_t* p_end = p_dst + count;
+
+  while (p_dst != p_end) {
+    *(p_dst++) = *(p_src++);
+  }
+
+  return dest;
+}
 
 bool Device::init() {
   // Tag buffers must be aligned to 32-bits. But uint64_t requires a minimal
   // alignment of 64-bits. Therefore, we use __attribute__((packed)) to force
   // the 4-bytes alignment.
-  struct alignas(4) GetBoardSerialTagBuffer {
-    uint64_t value;
-  } __attribute__((packed));
+  struct GetBoardSerialTagBuffer {
+    uint8_t serial_data[8];
+  };
 
   using GetGetBoardModelTag = MailBox::PropertyTag<0x00010001, uint32_t>;
   using GetGetBoardRevisionTag = MailBox::PropertyTag<0x00010002, uint32_t>;
@@ -26,12 +40,12 @@ bool Device::init() {
   struct alignas(16) PropertyMessage {
     uint32_t buffer_size = sizeof(PropertyMessage);
     uint32_t status = 0;
-    GetGetBoardModelTag board_model_tag = {};
-    GetGetBoardRevisionTag board_revision_tag = {};
-    GetGetBoardSerialTag board_serial_tag = {};
-    GetARMMemoryTag arm_memory_tag = {};
-    GetVCMemoryTag vc_memory_tag = {};
-    GetMaxTemperatureTag max_temp_tag = {};
+    volatile GetGetBoardModelTag board_model_tag = {};        // Can be modified by the GPU
+    volatile GetGetBoardRevisionTag board_revision_tag = {};  // Can be modified by the GPU
+    volatile GetGetBoardSerialTag board_serial_tag = {};      // Can be modified by the GPU
+    volatile GetARMMemoryTag arm_memory_tag = {};             // Can be modified by the GPU
+    volatile GetVCMemoryTag vc_memory_tag = {};               // Can be modified by the GPU
+    volatile GetMaxTemperatureTag max_temp_tag = {};          // Can be modified by the GPU
     uint32_t end_tag = 0;
   };  // struct PropertyMessage
 
@@ -39,13 +53,25 @@ bool Device::init() {
   const bool success = MailBox::send_property(message);
 
   // Cache values
-  m_arm_memory_info = message.arm_memory_tag.buffer;
-  m_vc_memory_info = message.vc_memory_tag.buffer;
   m_max_temp = message.max_temp_tag.buffer.value;
 
   m_board_model = message.board_model_tag.buffer;
   m_board_revision = message.board_revision_tag.buffer;
-  m_board_serial = message.board_serial_tag.buffer.value;
+
+  union {
+    uint8_t serial_data[8];
+    uint64_t serial;
+  } m;
+  for (int i = 0; i < 8; ++i) {
+        m.serial_data[i] = message.board_serial_tag.buffer.serial_data[i];
+  }
+  m_board_serial = m.serial;
+
+  m_arm_memory_info.size = message.arm_memory_tag.buffer.size;
+  m_arm_memory_info.base_address = message.arm_memory_tag.buffer.base_address;
+
+  m_vc_memory_info.size = message.vc_memory_tag.buffer.size;
+  m_vc_memory_info.base_address = message.vc_memory_tag.buffer.base_address;
 
   return success;
 }
@@ -96,9 +122,8 @@ bool Device::set_power_state(uint32_t device_id, bool on, bool wait) {
   message.tag.buffer.device_id = device_id;
   message.tag.buffer.state = (uint32_t)on | ((uint32_t)wait << 1);
   const bool success = MailBox::send_property(message);
-  return success
-    && ((message.tag.buffer.state & 0x1) == (uint32_t)on) // check if the device is in the expected state
-    && ((message.tag.buffer.state & 0x2) != 0); // check if the device exists
+  return success && ((message.tag.buffer.state & 0x1) == (uint32_t)on)  // check if the device is in the expected state
+         && ((message.tag.buffer.state & 0x2) != 0);                    // check if the device exists
 }
 
 bool Device::set_turbo(bool on) {

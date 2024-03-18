@@ -8,11 +8,11 @@
 
 // To move in a distinct file with the libk++
 extern "C" void* memset(void* dest, int ch, size_t count) {
-  auto* p = static_cast<unsigned char*>(dest);
-  auto* p_end = static_cast<unsigned char*>(dest) + count;
+  uint8_t* p = (uint8_t*)(dest);
+  uint8_t* p_end = (uint8_t*)(dest) + count;
 
   while (p != p_end) {
-    *(p++) = static_cast<unsigned char>(ch);
+    *(p++) = (uint8_t)(ch);
   }
 
   return dest;
