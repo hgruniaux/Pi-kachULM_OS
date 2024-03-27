@@ -1,0 +1,53 @@
+#include "format_impl.hpp"
+
+#include <libk/assert.hpp>
+
+namespace libk::detail {
+static size_t parse_index(const char* it) {
+  size_t index = 0;
+  while (*it >= '0' && *it <= '9') {
+    index *= 10;
+    index += *it - '0';
+    ++it;
+  }
+  return index;
+}
+
+char* format_to(char* out, const char* fmt, const Argument* args, size_t args_count) {
+  size_t next_argument_index = 0;
+#define CHECK_ARGUMENT_INDEX(index) KASSERT((index) < args_count);
+
+  // Variables needed by re2c
+  const char* YYCURSOR = fmt;
+  const char* YYMARKER = nullptr;
+
+  // User-defined tag variables that are available in semantic action.
+  const char *index_ptr, *spec_ptr;
+
+  /*!stags:re2c format = 'const char *@@;\n'; */
+
+  while (true) {
+    /*!re2c
+        re2c:yyfill:enable = 0;
+        re2c:define:YYCTYPE = char;
+        re2c:tags = 1;
+
+        "{{" { *out++ = '{'; continue; }
+        "}}" { *out++ = '}'; continue; }
+
+        index = [0-9]+;
+        "{" (@index_ptr index)? (":" @spec_ptr [^\x00}]*)? "}" {
+          const size_t index = (index_ptr == nullptr) ? next_argument_index++ : parse_index(index_ptr);
+          CHECK_ARGUMENT_INDEX(index);
+          out = format_argument_to(out, args[index], spec_ptr);
+          continue;
+        }
+
+        "\x00" { break; }
+        * { *out++ = yych; continue; }
+     */
+  }
+
+  return out;
+}
+}  // namespace libk::detail

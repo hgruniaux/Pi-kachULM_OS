@@ -1,4 +1,6 @@
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.20)
+
+include(cmake/GCCToolchain.cmake)
 
 project(Pi-kachULM_OS LANGUAGES CXX ASM)
 
@@ -11,6 +13,16 @@ set(CMAKE_CXX_EXTENSIONS ON)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS ON)
+
+# Enable warnings.
+add_compile_options(-Wall -Wextra)
+
+# Tell the compiler that we are in a freestanding environment.
+add_compile_options(-ffreestanding -nostdlib -fno-builtin)
+
+# Disable exceptions and RTTI in C++
+set(EXTRA_CXX_FLAGS -fno-exceptions -fno-rtti)
+add_compile_options("$<$<COMPILE_LANGUAGE:CXX>:${EXTRA_CXX_FLAGS}>")
 
 # Enable checks
 option(ENABLE_CHECKS "Enable checks using clang-tidy" OFF)
