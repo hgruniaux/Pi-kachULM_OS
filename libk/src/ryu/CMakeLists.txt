@@ -5,3 +5,6 @@ add_library(ryu-algorithm STATIC
 )
 
 target_include_directories(ryu-algorithm PRIVATE ${CMAKE_SOURCE_DIR}/libk/include)
+
+# Disable clang-tidy on ryu. The code comes from outside, we don't control it.
+set_target_properties(ryu-algorithm PROPERTIES CXX_CLANG_TIDY "")
