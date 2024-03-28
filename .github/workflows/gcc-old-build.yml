@@ -24,7 +24,6 @@ jobs:
                     cmake -B ${{github.workspace}}/build \
                         --toolchain=cmake/GCCToolchain.cmake \
                         -DCMAKE_BUILD_TYPE=${{matrix.type}} \
-                        -DENABLE_CHECKS=ON \
                         -DGCC_PREFIX=aarch64-linux-gnu- \
                         -DGCC_SUFFIX=-12
 

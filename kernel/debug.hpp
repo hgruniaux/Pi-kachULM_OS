@@ -46,9 +46,9 @@ struct Argument {
     /** @brief The `uint64_t` type. */
     UINT64,
     /** @brief The `float` type. */
-    FLOAT,
+    //    FLOAT,
     /** @brief The `double` type. */
-    DOUBLE,
+    //    DOUBLE,
     /** @brief A pointer. */
     POINTER,
     /** @brief A NUL-terminated UTF-8 string. */
@@ -77,8 +77,8 @@ struct Argument {
   Argument(uint16_t value) : type(Type::UINT64) { data.uint64_value = value; }
   Argument(uint32_t value) : type(Type::UINT64) { data.uint64_value = value; }
   Argument(uint64_t value) : type(Type::UINT64) { data.uint64_value = value; }
-  Argument(float value) : type(Type::FLOAT) { data.float_value = value; }
-  Argument(double value) : type(Type::DOUBLE) { data.double_value = value; }
+  //  Argument(float value) : type(Type::FLOAT) { data.float_value = value; }
+  //  Argument(double value) : type(Type::DOUBLE) { data.double_value = value; }
   Argument(const char* value) : type(Type::C_STRING) { data.c_string_value = value; }
   Argument(const void* value) : type(Type::POINTER) { data.pointer_value = value; }
 };  // class Argument
@@ -202,4 +202,6 @@ inline void log(Level severity, const char* message, std::source_location source
 #define LOG_CRITICAL(message, ...)
 #endif
 
-#define KASSERT(cond) (void)((cond) || (::debug::panic("assertion failed: " #cond), 0))
+#ifndef KASSERT
+#define KASSERT(cond) (void)((cond) || (::debug::panic("assertion failed: " #cond, std::source_location::current()), 0))
+#endif  // KASSERT

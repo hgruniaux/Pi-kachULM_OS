@@ -1,6 +1,6 @@
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.20)
 
-project(Pi-kachULM_OS LANGUAGES CXX ASM)
+project(Pi-kachULM_OS LANGUAGES CXX C ASM)
 
 # Enable C++20 (with GNU extensions)
 set(CMAKE_CXX_STANDARD 20)
@@ -11,6 +11,20 @@ set(CMAKE_CXX_EXTENSIONS ON)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS ON)
+
+# Enable warnings.
+add_compile_options(-Wall -Wextra)
+
+# Tell the compiler that we are in a freestanding environment.
+add_compile_options(-ffreestanding -nostdlib -fno-builtin)
+
+# Disable exceptions and RTTI in C++
+set(EXTRA_CXX_FLAGS -fno-exceptions -fno-rtti -mgeneral-regs-only)
+add_compile_options("$<$<COMPILE_LANGUAGE:CXX>:${EXTRA_CXX_FLAGS}>")
+
+# Use relative paths in __FILE__ macros and debug information.
+# This allow smaller and more readable logs.
+add_compile_options(-ffile-prefix-map=${CMAKE_SOURCE_DIR}/=./)
 
 # Enable checks
 option(ENABLE_CHECKS "Enable checks using clang-tidy" OFF)
@@ -33,4 +47,6 @@ if (${ENABLE_CHECKS})
     endif ()
 endif ()
 
+add_subdirectory(lib/libk)
+add_subdirectory(lib/device-tree)
 add_subdirectory(kernel)

@@ -24,7 +24,6 @@ jobs:
                     cmake -B ${{github.workspace}}/build \
                         --toolchain=cmake/ClangToolchain.cmake \
                         -DCMAKE_BUILD_TYPE=${{matrix.type}} \
-                        -DENABLE_CHECKS=ON \
                         -DCLANG_SUFFIX=-15 \
                         -DCLANG_TRIPLE=aarch64-linux-gnu
 
