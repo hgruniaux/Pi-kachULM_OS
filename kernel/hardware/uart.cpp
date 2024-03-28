@@ -96,6 +96,7 @@ void init(uint32_t baud_rate) {
 void write_one(uint8_t value) {
   // Wait for UART to become ready to transmit.
   while ((MMIO::read(UART0_FR) & (1 << 5)) != 0) {
+    asm("yield");
   }
   MMIO::write(UART0_DR, value);
 }
@@ -103,6 +104,7 @@ void write_one(uint8_t value) {
 uint8_t read_one() {
   // Wait for UART to have received something.
   while ((MMIO::read(UART0_FR) & (1 << 4)) != 0) {
+    asm("yield");
   }
 
   return MMIO::read(UART0_DR);

@@ -46,9 +46,9 @@ struct Argument {
     /** @brief The `uint64_t` type. */
     UINT64,
     /** @brief The `float` type. */
-    FLOAT,
+    //    FLOAT,
     /** @brief The `double` type. */
-    DOUBLE,
+    //    DOUBLE,
     /** @brief A pointer. */
     POINTER,
     /** @brief A NUL-terminated UTF-8 string. */
@@ -77,8 +77,8 @@ struct Argument {
   Argument(uint16_t value) : type(Type::UINT64) { data.uint64_value = value; }
   Argument(uint32_t value) : type(Type::UINT64) { data.uint64_value = value; }
   Argument(uint64_t value) : type(Type::UINT64) { data.uint64_value = value; }
-  Argument(float value) : type(Type::FLOAT) { data.float_value = value; }
-  Argument(double value) : type(Type::DOUBLE) { data.double_value = value; }
+  //  Argument(float value) : type(Type::FLOAT) { data.float_value = value; }
+  //  Argument(double value) : type(Type::DOUBLE) { data.double_value = value; }
   Argument(const char* value) : type(Type::C_STRING) { data.c_string_value = value; }
   Argument(const void* value) : type(Type::POINTER) { data.pointer_value = value; }
 };  // class Argument

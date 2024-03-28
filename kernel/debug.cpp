@@ -82,6 +82,7 @@ size_t uint_to_string(uint64_t value, char* buffer) {
  * fractional part, 1 for the period and 1 for the final NUL character).
  *
  * If @a buffer is not big enough, behavior is undefined. */
+/*
 static size_t float_to_string(float value, char* buffer) {
   // TODO: Maybe move this function to elsewhere.
   // FIXME: this function only display 2 digits precision
@@ -105,10 +106,11 @@ static size_t float_to_string(float value, char* buffer) {
   ++written_bytes;
 
   // Print the fractional part. We only keep 2 digits after the period.
-  value = (value - (float)integer_part) * 100 /* 2 digits */;
+  value = (value - (float)integer_part) * 100; // 2 digits
   written_bytes += uint_to_string((uint64_t)value, it);
   return written_bytes;
 }
+*/
 
 template <class Sink>
 static void print_header(Sink& sink, Level level, const Logger& logger, std::source_location source_location) {
@@ -205,6 +207,7 @@ static void print_int64(Sink& sink, int64_t value) {
   }
 }
 
+/*
 template <class Sink>
 static void print_float(Sink& sink, float value) {
   // TODO: maybe implement the ryu algorithm
@@ -218,6 +221,7 @@ static void print_double(Sink& sink, double value) {
   // TODO: maybe implement the ryu algorithm
   print_float(sink, (float)value);
 }
+*/
 
 template <class Sink>
 static void print_c_string(Sink& sink, const char* value) {
@@ -239,12 +243,14 @@ static void print_argument(Sink& sink, const impl::Argument& argument) {
     case impl::Argument::Type::UINT64:
       print_uint64(sink, argument.data.uint64_value);
       return;
+  /*
     case impl::Argument::Type::FLOAT:
       print_float(sink, argument.data.float_value);
       return;
     case impl::Argument::Type::DOUBLE:
       print_double(sink, argument.data.double_value);
       return;
+  */
     case impl::Argument::Type::C_STRING:
       print_c_string(sink, argument.data.c_string_value);
       return;

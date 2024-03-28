@@ -2,6 +2,8 @@
 #include "graphics/graphics.hpp"
 #include "graphics/pkfont.hpp"
 #include "hardware/device.hpp"
+#include "hardware/dtb/dtb.hpp"
+#include "hardware/dtb/node.hpp"
 #include "hardware/framebuffer.hpp"
 #include "hardware/mmio.hpp"
 #include "hardware/uart.hpp"
@@ -18,20 +20,36 @@ extern "C" void* memset(void* dest, int ch, size_t count) {
   return dest;
 }
 
-extern "C" [[noreturn]] void kmain() {
-  MMIO::init();
-  UART::init(115200);
+void print_property(const DeviceTree& dt, const char* property) {
+  Property p;
+
+  if (!dt.find_property(property, &p)) {
+    LOG_CRITICAL("Unable to find property {} in device tree.", property);
+  }
+
+  LOG_INFO("DeviceTree property {} (size: {}) : {}", p.name, p.length, p.data);
+}
+
+extern "C" [[noreturn]] void kmain(const void* dtb) {
+  const DeviceTree dt(dtb);
+  MMIO::init(dt);
+  UART::init(1000000);
   UART::puts("Hello, kernel World from UART!\r\n");
+
+  LOG_INFO("DeviceTree initialization: {}", dt.is_status_okay());
+  LOG_INFO("DeviceTree Version: {}", dt.get_version());
+  print_property(dt, "/model");
+  print_property(dt, "/compatible");
+  print_property(dt, "/serial-number");
 
   Device device;
   LOG_INFO("Device initialization: {}", device.init());
-
   LOG_INFO("Board model: {}", device.get_board_model());
   LOG_INFO("Board revision: {}", device.get_board_revision());
   LOG_INFO("Board serial: {}", device.get_board_serial());
   LOG_INFO("ARM memory: {} bytes at {}", device.get_arm_memory_info().size, device.get_arm_memory_info().base_address);
   LOG_INFO("VC memory: {} bytes at {}", device.get_vc_memory_info().size, device.get_vc_memory_info().base_address);
-//  LOG_INFO("Temp: {} °C / {} °C", device.get_current_temp() / 1000.0f, device.get_max_temp() / 1000.0f);
+  //  LOG_INFO("Temp: {} °C / {} °C", device.get_current_temp() / 1000.0f, device.get_max_temp() / 1000.0f);
 
   FrameBuffer& framebuffer = FrameBuffer::get();
   if (!framebuffer.init(640, 480)) {

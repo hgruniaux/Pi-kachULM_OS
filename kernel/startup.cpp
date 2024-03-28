@@ -51,14 +51,14 @@ void call_fini_array() {
 }
 
 // This function is defined in kernel.cpp. It is the real entry point of the kernel.
-extern "C" [[noreturn]] void kmain();
+extern "C" [[noreturn]] void kmain(const void* dtb);
 
 /** The C and C++ world entry point. It is called from the boot.S assembly script. */
-extern "C" void _startup() {
+extern "C" void _startup(const void* dtb) {
   // Erases the BSS section as required.
   zero_bss();
 
   call_init_array();
-  kmain();  // the real kernel entry point
+  kmain(dtb);  // the real kernel entry point
   call_fini_array();
 }

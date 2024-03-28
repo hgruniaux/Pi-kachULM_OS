@@ -31,6 +31,20 @@ add_executable(kernel boot.S kernel.cpp cxxabi.cpp startup.cpp
         ../fonts/firacode_16.cpp
         graphics/graphics.hpp
         graphics/graphics.cpp
+
+        hardware/dtb/dtb.hpp
+        hardware/dtb/dtb.cpp
+
+        hardware/dtb/node.hpp
+        hardware/dtb/node.cpp
+
+        hardware/dtb/parser.hpp
+        hardware/dtb/parser.cpp
+
+        hardware/dtb/utils.hpp
+
+        mini_clib.cpp
+        mini_clib.hpp
 )
 
 set_target_properties(kernel PROPERTIES OUTPUT_NAME "kernel8.elf")
@@ -50,7 +64,7 @@ target_compile_options(kernel PRIVATE ${CPU_OPTIONS})
 target_compile_options(kernel PRIVATE -ffreestanding -nostdlib)
 
 # Disable exceptions and RTTI in C++
-target_compile_options(kernel PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions -fno-rtti -fno-builtin>)
+target_compile_options(kernel PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions -fno-rtti -fno-builtin -mgeneral-regs-only>)
 
 # Use relative paths in __FILE__ macros and debug information.
 # This allow smaller and more readable logs.

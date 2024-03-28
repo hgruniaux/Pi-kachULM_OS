@@ -5,7 +5,7 @@
 #include "miniuart.hpp"
 #include "mmio.hpp"
 
-namespace MINI_UART {
+namespace MiniUART {
 /** Auxiliary Interrupt status (size: 3) */
 // static constexpr int32_t AUX_IRQ = 0x215000;
 
@@ -36,11 +36,9 @@ static constexpr int32_t AUX_MU_CNTL_REG = 0x215060;
 /** Mini UART Baud rate (size: 16) */
 static constexpr int32_t AUX_MU_BAUD_REG = 0x215068;
 
-#if RASPI_VERSION == 3
-static constexpr uint64_t CORE_CLOCK = 250'000'000;
-#elif RASPI_VERSION == 4
-static constexpr uint64_t CORE_CLOCK = 200'000'000;
-#endif
+static constexpr uint64_t RPI3_CORE_CLOCK = 250'000'000;
+
+static constexpr uint64_t RPI4_CORE_CLOCK = 200'000'000;
 
 void init(uint32_t baud_rate) {
   // We deactivate Pull Up/Down fot the pins 14 and 15
@@ -66,8 +64,14 @@ void init(uint32_t baud_rate) {
   // Set RTS line to be always high
   MMIO::write(AUX_MU_MCR_REG, 0);
 
-  // Set baud rate
-  MMIO::write(AUX_MU_BAUD_REG, CORE_CLOCK / ((uint64_t)8 * baud_rate) - 1);
+  switch (MMIO::device) {
+    case MMIO::DeviceType::RaspberryPi3:
+      MMIO::write(AUX_MU_BAUD_REG, RPI3_CORE_CLOCK / ((uint64_t)8 * baud_rate) - 1);
+      break;
+    case MMIO::DeviceType::RaspberryPi4:
+      MMIO::write(AUX_MU_BAUD_REG, RPI4_CORE_CLOCK / ((uint64_t)8 * baud_rate) - 1);
+      break;
+  }
 
   // Finally, enable transmitter and receiver
   MMIO::write(AUX_MU_CNTL_REG, 3);
@@ -75,7 +79,7 @@ void init(uint32_t baud_rate) {
 
 void write_one(uint8_t value) {
   while ((MMIO::read(AUX_MU_LSR_REG) & 0x20) == 0) {
-    // sleep
+        asm("yield");
   }
 
   MMIO::write(AUX_MU_IO_REG, value);
@@ -83,7 +87,7 @@ void write_one(uint8_t value) {
 
 uint8_t read_one() {
   while ((MMIO::read(AUX_MU_LSR_REG) & 0x01) == 0) {
-    // sleep
+        asm("yield");
   }
 
   return (MMIO::read(AUX_MU_IO_REG) & 0xFF);
@@ -107,4 +111,4 @@ void read(uint8_t* buffer, size_t buffer_length) {
   }
 }
 
-};  // namespace MINI_UART
+};  // namespace MiniUART
