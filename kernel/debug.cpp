@@ -1,5 +1,6 @@
 #include "debug.hpp"
 #include "hardware/uart.hpp"
+#include "libk/utils.hpp"
 
 namespace debug {
 // We don't use DEBUG_IMPL_LOGGER(default) because we wants a nullptr logger name. So it is not displayed by vlog().
@@ -334,7 +335,6 @@ void impl::vlog(Level level,
   print("Panic message: {}", message);
 
   // Enter an infinite loop, so we don't return from this function.
-  while (true)
-    ;
+  libk::halt();
 }
 }  // namespace debug

@@ -3,6 +3,8 @@
 #include <cstddef>
 #include <cstdint>
 
+#include "libk/utils.hpp"
+
 class DeviceTreeParser {
  public:
   [[nodiscard]] static DeviceTreeParser from_memory(const void* dts);
@@ -16,21 +18,12 @@ class DeviceTreeParser {
 
   [[nodiscard]] inline uint32_t get_uint32(size_t byte_offset) const {
     // Device Tree Integers are Big Endian
-
-#if __BYTE_ORDER == __LITTLE_ENDIAN
-    return __builtin_bswap32(*((const uint32_t*)(m_dts + byte_offset)));
-#else
-    return *((const uint32_t*)(m_dts + byte_offset));
-#endif
+    return libk::from_be(*((const uint32_t*)(m_dts + byte_offset)));
   }
 
   [[nodiscard]] inline uint64_t get_uint64(size_t byte_offset) const {
     // Device Tree Integers are Big Endian
-#if __BYTE_ORDER == __LITTLE_ENDIAN
-    return __builtin_bswap64(*((const uint64_t*)(m_dts + byte_offset)));
-#else
-    return *((const uint64_t*)(m_dts + byte_offset));
-#endif
+    return libk::from_be(*((const uint64_t*)(m_dts + byte_offset)));
   }
 
   [[nodiscard]] const char* get_string(size_t byte_offset) const { return (const char*)(m_dts + byte_offset); }

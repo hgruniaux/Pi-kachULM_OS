@@ -3,6 +3,7 @@
 #include "dtb/parser.hpp"
 #include "libk/assert.hpp"
 #include "libk/string.hpp"
+#include "libk/utils.hpp"
 #include "utils.hpp"
 
 static constexpr size_t max_val = -1;
@@ -168,5 +169,5 @@ Node::Node(const DeviceTreeParser* parser, size_t offset) : m_p(parser) {
   m_name = m_p->get_string(offset);
   const size_t name_size = libk::strlen(m_name) + 1;  // We count the \000 at the end
 
-  m_off = align_pointer(offset + name_size, alignof(uint32_t));
+  m_off = libk::align(offset + name_size, alignof(uint32_t));
 }

@@ -2,41 +2,36 @@
 
 #include "libk/assert.hpp"
 #include "libk/string.hpp"
+#include "libk/utils.hpp"
 #include "utils.hpp"
 
-#if __BYTE_ORDER == __LITTLE_ENDIAN
-#define be32toh(x) __builtin_bswap32(x)
-#else
-#define be32toh(x) (x)
-#endif
-
 DeviceTreeParser DeviceTreeParser::from_memory(const void* dts) {
-  if (align_pointer(dts, alignof(uint64_t)) != dts) {
+  if (libk::align(dts, alignof(uint64_t)) != dts) {
     return DeviceTreeParser(nullptr, 0, 0, 0, 0, 0);
   }
 
   const auto* header = (const uint32_t*)dts;
 
-  if (be32toh(header[0]) != DTB_MAGIC) {
+  if (libk::from_be(header[0]) != DTB_MAGIC) {
     return DeviceTreeParser(nullptr, 0, 0, 0, 0, 0);
   }
 
-  const uint32_t total_size = be32toh(header[1]);
-  const uint32_t off_struct = be32toh(header[2]);
-  if (align_pointer(off_struct, alignof(uint32_t)) != off_struct) {
+  const uint32_t total_size = libk::from_be(header[1]);
+  const uint32_t off_struct = libk::from_be(header[2]);
+  if (libk::align(off_struct, alignof(uint32_t)) != off_struct) {
     // Unaligned property section
     return DeviceTreeParser(nullptr, 0, 0, 0, 0, 0);
   }
 
-  const uint32_t off_strings = be32toh(header[3]);
+  const uint32_t off_strings = libk::from_be(header[3]);
 
-  const uint32_t off_mem_reserved_map = be32toh(header[4]);
-  if (align_pointer(off_mem_reserved_map, alignof(uint64_t)) != off_mem_reserved_map) {
+  const uint32_t off_mem_reserved_map = libk::from_be(header[4]);
+  if (libk::align(off_mem_reserved_map, alignof(uint64_t)) != off_mem_reserved_map) {
     // Unaligned reserved memory section
     return DeviceTreeParser(nullptr, 0, 0, 0, 0, 0);
   }
 
-  const uint32_t version = be32toh(header[5]);
+  const uint32_t version = libk::from_be(header[5]);
 
   return DeviceTreeParser((const uint8_t*)dts, total_size, off_struct, off_strings, off_mem_reserved_map, version);
 }
@@ -55,7 +50,7 @@ size_t DeviceTreeParser::skip_property(size_t offset) const {
   offset += sizeof(uint32_t);
 
   // Skip property data
-  offset = align_pointer(offset + property_size, alignof(uint32_t));
+  offset = libk::align(offset + property_size, alignof(uint32_t));
 
   return offset;
 }
@@ -68,7 +63,7 @@ size_t DeviceTreeParser::skip_node(size_t offset) const {
 
   // And ignore the node's name
   const size_t name_size = libk::strlen(get_string(offset)) + 1;  // We count the \000 at the end
-  offset = align_pointer(offset + name_size, alignof(uint32_t));
+  offset = libk::align(offset + name_size, alignof(uint32_t));
 
   while (true) {
     const uint32_t token = get_uint32(offset);
