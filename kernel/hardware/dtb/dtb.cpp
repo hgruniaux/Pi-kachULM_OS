@@ -23,8 +23,8 @@ MemorySectionIterator::element_type MemorySectionIterator::operator*() const {
 }
 
 MemorySectionIterator& MemorySectionIterator::operator++() {
-  uint64_t const tmp_address = m_p->get_uint64(m_off + 2 * sizeof(uint64_t));
-  uint64_t const tmp_size = m_p->get_uint64(m_off + 3 * sizeof(uint64_t));
+  const uint64_t tmp_address = m_p->get_uint64(m_off + 2 * sizeof(uint64_t));
+  const uint64_t tmp_size = m_p->get_uint64(m_off + 3 * sizeof(uint64_t));
 
   if (tmp_address == 0 && tmp_size == 0) {
     m_off = max_value;
@@ -45,7 +45,7 @@ bool DeviceTree::find_node(const char* path, size_t path_length, Node* node) con
 
   while (begin < path_length) {
     const char* next_delim = strchrnul(path + begin, '/');
-    size_t const node_name_length = next_delim - path - begin - 1;
+    const size_t node_name_length = next_delim - path - begin - 1;
 
     // Next node name is in path[0] ... path[node_name_length]
     if (current_node.find_child(path + begin, node_name_length, &current_node)) {
