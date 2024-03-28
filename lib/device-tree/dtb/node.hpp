@@ -3,9 +3,8 @@
 #include <cstddef>
 #include <iterator>
 
+#include "libk/string.hpp"
 #include "parser.hpp"
-#include "../../mini_clib.hpp"
-
 
 class DeviceTree;
 
@@ -103,7 +102,7 @@ class Node {
 
   [[nodiscard]] bool find_child(const char* child_name, Node* child) const {
     for (Node const n : get_children()) {
-      if (strcmp(n.get_name(), child_name) == 0) {
+      if (libk::strcmp(n.get_name(), child_name) == 0) {
         *child = n;
         return true;
       }
@@ -113,7 +112,7 @@ class Node {
   }
   [[nodiscard]] bool find_property(const char* property_name, Property* property) const {
     for (Property const p : get_properties()) {
-      if (strcmp(p.name, property_name) == 0) {
+      if (libk::strcmp(p.name, property_name) == 0) {
         *property = p;
         return true;
       }
@@ -138,7 +137,7 @@ class Node {
 
   [[nodiscard]] bool find_child(const char* child_name, size_t name_length, Node* child) const {
     for (Node const n : get_children()) {
-      if (strncmp(n.get_name(), child_name, name_length) == 0) {
+      if (libk::strncmp(n.get_name(), child_name, name_length) == 0) {
         *child = n;
         return true;
       }

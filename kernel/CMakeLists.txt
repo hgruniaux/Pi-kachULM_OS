@@ -31,25 +31,11 @@ add_executable(kernel boot.S kernel.cpp cxxabi.cpp startup.cpp
         ../fonts/firacode_16.cpp
         graphics/graphics.hpp
         graphics/graphics.cpp
-
-        hardware/dtb/dtb.hpp
-        hardware/dtb/dtb.cpp
-
-        hardware/dtb/node.hpp
-        hardware/dtb/node.cpp
-
-        hardware/dtb/parser.hpp
-        hardware/dtb/parser.cpp
-
-        hardware/dtb/utils.hpp
-
-        mini_clib.cpp
-        mini_clib.hpp
 )
 
 set_target_properties(kernel PROPERTIES OUTPUT_NAME "kernel8.elf")
 
-target_link_libraries(kernel PRIVATE libk)
+target_link_libraries(kernel PRIVATE libk device-tree)
 
 # Use the linker script.
 set(LINKER_SCRIPT ${CMAKE_SOURCE_DIR}/kernel/link.ld)

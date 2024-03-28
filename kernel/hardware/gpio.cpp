@@ -1,5 +1,3 @@
-#include <cstdint>
-
 #include "utils.hpp"
 #include "gpio.hpp"
 #include "mmio.hpp"

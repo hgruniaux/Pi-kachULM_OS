@@ -9,6 +9,12 @@ namespace libk {
 size_t strlen(const char* text);
 char* strcpy(char* dst, const char* src);
 
+// TODO Update this later
+int strcmp(const char* lhs, const char* rhs);
+int strncmp(const char* lhs, const char* rhs, size_t count);
+char* strrchr(const char* str, int ch);
+char* strchrnul(const char* str, int ch);
+
 void* memchr(const void* ptr, int value, size_t length);
 int memcmp(const void* lhs, const void* rhs, size_t length);
 void* memset(void* dst, int value, size_t length);

@@ -1,24 +1,11 @@
 #include "debug.hpp"
+#include "dtb/dtb.hpp"
 #include "graphics/graphics.hpp"
 #include "graphics/pkfont.hpp"
 #include "hardware/device.hpp"
-#include "hardware/dtb/dtb.hpp"
-#include "hardware/dtb/node.hpp"
 #include "hardware/framebuffer.hpp"
 #include "hardware/mmio.hpp"
 #include "hardware/uart.hpp"
-
-// To move in a distinct file with the libk++
-extern "C" void* memset(void* dest, int ch, size_t count) {
-  uint8_t* p = (uint8_t*)(dest);
-  uint8_t* p_end = (uint8_t*)(dest) + count;
-
-  while (p != p_end) {
-    *(p++) = (uint8_t)(ch);
-  }
-
-  return dest;
-}
 
 void print_property(const DeviceTree& dt, const char* property) {
   Property p;
@@ -35,6 +22,7 @@ extern "C" [[noreturn]] void kmain(const void* dtb) {
   MMIO::init(dt);
   UART::init(1000000);
   UART::puts("Hello, kernel World from UART!\r\n");
+
 
   LOG_INFO("DeviceTree initialization: {}", dt.is_status_okay());
   LOG_INFO("DeviceTree Version: {}", dt.get_version());

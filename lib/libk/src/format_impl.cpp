@@ -215,6 +215,7 @@ struct FloatSpec {
   uint32_t precision = 3;
 };  // struct FloatSpec
 
+/* // FIXME : Activate when floating point is activated
 static FloatSpec parse_float_spec(const char* spec) {
   FloatSpec parsed_spec = {};
   if (spec == nullptr)
@@ -299,7 +300,7 @@ static char* format_double_to(char* out, double value, const char* spec) {
 
   KASSERT(false && "unsupported floating point format type");
 }
-
+*/
 struct StringSpec {
   bool debug = false;
 };  // struct StringSpec
@@ -397,10 +398,12 @@ char* format_argument_to(char* out, const Argument& argument, const char* spec) 
       return format_int_to(out, argument.data.intmax_value, spec);
     case Argument::Type::UINTMAX:
       return format_uint_to(out, argument.data.uintmax_value, spec);
+    /* FIXME : Activate when floating point is activated
     case Argument::Type::FLOAT:
       return format_float_to(out, argument.data.float_value, spec);
     case Argument::Type::DOUBLE:
       return format_double_to(out, argument.data.double_value, spec);
+      */
     case Argument::Type::POINTER:
       return format_pointer_to(out, argument.data.pointer_value, spec);
     case Argument::Type::C_STRING:

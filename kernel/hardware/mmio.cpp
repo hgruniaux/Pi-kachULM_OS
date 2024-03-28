@@ -1,12 +1,8 @@
 #include "mmio.hpp"
 
 #include "../debug.hpp"
-#include "../mini_clib.hpp"
 
-#include "dtb/dtb.hpp"
-#include "dtb/node.hpp"
-
-#include <cstdint>
+#include "libk/string.hpp"
 
 namespace MMIO {
 uint64_t BASE;
@@ -28,10 +24,10 @@ void init(const DeviceTree& dt) {
    *    2. Use the information node at path $(mailbox alias)
    *       [spoiler: it's in /soc, whose indications define the memory mapping between the devices and the SOC].
    */
-  if (strcmp(p.data, "Raspberry Pi 3 Model B Plus Rev 1.4") == 0) {
+  if (libk::strcmp(p.data, "Raspberry Pi 3 Model B Plus Rev 1.4") == 0) {
     BASE = 0x3F000000;
     device = DeviceType::RaspberryPi3;
-  } else if (strcmp(p.data, "Raspberry Pi 4 Model B Rev 1.5") == 0) {
+  } else if (libk::strcmp(p.data, "Raspberry Pi 4 Model B Rev 1.5") == 0) {
     BASE = 0xFE000000;
     device = DeviceType::RaspberryPi4;
   } else {

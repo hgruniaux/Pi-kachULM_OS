@@ -1,12 +1,10 @@
-#include "dtb.hpp"
+#include "dtb/dtb.hpp"
 
-#include <cstddef>
-#include <cstdint>
+#include "libk/assert.hpp"
 
-#include "../../debug.hpp"
-#include "../uart.hpp"
-#include "node.hpp"
-#include "parser.hpp"
+#include "dtb/node.hpp"
+#include "dtb/parser.hpp"
+#include "libk/string.hpp"
 
 static constexpr size_t max_value = -1;
 
@@ -44,7 +42,7 @@ bool DeviceTree::find_node(const char* path, size_t path_length, Node* node) con
   }
 
   while (begin < path_length) {
-    const char* next_delim = strchrnul(path + begin, '/');
+    const char* next_delim = libk::strchrnul(path + begin, '/');
     const size_t node_name_length = next_delim - path - begin - 1;
 
     // Next node name is in path[0] ... path[node_name_length]
@@ -63,7 +61,7 @@ bool DeviceTree::find_node(const char* path, size_t path_length, Node* node) con
 }
 
 bool DeviceTree::find_property(const char* path, Property* property) const {
-  const char* last_delim = strrchr(path, '/');
+  const char* last_delim = libk::strrchr(path, '/');
 
   if (last_delim == nullptr) {
     return get_root().find_property(path, property);

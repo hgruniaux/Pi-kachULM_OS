@@ -1,5 +1,5 @@
 add_subdirectory(src/optimized)
-add_subdirectory(src/ryu)
+#add_subdirectory(src/ryu)
 
 add_library(libk STATIC
         src/format.cpp
@@ -14,10 +14,10 @@ add_library(libk STATIC
         include/libk/utils.hpp
 )
 
-target_include_directories(libk PUBLIC include)
+target_include_directories(libk PUBLIC include/)
 
 target_link_libraries(libk PRIVATE optimized-routines)
-target_link_libraries(libk PRIVATE ryu-algorithm)
+#target_link_libraries(libk PRIVATE ryu-algorithm)
 
 # Define LIBK_ENABLE_C so we export the C stdlib functions.
 target_compile_definitions(libk PUBLIC -DLIBK_ENABLE_C=1)
@@ -40,7 +40,7 @@ if (RE2C_PROGRAM)
             --no-debug-info
             --no-generation-date
             --no-version
-            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+            WORKING_DIRECTORY .
             DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/format.re2c
             COMMENT "Generating libk::format() lexer using re2c"
     )

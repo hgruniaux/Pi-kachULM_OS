@@ -1,6 +1,4 @@
 #include "uart.hpp"
-#include <cstddef>
-#include <cstdint>
 #include "../debug.hpp"
 #include "gpio.hpp"
 #include "mailbox.hpp"

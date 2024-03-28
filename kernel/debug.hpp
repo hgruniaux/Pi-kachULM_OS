@@ -202,4 +202,6 @@ inline void log(Level severity, const char* message, std::source_location source
 #define LOG_CRITICAL(message, ...)
 #endif
 
-#define KASSERT(cond) (void)((cond) || (::debug::panic("assertion failed: " #cond), 0))
+#ifndef KASSERT
+#define KASSERT(cond) (void)((cond) || (::debug::panic("assertion failed: " #cond, std::source_location::current()), 0))
+#endif  // KASSERT

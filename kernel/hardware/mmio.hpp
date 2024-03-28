@@ -1,5 +1,5 @@
 #pragma once
-#include "dtb/dtb.hpp"
+#include <dtb/dtb.hpp>
 
 #include <cstdint>
 

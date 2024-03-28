@@ -1,10 +1,7 @@
-#include "parser.hpp"
+#include "dtb/parser.hpp"
 
-#include <cstddef>
-#include <cstdint>
-
-#include "../../debug.hpp"
-#include "../../mini_clib.hpp"
+#include "libk/assert.hpp"
+#include "libk/string.hpp"
 #include "utils.hpp"
 
 #if __BYTE_ORDER == __LITTLE_ENDIAN
@@ -70,7 +67,7 @@ size_t DeviceTreeParser::skip_node(size_t offset) const {
   offset += sizeof(uint32_t);
 
   // And ignore the node's name
-  const size_t name_size = strlen(get_string(offset)) + 1;  // We count the \000 at the end
+  const size_t name_size = libk::strlen(get_string(offset)) + 1;  // We count the \000 at the end
   offset = align_pointer(offset + name_size, alignof(uint32_t));
 
   while (true) {
@@ -100,7 +97,9 @@ size_t DeviceTreeParser::skip_node(size_t offset) const {
       }
 
       default: {
-        LOG_CRITICAL("Unrecognized token in Device Tree Blob at offset {} : {}.", offset, token);
+        KASSERT(false);
+        // TODO : Fix this with a message
+        // LOG_CRITICAL("Unrecognized token in Device Tree Blob at offset {} : {}.", offset, token);
       }
     }
   }

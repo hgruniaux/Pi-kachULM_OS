@@ -4,9 +4,9 @@
 #include <cstddef>
 #include <iterator>
 
+#include "libk/string.hpp"
 #include "node.hpp"
 #include "parser.hpp"
-#include "../../mini_clib.hpp"
 
 struct MemorySection {
   uint64_t address;
@@ -65,7 +65,7 @@ public:
   [[nodiscard]] Node get_root() const { return Node(&m_p, m_p.struct_offset); }
 
   [[nodiscard]] bool find_node(const char *path, Node *node) const {
-      return find_node(path, strlen(path), node);
+      return find_node(path, libk::strlen(path), node);
   }
 
   [[nodiscard]] bool find_property(const char *path, Property *property) const;

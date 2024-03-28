@@ -1,8 +1,5 @@
-#include <cstddef>
-#include <cstdint>
-
-#include "gpio.hpp"
 #include "miniuart.hpp"
+#include "gpio.hpp"
 #include "mmio.hpp"
 
 namespace MiniUART {
@@ -79,7 +76,7 @@ void init(uint32_t baud_rate) {
 
 void write_one(uint8_t value) {
   while ((MMIO::read(AUX_MU_LSR_REG) & 0x20) == 0) {
-        asm("yield");
+    asm("yield");
   }
 
   MMIO::write(AUX_MU_IO_REG, value);
@@ -87,7 +84,7 @@ void write_one(uint8_t value) {
 
 uint8_t read_one() {
   while ((MMIO::read(AUX_MU_LSR_REG) & 0x01) == 0) {
-        asm("yield");
+    asm("yield");
   }
 
   return (MMIO::read(AUX_MU_IO_REG) & 0xFF);

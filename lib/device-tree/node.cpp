@@ -1,13 +1,9 @@
-#include "node.hpp"
+#include "dtb/node.hpp"
 
-#include "../../debug.hpp"
-#include "../../mini_clib.hpp"
-
-#include "parser.hpp"
+#include "dtb/parser.hpp"
+#include "libk/assert.hpp"
+#include "libk/string.hpp"
 #include "utils.hpp"
-
-#include <cstddef>
-#include <cstdint>
 
 static constexpr size_t max_val = -1;
 
@@ -39,7 +35,9 @@ bool find_next_property(const DeviceTreeParser* m_p, size_t* offset) {
         return false;
       }
       default: {
-        LOG_CRITICAL("Unrecognized token in Device Tree Blob at offset {} : {}.", offset, token);
+        KASSERT(false);
+        // TODO : Fix this with a message
+        // LOG_CRITICAL("Unrecognized token in Device Tree Blob at offset {} : {}.", offset, token);
       }
     }
   }
@@ -115,7 +113,9 @@ bool find_next_node(const DeviceTreeParser* m_p, size_t* offset) {
         return false;
       }
       default: {
-        LOG_CRITICAL("Unrecognized token in Device Tree Blob at offset {} : {}.", offset, token);
+        KASSERT(false);
+        // TODO : Fix this with a message
+        // LOG_CRITICAL("Unrecognized token in Device Tree Blob at offset {} : {}.", offset, token);
       }
     }
   }
@@ -166,7 +166,7 @@ Node::Node(const DeviceTreeParser* parser, size_t offset) : m_p(parser) {
   offset += sizeof(uint32_t);
 
   m_name = m_p->get_string(offset);
-  const size_t name_size = strlen(m_name) + 1;  // We count the \000 at the end
+  const size_t name_size = libk::strlen(m_name) + 1;  // We count the \000 at the end
 
   m_off = align_pointer(offset + name_size, alignof(uint32_t));
 }

@@ -1,6 +1,4 @@
 #include "device.hpp"
-#include <cstddef>
-#include <cstdint>
 #include "../debug.hpp"
 #include "mailbox.hpp"
 
