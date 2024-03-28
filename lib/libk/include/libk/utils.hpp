@@ -4,6 +4,8 @@
 #include <cstdint>
 #include <type_traits>
 
+#include "assert.hpp"
+
 #define KUNUSED(var) ((void)(var))
 
 namespace libk {
@@ -44,6 +46,27 @@ static inline constexpr T clamp(T val, T min_val, T max_val) {
     asm volatile("");
 }
 
+/** @brief Checks if @a n is a power of two. */
+template <std::unsigned_integral T>
+[[nodiscard]] static inline constexpr bool is_power_of_two(T n) {
+  return (n > 0 && ((n & (n - 1)) == 0));
+}
+
+template <class T>
+concept unsigned_or_pointer = std::is_unsigned_v<T> || std::is_pointer_v<T>;
+
+/** @brief Aligns @a value to the requested @a alignment (is a power of two). */
+template <unsigned_or_pointer T>
+[[nodiscard]] static inline constexpr T align(T value, size_t alignment) {
+  KASSERT(is_power_of_two(alignment));
+  const auto addr = (uintptr_t)value;
+  const uintptr_t new_addr = addr ^ (addr & (alignment - 1));
+  if (new_addr < addr) {
+    return (T)(new_addr + alignment);
+  }
+  return (T)new_addr;
+}
+
 /** @brief Reverses the bytes in @a value. */
 [[gnu::always_inline]] static inline uint8_t bswap(uint8_t value) {
   // No bytes to reverse, but provided for the sake of completeness.
@@ -68,15 +91,21 @@ static inline constexpr T clamp(T val, T min_val, T max_val) {
 /** @brief Converts a little-endian @a value to the native endianness. */
 template <std::unsigned_integral T>
 [[gnu::always_inline]] static inline T from_le(T value) {
-  // ARM is natively little-endian, no conversion needed.
+#if __BYTE_ORDER == __LITTLE_ENDIAN
   return value;
+#else
+  return bswap(value);
+#endif
 }
 
 /** @brief Converts a big-endian @a value to the native endianness. */
 template <std::unsigned_integral T>
 [[gnu::always_inline]] static inline T from_be(T value) {
-  // ARM is natively little-endian, byte swapping needed.
+#if __BYTE_ORDER == __LITTLE_ENDIAN
   return bswap(value);
+#else
+  return value;
+#endif
 }
 
 /** @brief Reads a 8-bit word at the given memory @a address. */
