@@ -3,12 +3,19 @@
 #if __ARM_FEATURE_SVE
 extern "C" size_t __strlen_aarch64_sve(const char*);
 extern "C" char* __strcpy_aarch64_sve(char*, const char*);
+extern "C" int __strcmp_aarch64_sve(const char*, const char*);
+extern "C" char* __strrchr_aarch64_sve(const char*, int);
+extern "C" char* __strchrnul_aarch64_sve(const char*, int);
 extern "C" void* __memchr_aarch64_sve(const void*, int, size_t);
 extern "C" int __memcmp_aarch64_sve(const void*, const void*, size_t);
 extern "C" void* __memcpy_aarch64_sve(void*, const void*, size_t);
 #else
 extern "C" size_t __strlen_aarch64(const char*);
 extern "C" char* __strcpy_aarch64(char*, const char*);
+extern "C" int __strcmp_aarch64(const char*, const char*);
+extern "C" int __strncmp_aarch64(const char*, const char*, size_t);
+extern "C" char* __strrchr_aarch64(const char*, int);
+extern "C" char* __strchrnul_aarch64(const char*, int);
 extern "C" void* __memchr_aarch64(const void*, int, size_t);
 extern "C" int __memcmp_aarch64(const void*, const void*, size_t);
 extern "C" void* __memcpy_aarch64(void*, const void*, size_t);
@@ -17,76 +24,6 @@ extern "C" void* __memset_aarch64(void*, int, size_t);
 extern "C" void* __memmove_aarch64_mops(void*, const void*, size_t);
 
 namespace libk {
-
-// TODO : Update This
-int strcmp(const char* lhs, const char* rhs) {
-  // From glibc 2.7
-  unsigned char c1, c2;
-
-  do {
-    c1 = *lhs++;
-    c2 = *rhs++;
-
-    if (c1 == '\0') {
-      return c1 - c2;
-    }
-
-  } while (c1 == c2);
-
-  return c1 - c2;
-}
-
-int strncmp(const char* lhs, const char* rhs, size_t count) {
-  // From glibc 2.7
-  unsigned char c1 = 0, c2 = 0;
-
-  while (count > 0) {
-    c1 = *lhs++;
-    c2 = *rhs++;
-
-    if (c1 == '\0' || c1 != c2) {
-      return c1 - c2;
-    }
-
-    count--;
-  }
-
-  return c1 - c2;
-}
-
-char* strrchr(const char* str, int ch) {
-  if (ch == '\0') {
-    while (*str != '\0') {
-      str++;
-    }
-
-    return (char*)str;
-  }
-
-  const char* last_found = nullptr;
-
-  while (*str != '\0') {
-    while (!(*str == '\0' || *str == ch)) {
-      str++;
-    }
-
-    if (*str == ch) {
-      last_found = str;
-      str++;
-    }
-  }
-
-  return (char*)last_found;
-}
-
-char* strchrnul(const char* str, int ch) {
-  while (!(*str == '\0' && *str == ch)) {
-    str++;
-  }
-  return (char*)str;
-}
-// End of TODO
-
 size_t strlen(const char* text) {
 #if __ARM_FEATURE_SVE
   return __strlen_aarch64_sve(text);
@@ -100,6 +37,38 @@ char* strcpy(char* dst, const char* src) {
   return __strcpy_aarch64_sve(dst, src);
 #else
   return __strcpy_aarch64(dst, src);
+#endif
+}
+
+int strcmp(const char* lhs, const char* rhs) {
+#if __ARM_FEATURE_SVE
+  return __strcmp_aarch64_sve(lhs, rhs);
+#else
+  return __strcmp_aarch64(lhs, rhs);
+#endif
+}
+
+int strncmp(const char* lhs, const char* rhs, size_t count) {
+#if __ARM_FEATURE_SVE
+  return __strncmp_aarch64_sve(lhs, rhs, count);
+#else
+  return __strncmp_aarch64(lhs, rhs, count);
+#endif
+}
+
+char* strrchr(const char* str, int ch) {
+#if __ARM_FEATURE_SVE
+  return __strrchr_aarch64_sve(str, ch);
+#else
+  return __strrchr_aarch64(str, ch);
+#endif
+}
+
+char* strchrnul(const char* str, int ch) {
+#if __ARM_FEATURE_SVE
+  return __strchrnul_aarch64_sve(str, ch);
+#else
+  return __strchrnul_aarch64(str, ch);
 #endif
 }
 
@@ -136,12 +105,32 @@ void* memmove(void* dst, const void* src, size_t length) {
 }
 }  // namespace libk
 
+/*
+ * Start of the C API:
+ */
+
 extern "C" size_t strlen(const char* text) {
   return libk::strlen(text);
 }
 
 extern "C" char* strcpy(char* dst, const char* src) {
   return libk::strcpy(dst, src);
+}
+
+extern "C" int strcmp(const char* lhs, const char* rhs) {
+  return libk::strcmp(lhs, rhs);
+}
+
+extern "C" int strncmp(const char* lhs, const char* rhs, size_t count) {
+  return libk::strncmp(lhs, rhs, count);
+}
+
+extern "C" char* strrchr(const char* str, int ch) {
+  return libk::strrchr(str, ch);
+}
+
+extern "C" char* strchrnul(const char* str, int ch) {
+  return libk::strchrnul(str, ch);
 }
 
 extern "C" void* memchr(const void* ptr, int value, size_t length) {

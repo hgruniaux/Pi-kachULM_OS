@@ -8,8 +8,6 @@
 namespace libk {
 size_t strlen(const char* text);
 char* strcpy(char* dst, const char* src);
-
-// TODO Update this later
 int strcmp(const char* lhs, const char* rhs);
 int strncmp(const char* lhs, const char* rhs, size_t count);
 char* strrchr(const char* str, int ch);
