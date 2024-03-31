@@ -13,6 +13,7 @@ add_library(libk STATIC
         include/libk/string.hpp
         include/libk/utils.hpp
         include/libk/option.hpp
+        include/libk/string_view.hpp
 )
 
 target_include_directories(libk PUBLIC include/)
