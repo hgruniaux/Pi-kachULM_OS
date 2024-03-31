@@ -3,6 +3,7 @@
 #include <cstddef>
 #include <iterator>
 
+#include "libk/option.hpp"
 #include "libk/string.hpp"
 #include "parser.hpp"
 
@@ -14,6 +15,13 @@ struct Property {
   const char* name;
   size_t length;
   const char* data;
+
+  /** @brief Parses the property value as a `<u32>`. */
+  [[nodiscard]] libk::Option<uint32_t> get_u32() const;
+  /** @brief Parses the property value as a `<u64>`. */
+  [[nodiscard]] libk::Option<uint64_t> get_u64() const;
+  /** @brief Parses the property value as a `<u32>` or `<u64>` depending on property length. */
+  [[nodiscard]] libk::Option<uint64_t> get_u32_or_u64() const;
 };
 
 class PropertyIterator {
