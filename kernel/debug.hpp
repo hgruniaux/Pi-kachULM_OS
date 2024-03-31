@@ -4,6 +4,8 @@
 #include <cstdint>
 #include <source_location>
 
+#include "libk/string_view.hpp"
+
 /** See debug::Severity::TRACE. */
 #define LOG_TRACE_LEVEL 0
 /** @brief See debug::Severity::DEBUG. */
@@ -53,6 +55,8 @@ struct Argument {
     POINTER,
     /** @brief A NUL-terminated UTF-8 string. */
     C_STRING,
+    /** @brief A sized UTF-8 string. */
+    C_SIZED_STRING,
   };
 
   Type type;
@@ -65,6 +69,10 @@ struct Argument {
     double double_value;
     const char* c_string_value;
     const void* pointer_value;
+    struct {
+      const char* data;
+      size_t length;
+    } c_sized_string_value;
   } data;
 
   Argument(bool value) : type(Type::BOOL) { data.bool_value = value; }
@@ -81,6 +89,10 @@ struct Argument {
   //  Argument(double value) : type(Type::DOUBLE) { data.double_value = value; }
   Argument(const char* value) : type(Type::C_STRING) { data.c_string_value = value; }
   Argument(const void* value) : type(Type::POINTER) { data.pointer_value = value; }
+  Argument(libk::StringView value) : type(Type::C_SIZED_STRING) {
+    data.c_sized_string_value.length = value.get_length();
+    data.c_sized_string_value.data = value.get_data();
+  }
 };  // class Argument
 }  // namespace impl
 

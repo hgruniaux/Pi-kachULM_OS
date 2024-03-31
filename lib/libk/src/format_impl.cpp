@@ -373,19 +373,19 @@ static char* format_char_to(char* out, char value, const char* spec) {
   }
 }
 
-static char* format_c_string_to(char* out, const char* value, const char* spec) {
+static char* format_string_to(char* out, const char* value, size_t length, const char* spec) {
   const auto parsed_spec = parse_string_spec(false, spec);
   if (parsed_spec.debug) {
     *out++ = '"';
-    for (const char* it = value; *it != '\0'; ++it) {
-      out = output_debug_char(out, *it);
+    for (size_t i = 0; i < length; ++i) {
+      out = output_debug_char(out, value[i]);
     }
     *out++ = '"';
     return out;
-  } else {
-    strcpy(out, value);
-    return out + strlen(value);
   }
+
+  memcpy(out, value, sizeof(char) * length);
+  return out + strlen(value);
 }
 
 char* format_argument_to(char* out, const Argument& argument, const char* spec) {
@@ -406,8 +406,8 @@ char* format_argument_to(char* out, const Argument& argument, const char* spec) 
       */
     case Argument::Type::POINTER:
       return format_pointer_to(out, argument.data.pointer_value, spec);
-    case Argument::Type::C_STRING:
-      return format_c_string_to(out, argument.data.c_string_value, spec);
+    case Argument::Type::STRING:
+      return format_string_to(out, argument.data.string_value.value, argument.data.string_value.length, spec);
   }
 
   KASSERT(false && "argument kind not implemented");

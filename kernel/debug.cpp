@@ -225,8 +225,10 @@ static void print_double(Sink& sink, double value) {
 */
 
 template <class Sink>
-static void print_c_string(Sink& sink, const char* value) {
-  sink.puts(value);
+static void print_string(Sink& sink, const char* value, size_t length) {
+  for (size_t i = 0; i < length; ++i) {
+    sink.putc(value[i]);
+  }
 }
 
 template <class Sink>
@@ -244,16 +246,19 @@ static void print_argument(Sink& sink, const impl::Argument& argument) {
     case impl::Argument::Type::UINT64:
       print_uint64(sink, argument.data.uint64_value);
       return;
-  /*
-    case impl::Argument::Type::FLOAT:
-      print_float(sink, argument.data.float_value);
-      return;
-    case impl::Argument::Type::DOUBLE:
-      print_double(sink, argument.data.double_value);
-      return;
-  */
+      /*
+        case impl::Argument::Type::FLOAT:
+          print_float(sink, argument.data.float_value);
+          return;
+        case impl::Argument::Type::DOUBLE:
+          print_double(sink, argument.data.double_value);
+          return;
+      */
     case impl::Argument::Type::C_STRING:
-      print_c_string(sink, argument.data.c_string_value);
+      print_string(sink, argument.data.c_string_value, libk::strlen(argument.data.c_string_value));
+      return;
+    case impl::Argument::Type::C_SIZED_STRING:
+      print_string(sink, argument.data.c_sized_string_value.data, argument.data.c_sized_string_value.length);
       return;
     case impl::Argument::Type::POINTER:
       print_uint64(sink, argument.data.uint64_value);
