@@ -12,6 +12,7 @@ add_library(libk STATIC
         include/libk/spinlock.hpp
         include/libk/string.hpp
         include/libk/utils.hpp
+        include/libk/option.hpp
 )
 
 target_include_directories(libk PUBLIC include/)
