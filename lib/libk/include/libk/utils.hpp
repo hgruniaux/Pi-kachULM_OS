@@ -98,9 +98,29 @@ template <std::unsigned_integral T>
 #endif
 }
 
+/** @brief Converts a native endianness @a value to little-endian. */
+template <std::unsigned_integral T>
+[[gnu::always_inline]] static inline T to_le(T value) {
+#if __BYTE_ORDER == __LITTLE_ENDIAN
+  return value;
+#else
+  return bswap(value);
+#endif
+}
+
 /** @brief Converts a big-endian @a value to the native endianness. */
 template <std::unsigned_integral T>
 [[gnu::always_inline]] static inline T from_be(T value) {
+#if __BYTE_ORDER == __LITTLE_ENDIAN
+  return bswap(value);
+#else
+  return value;
+#endif
+}
+
+/** @brief Converts a native endianness @a value to big-endian. */
+template <std::unsigned_integral T>
+[[gnu::always_inline]] static inline T to_be(T value) {
 #if __BYTE_ORDER == __LITTLE_ENDIAN
   return bswap(value);
 #else
