@@ -7,20 +7,19 @@
 
 DeviceTreeParser DeviceTreeParser::from_memory(const void* dts) {
   if (libk::align(dts, alignof(uint64_t)) != dts) {
-    return DeviceTreeParser(nullptr, 0, 0, 0, 0, 0);
+    return DeviceTreeParser(nullptr, 0, 0, 0, 0);
   }
 
   const auto* header = (const uint32_t*)dts;
 
   if (libk::from_be(header[0]) != DTB_MAGIC) {
-    return DeviceTreeParser(nullptr, 0, 0, 0, 0, 0);
+    return DeviceTreeParser(nullptr,  0, 0, 0, 0);
   }
 
-  const uint32_t total_size = libk::from_be(header[1]);
   const uint32_t off_struct = libk::from_be(header[2]);
   if (libk::align(off_struct, alignof(uint32_t)) != off_struct) {
     // Unaligned property section
-    return DeviceTreeParser(nullptr, 0, 0, 0, 0, 0);
+    return DeviceTreeParser(nullptr, 0, 0, 0,  0);
   }
 
   const uint32_t off_strings = libk::from_be(header[3]);
@@ -28,12 +27,12 @@ DeviceTreeParser DeviceTreeParser::from_memory(const void* dts) {
   const uint32_t off_mem_reserved_map = libk::from_be(header[4]);
   if (libk::align(off_mem_reserved_map, alignof(uint64_t)) != off_mem_reserved_map) {
     // Unaligned reserved memory section
-    return DeviceTreeParser(nullptr, 0, 0, 0, 0, 0);
+    return DeviceTreeParser(nullptr, 0, 0, 0, 0);
   }
 
   const uint32_t version = libk::from_be(header[5]);
 
-  return DeviceTreeParser((const uint8_t*)dts, total_size, off_struct, off_strings, off_mem_reserved_map, version);
+  return DeviceTreeParser((const uint8_t*)dts, off_struct, off_strings, off_mem_reserved_map, version);
 }
 
 size_t DeviceTreeParser::skip_property(size_t offset) const {
