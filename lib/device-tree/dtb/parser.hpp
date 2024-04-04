@@ -10,7 +10,6 @@ class DeviceTreeParser {
   [[nodiscard]] static DeviceTreeParser from_memory(const void* dts);
   [[nodiscard]] bool is_status_okay() const { return version != 0; }
 
-  const uint32_t total_size;
   const uint32_t struct_offset;
   const uint32_t string_offset;
   const uint32_t reserved_memory_offset;
@@ -35,13 +34,11 @@ class DeviceTreeParser {
 
  private:
   explicit DeviceTreeParser(const uint8_t* dts,
-                            uint32_t total_size,
                             uint32_t off_struct,
                             uint32_t off_strings,
                             uint32_t off_mem_reserved_map,
                             uint32_t version)
-      : total_size(total_size),
-        struct_offset(off_struct),
+      : struct_offset(off_struct),
         string_offset(off_strings),
         reserved_memory_offset(off_mem_reserved_map),
         version(version),

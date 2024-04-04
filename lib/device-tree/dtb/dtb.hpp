@@ -58,8 +58,6 @@ public:
 
   [[nodiscard]] uint32_t get_version() const { return m_p.version; }
 
-  [[nodiscard]] uint32_t get_size() const { return m_p.total_size; }
-
   [[nodiscard]] ReservedSections get_reserved_sections() const { return ReservedSections(&m_p); }
 
   [[nodiscard]] Node get_root() const { return Node(&m_p, m_p.struct_offset); }
