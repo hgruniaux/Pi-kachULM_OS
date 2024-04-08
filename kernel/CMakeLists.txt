@@ -25,6 +25,10 @@ add_executable(kernel boot.S kernel.cpp cxxabi.cpp startup.cpp
         hardware/framebuffer.hpp
         hardware/framebuffer.cpp
 
+        hardware/interrupts.hpp
+        hardware/interrupts.cpp
+        hardware/interrupts.S
+
         graphics/pkfont.hpp
         graphics/pkfont.cpp
 
@@ -44,6 +48,6 @@ set_property(TARGET kernel PROPERTY LINK_DEPENDS ${LINKER_SCRIPT})
 
 # Extracting the elf file to a binary one
 add_custom_target(kernel-img
-        COMMAND ${CMAKE_OBJCOPY} -O binary ${CMAKE_CURRENT_BINARY_DIR}/kernel8.elf ${CMAKE_CURRENT_BINARY_DIR}/kernel8.bin
+        COMMAND ${CMAKE_OBJCOPY} -O binary ${CMAKE_CURRENT_BINARY_DIR}/kernel8.elf ${CMAKE_CURRENT_BINARY_DIR}/kernel8.img
         DEPENDS kernel
         COMMENT "Converting ELF to binary")

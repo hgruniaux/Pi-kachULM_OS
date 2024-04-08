@@ -4,6 +4,7 @@
 #include "graphics/pkfont.hpp"
 #include "hardware/device.hpp"
 #include "hardware/framebuffer.hpp"
+#include "hardware/interrupts.hpp"
 #include "hardware/mmio.hpp"
 #include "hardware/uart.hpp"
 
@@ -17,13 +18,43 @@ void print_property(const DeviceTree& dt, const char* property) {
   LOG_INFO("DeviceTree property {} (size: {}) : {}", p.name, p.length, p.data);
 }
 
+void dump_current_el() {
+  switch (get_current_exception_level()) {
+    case ExceptionLevel::EL0:
+      LOG_INFO("CurrentEL: EL0");
+      break;
+    case ExceptionLevel::EL1:
+      LOG_INFO("CurrentEL: EL1");
+      break;
+    case ExceptionLevel::EL2:
+      LOG_INFO("CurrentEL: EL2");
+      break;
+    case ExceptionLevel::EL3:
+      LOG_INFO("CurrentEL: EL3");
+      break;
+  }
+}
+
+extern "C" void init_interrupts_vector_table();
+
 extern "C" [[noreturn]] void kmain(const void* dtb) {
   const DeviceTree dt(dtb);
-  MMIO::init(dt);
-  UART::init(1000000);
-  UART::puts("Hello, kernel World from UART!\r\n");
+#endif
+  MMIO::init();
+  UART::init(115200);
 
+  LOG_INFO("Kernel built at " __DATE__ " " __TIME__);
 
+#if 1
+  dump_current_el();
+  enable_fpu_and_neon();
+  jump_to_el1();
+  dump_current_el();
+#endif
+
+  init_interrupts_vector_table();
+
+#if 0
   LOG_INFO("DeviceTree initialization: {}", dt.is_status_okay());
   LOG_INFO("DeviceTree Version: {}", dt.get_version());
   print_property(dt, "/model");
