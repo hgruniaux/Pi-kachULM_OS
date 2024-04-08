@@ -23,10 +23,10 @@ static constexpr int32_t GPCLR = 0x200028;  // GPIO Pin Output Clear Base
 //  GPCLR + 0 = 0x200028, GPIO Pin Output Clear 1
 //  GPCLR + 4 = 0x20002C, GPIO Pin Output Clear 1
 
-static constexpr int32_t GPLEV = 0x200034;  // GPIO Pin Level Base
+static constexpr int32_t GPLEV = 0x200034;  // GPIO Pin LogLevel Base
 
-//  GPLEV + 0 = 0x200034, GPIO Pin Level 0
-//  GPLEV + 4 = 0x200038, GPIO Pin Level 1
+//  GPLEV + 0 = 0x200034, GPIO Pin LogLevel 0
+//  GPLEV + 4 = 0x200038, GPIO Pin LogLevel 1
 
 // static constexpr int32_t GPEDS = 0x200040;  // GPIO Pin Event Detect Status Base
 //  GPEDS + 0 = 0x200040, GPIO Pin Event Detect Status 0
