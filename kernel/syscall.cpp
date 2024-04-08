@@ -1,6 +1,6 @@
 #include "syscall.hpp"
 #include <libk/assert.hpp>
-#include "debug.hpp"
+#include <libk/log.hpp>
 
 SyscallManager& SyscallManager::get() {
   static SyscallManager manager;

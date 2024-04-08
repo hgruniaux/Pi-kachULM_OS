@@ -1,7 +1,4 @@
 add_executable(kernel boot.S kernel.cpp cxxabi.cpp startup.cpp
-        debug.hpp
-        debug.cpp
-
         syscall.hpp
         syscall.cpp
 

@@ -1,4 +1,3 @@
-#include "debug.hpp"
 #include "dtb/dtb.hpp"
 #include "graphics/graphics.hpp"
 #include "graphics/pkfont.hpp"
@@ -8,6 +7,8 @@
 #include "hardware/mmio.hpp"
 #include "hardware/uart.hpp"
 #include "syscall.hpp"
+
+#include <libk/log.hpp>
 
 void print_property(const DeviceTree& dt, const char* property) {
   Property p;
@@ -38,12 +39,24 @@ void dump_current_el() {
 
 extern "C" void init_interrupts_vector_table();
 
+class UARTLogger : public libk::Logger {
+ public:
+  bool support_colors() const override { return true; }
+  void write(const char* data, size_t length) override {
+    UART::write((const uint8_t*)data, length);
+    UART::write((const uint8_t*)"\r\n", 2);
+  }
+};  // class UARTLogger
+
 extern "C" [[noreturn]] void kmain(const void* dtb) {
 #if 0
   const DeviceTree dt(dtb);
 #endif
   MMIO::init();
   UART::init(115200);
+
+  UARTLogger logger;
+  libk::register_logger(logger);
 
   LOG_INFO("Kernel built at " __DATE__ " " __TIME__);
 

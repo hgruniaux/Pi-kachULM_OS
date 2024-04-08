@@ -1,5 +1,4 @@
 #include "device.hpp"
-#include "../debug.hpp"
 #include "mailbox.hpp"
 
 bool Device::init() {

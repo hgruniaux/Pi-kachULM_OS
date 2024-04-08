@@ -14,7 +14,7 @@ extern uint64_t BASE;
 extern DeviceType device;
 
 /** Initializes the memory-mapped IO system. */
-void init(const DeviceTree& dt);
+void init();
 
 /** Writes @a value into the memory-mapped IO @a reg register. */
 [[gnu::always_inline]] static inline void write(uint32_t reg, uint32_t value) {

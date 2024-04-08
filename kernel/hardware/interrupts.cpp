@@ -1,5 +1,5 @@
 #include "interrupts.hpp"
-#include "../debug.hpp"
+#include <libk/log.hpp>
 #include "../syscall.hpp"
 
 ExceptionLevel get_current_exception_level() {
