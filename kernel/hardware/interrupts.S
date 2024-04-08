@@ -85,74 +85,50 @@ jump_from_el1_to_el0:
 el0_entry: // EL0 entry point
     ret
 
+.macro KERNEL_ENTRY source, kind
+.balign 0x80
+    sub sp, sp, #176 // sizeof(Registers)
+    stp x0, x1, [sp, #16 * 0]
+    mov x0, \source
+    mov x1, \kind
+    b exception_entry
+.endm
+
 .global interrupts_vector_table
 .balign 2048
 interrupts_vector_table:
 // The four first entries are for when we are using SP_EL0. This should never happen
-// as we requested that the CPU use SP_ELx for each exception level. So we just enter an infinite loop.
-    b exception_entry
-.balign 0x80
-    b .
-.balign 0x80
-    b .
-.balign 0x80
-    b exception_entry
-
+// as we requested that the CPU use SP_ELx for each exception level.
+    KERNEL_ENTRY 0, 0
+    KERNEL_ENTRY 0, 1
+    KERNEL_ENTRY 0, 2
+    KERNEL_ENTRY 0, 3
 // The following entries are for interrupts and exceptions coming from the
 // same exception level (that is from the kernel code). These entries will use
 // the EL1 stack pointer (the stack pointer of the kernel, and therefore the
 // same as the interrupt code).
-.balign 0x80
-    // The exception handler for a synchronous exception from the current EL
-    // using the current SP.
-    b exception_entry
-.balign 0x80
-    // The exception handler for an IRQ exception from the current EL
-    // using the current SP.
-    b .
-.balign 0x80
-    // The exception handler for an FIQ from the current EL
-    // using the current SP.
-    b .
-.balign 0x80
-    // The exception handler for a System Error exception from the current EL
-    // using the current SP.
-    b exception_entry
-
+    KERNEL_ENTRY 1, 0
+    KERNEL_ENTRY 1, 1
+    KERNEL_ENTRY 1, 2
+    KERNEL_ENTRY 1, 3
 // The following entries are for interrupts and exceptions coming from lower
 // exception levels (like EL0, the user space).
 // From AArch64 mode:
-.balign 0x80
-    // The exception handler for a synchronous exception from a lower EL (AArch64).
-    b exception_entry
-.balign 0x80
-    // The exception handler for an IRQ from a lower EL (AArch64).
-    b .
-.balign 0x80
-    // The exception handler for an FIQ from a lower EL (AArch64).
-    b .
-.balign 0x80
-    // The exception handler for a System Error exception from a lower EL(AArch64).
-    b exception_entry
-// From AArch32 mode:
-.balign 0x80
-    // The exception handler for a synchronous exception from a lower EL(AArch32).
-    b exception_entry
-.balign 0x80
-    // The exception handler for an IRQ exception from a lower EL (AArch32).
-    b .
-.balign 0x80
-    // The exception handler for an FIQ exception from a lower EL (AArch32).
-    b .
-.balign 0x80
-    // The exception handler for a System Error exception from a lower EL(AArch32).
-    b exception_entry
+    KERNEL_ENTRY 2, 0
+    KERNEL_ENTRY 2, 1
+    KERNEL_ENTRY 2, 2
+    KERNEL_ENTRY 2, 3
+// From AArch32 mode (NOT SUPPORTED):
+    KERNEL_ENTRY 3, 0
+    KERNEL_ENTRY 3, 1
+    KERNEL_ENTRY 3, 2
+    KERNEL_ENTRY 3, 3
 
 .global exception_handler
 
 exception_entry:
-    sub sp, sp, #176 // sizeof(Registers)
-    stp x0, x1, [sp, #16 * 0]
+    // Space for the stack already reserved in the macro KERNEL_ENTRY
+    // Likewise, x0 and x1 were already saved.
     stp x2, x3, [sp, #16 * 1]
     stp x4, x5, [sp, #16 * 2]
     stp x6, x7, [sp, #16 * 3]
@@ -163,11 +139,14 @@ exception_entry:
     stp x16, x17, [sp, #16 * 8]
     stp x18, x30, [sp, #16 * 9]
 
-    mrs x0, ESR_EL1
-    mrs x1, FAR_EL1
-    stp x0, x1, [sp, #16 * 10]
+    // Cannot use x0 and x1 as they are already used by KERNEL_ENTRY to store
+    // the source and the kind of the interrupt.
+    mrs x2, ESR_EL1
+    mrs x3, FAR_EL1
+    stp x2, x3, [sp, #16 * 10]
 
-    mov x0, sp
+    mov x2, sp
+    // Signature: void exception_handler(InterruptSource, InterruptKind, Registers&)
     bl exception_handler
 
     ldp x0, x1, [sp, #16 * 0]

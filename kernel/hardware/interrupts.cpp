@@ -1,5 +1,6 @@
 #include "interrupts.hpp"
 #include "../debug.hpp"
+#include "../syscall.hpp"
 
 ExceptionLevel get_current_exception_level() {
   // The current exception level is stored in the system register CurrentEL in the bits [3:2].
@@ -8,6 +9,14 @@ ExceptionLevel get_current_exception_level() {
   asm volatile("mrs %0, CurrentEL" : "=r"(current_el));
   return (ExceptionLevel)(current_el >> 2 & 0b11);
 }
+
+// The following functions are implemented in assembly in interrupts.S:
+/** Jumps from EL3 to EL2 (Non-secure). */
+extern "C" void jump_from_el3_to_el2();
+/** Jumps from EL2 to EL1 (Non-secure). */
+extern "C" void jump_from_el2_to_el1();
+/** Jumps from EL1 to EL0 (Non-secure). */
+extern "C" void jump_from_el1_to_el0();
 
 void jump_to_el1() {
   switch (get_current_exception_level()) {
@@ -22,35 +31,34 @@ void jump_to_el1() {
   }
 }
 
-struct Registers {
-  uint64_t x0;
-  uint64_t x1;
-  uint64_t x2;
-  uint64_t x3;
-  uint64_t x4;
-  uint64_t x5;
-  uint64_t x6;
-  uint64_t x7;
-  uint64_t x8;
-  uint64_t x9;
-  uint64_t x10;
-  uint64_t x11;
-  uint64_t x12;
-  uint64_t x13;
-  uint64_t x14;
-  uint64_t x15;
-  uint64_t x16;
-  uint64_t x17;
-  uint64_t x18;
-  // Registers x19-x28 are callee-saved so no need to save them.
-  uint64_t x30;  // the link pointer (store the return address)
+void jump_to_el0() {
+  // We cannot check if we are already at EL0 (the system register CurrentEL is
+  // not readable in EL0). Therefore, we assume that we are not in EL0.
 
-  // The following two registers are only used in case of exceptions.
-  // In other cases, they are set to zero.
-  uint64_t esr;
-  uint64_t far;
-};
+  // Jump to EL1 if not already in it.
+  jump_to_el1();
 
-extern "C" void exception_handler(Registers& registers) {
-  LOG_CRITICAL("Exception!");
+  // Then jump to EL0!
+  jump_from_el1_to_el0();
+}
+
+extern "C" void exception_handler(InterruptSource source, InterruptKind kind, Registers& registers) {
+  if (source == InterruptSource::LOWER_AARCH64 && kind == InterruptKind::SYNCHRONOUS) {
+    const uint32_t ec = (registers.esr >> 26) & 0x3F;
+
+    // Handle AArch64 syscall
+    if (ec == 0b010101) {  // SVC instruction execution in AArch64 state.
+      // The system call number is stored in w8 (lower 32-bits of x8).
+      const uint32_t syscall_id = registers.x8 & 0xFFFFFFFF;
+      SyscallManager::get().call_syscall(syscall_id, registers);
+      return;
+    }
+  }
+
+  if (source == InterruptSource::LOWER_AARCH32) {
+    LOG_WARNING("interrupt/exception from userspace aarch32 code (not supported)");
+    return;
+  }
+
+  LOG_WARNING("Unhandled exception/interrupt");
 }
