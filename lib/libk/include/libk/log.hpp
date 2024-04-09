@@ -118,7 +118,7 @@ inline void print(const char* message, const Args&... args) {
 #endif
 
 #if LOG_CRITICAL_LEVEL >= LOG_MIN_LEVEL
-#define LOG_CRITICAL(logger, message, ...) \
+#define LOG_CRITICAL(message, ...) \
   ::libk::log(::libk::LogLevel::CRITICAL, (message), std::source_location::current() __VA_OPT__(, ) __VA_ARGS__)
 #else
 #define LOG_CRITICAL(message, ...)

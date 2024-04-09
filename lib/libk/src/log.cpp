@@ -33,12 +33,9 @@ void vlog_logger(Logger* logger,
                  std::source_location source_location,
                  const detail::Argument* args,
                  size_t args_count) {
-  if (logger == nullptr)
-    return;
-
   static constexpr size_t MAX_BUFFER_SIZE = 1024;
-  char buffer[MAX_BUFFER_SIZE];
 
+  char buffer[MAX_BUFFER_SIZE];
   char* it = buffer;
 
   // Print the header
@@ -60,11 +57,13 @@ void vlog(LogLevel level,
     return;
 
   for (auto* logger : loggers) {
+    if (logger == nullptr)
+      continue;
     vlog_logger(logger, level, message, source_location, args, args_count);
   }
 
   if (level >= LogLevel::CRITICAL) {
-    // TODO: panic
+    panic("A critical log message was emitted");
   }
 }
 
@@ -75,8 +74,12 @@ void vprint(const char* message, const detail::Argument* args, size_t args_count
   char* it = detail::format_to(buffer, message, args, args_count);
   *it = '\0';
 
-  for (auto* logger : loggers)
+  for (auto* logger : loggers) {
+    if (logger == nullptr)
+      continue;
+
     logger->write(buffer, (size_t)((intptr_t)it - (intptr_t)buffer));
+  }
 }
 }  // namespace detail
 
