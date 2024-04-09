@@ -58,14 +58,14 @@ extern "C" [[noreturn]] void kmain(const void* dtb) {
   UARTLogger logger;
   libk::register_logger(logger);
 
-  LOG_INFO("Kernel built at " __DATE__ " " __TIME__);
-
   dump_current_el();
-
   enable_fpu_and_neon();
   jump_to_el1();
+  dump_current_el();
 
   init_interrupts_vector_table();
+
+  LOG_INFO("Kernel built at " __TIME__ " on " __DATE__);
 
 #if 0
   LOG_INFO("DeviceTree initialization: {}", dt.is_status_okay());
@@ -84,11 +84,12 @@ extern "C" [[noreturn]] void kmain(const void* dtb) {
   LOG_INFO("VC memory: {} bytes at {}", device.get_vc_memory_info().size, device.get_vc_memory_info().base_address);
   // LOG_INFO("Temp: {} °C / {} °C", device.get_current_temp() / 1000.0f, device.get_max_temp() / 1000.0f);
 
-  jump_to_el0();
-
   SyscallManager::get().register_syscall(24, [](Registers& regs) { LOG_INFO("Syscall 24"); });
 
+  // Enter userspace
+  jump_to_el0();
   asm volatile("mov w8, 24\n\tsvc #0");
+  libk::halt();
 
 #if 0
   FrameBuffer& framebuffer = FrameBuffer::get();
