@@ -26,7 +26,7 @@ static constexpr int32_t UART0_LCRH = UART0_BASE + 0x2c;
 /** UART0 Control Register (size: 32) */
 static constexpr int32_t UART0_CR = UART0_BASE + 0x30;
 
-/** UART0 Interrupt FIFO LogLevel Select Register (size: 32) */
+/** UART0 Interrupt FIFO Level Select Register (size: 32) */
 // static constexpr int32_t UART0_IFLS = UART0_BASE + 0x34;
 
 /** UART0 Interrupt Mask Set Clear Register (size: 32) */
