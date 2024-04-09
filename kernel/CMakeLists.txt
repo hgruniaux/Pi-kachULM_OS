@@ -29,6 +29,8 @@ add_executable(kernel boot.S kernel.cpp cxxabi.cpp startup.cpp
         hardware/interrupts.cpp
         hardware/interrupts.S
 
+        hardware/timer.hpp
+
         graphics/pkfont.hpp
         graphics/pkfont.cpp
 

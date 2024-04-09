@@ -5,7 +5,9 @@ namespace libk {
 static constexpr size_t MAX_LOGGERS = 5;
 static Logger* loggers[MAX_LOGGERS] = {nullptr};
 
-static LogLevel current_log_level = LogLevel::INFO;
+static LogLevel current_log_level = LogLevel::TRACE;
+
+static LogTimer log_timer = nullptr;
 
 namespace detail {
 static const char* get_level_string(LogLevel level, bool with_colors) {
@@ -40,7 +42,15 @@ void vlog_logger(Logger* logger,
 
   // Print the header
   const char* level_string = get_level_string(level, logger->support_colors());
-  it = libk::format_to(it, "[{}:{}] [{}] ", source_location.file_name(), source_location.line(), level_string);
+  if (log_timer != nullptr) {
+    it = libk::format_to(it, "[{} ms] ", log_timer());
+  }
+
+  if (level < LogLevel::INFO) {
+    it = libk::format_to(it, "[{}:{}] ", source_location.file_name(), source_location.line());
+  }
+
+  it = libk::format_to(it, "[{}] ", level_string);
 
   // Print the message itself
   it = detail::format_to(it, message, args, args_count);
@@ -82,6 +92,10 @@ void vprint(const char* message, const detail::Argument* args, size_t args_count
   }
 }
 }  // namespace detail
+
+void set_log_timer(LogTimer timer_in_ms) {
+  log_timer = timer_in_ms;
+}
 
 void register_logger(Logger& logger) {
   for (auto& entry : loggers) {

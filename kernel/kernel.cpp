@@ -9,6 +9,7 @@
 #include "syscall.hpp"
 
 #include <libk/log.hpp>
+#include "hardware/timer.hpp"
 
 void print_property(const DeviceTree& dt, const char* property) {
   Property p;
@@ -57,6 +58,7 @@ extern "C" [[noreturn]] void kmain(const void* dtb) {
 
   UARTLogger logger;
   libk::register_logger(logger);
+  libk::set_log_timer([]() { return GenericTimer::get_elapsed_time_in_ms(); });
 
   dump_current_el();
   enable_fpu_and_neon();

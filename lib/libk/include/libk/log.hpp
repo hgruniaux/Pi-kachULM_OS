@@ -52,6 +52,9 @@ void vprint(const char* message, const detail::Argument* args, size_t args_count
 
 void register_logger(Logger& logger);
 
+using LogTimer = uint64_t (*)();
+void set_log_timer(LogTimer timer_in_ms);
+
 /** @brief Logs a formatted message in the kernel logs.
  *
  * Prefer to use the LOG_*() macros. */
