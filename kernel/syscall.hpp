@@ -23,8 +23,19 @@ struct Registers {
   uint64_t x16;
   uint64_t x17;
   uint64_t x18;
-  // Registers x19-x28 are callee-saved so no need to save them.
+  uint64_t x19;
+  uint64_t x20;
+  uint64_t x21;
+  uint64_t x22;
+  uint64_t x23;
+  uint64_t x24;
+  uint64_t x25;
+  uint64_t x26;
+  uint64_t x27;
+  uint64_t x28;
+  uint64_t x29;
   uint64_t x30;  // the link pointer (store the return address)
+  uint64_t xzr;  // always zero
 
   // The following two registers are only used in case of exceptions.
   // In other cases, they are set to zero.

@@ -85,10 +85,10 @@ jump_from_el1_to_el0:
 el0_entry: // EL0 entry point
     ret
 
-.macro KERNEL_ENTRY source, kind
-.balign 0x80
-    sub sp, sp, #176 // sizeof(Registers)
-    stp x0, x1, [sp, #16 * 0]
+#define SIZEOF_REGISTERS 272
+
+                     .macro KERNEL_ENTRY source, kind
+.balign 0x80 sub sp, sp, #SIZEOF_REGISTERS stp x0, x1, [sp, #16 * 0]
     mov x0, \source
     mov x1, \kind
     b exception_entry
@@ -136,14 +136,16 @@ exception_entry:
     stp x10, x11, [sp, #16 * 5]
     stp x12, x13, [sp, #16 * 6]
     stp x14, x15, [sp, #16 * 7]
-    stp x16, x17, [sp, #16 * 8]
-    stp x18, x30, [sp, #16 * 9]
+    stp x16, x17, [sp, #16 * 8] stp x18, x19, [ sp, #16 * 9 ] stp x20, x21,
+    [ sp, #16 * 10 ] stp x22, x23, [ sp, #16 * 11 ] stp x24, x25, [ sp, #16 * 12 ] stp x26, x27,
+    [ sp, #16 * 13 ] stp x28, x29, [ sp, #16 * 14 ] stp x30, xzr,
+    [ sp, #16 * 15 ]
 
     // Cannot use x0 and x1 as they are already used by KERNEL_ENTRY to store
     // the source and the kind of the interrupt.
     mrs x2, ESR_EL1
-    mrs x3, FAR_EL1
-    stp x2, x3, [sp, #16 * 10]
+    mrs x3, FAR_EL1 stp x2, x3,
+    [ sp, #16 * 16 ]
 
     mov x2, sp
     // Signature: void exception_handler(InterruptSource, InterruptKind, Registers&)
@@ -157,14 +159,15 @@ exception_entry:
     ldp x10, x11, [sp, #16 * 5]
     ldp x12, x13, [sp, #16 * 6]
     ldp x14, x15, [sp, #16 * 7]
-    ldp x16, x17, [sp, #16 * 8]
-    ldp x18, x30, [sp, #16 * 9]
-    add sp, sp, #176 // sizeof(Registers)
+    ldp x16, x17, [sp, #16 * 8] ldp x18, x19, [ sp, #16 * 9 ] ldp x20, x21,
+    [ sp, #16 * 10 ] ldp x22, x23, [ sp, #16 * 11 ] ldp x24, x25, [ sp, #16 * 12 ] ldp x26, x27,
+    [ sp, #16 * 13 ] ldp x28, x29, [ sp, #16 * 14 ] ldr x30, [ sp, #16 * 15 ] add sp, sp,
+    #SIZEOF_REGISTERS
 
     eret
 
-// Registers the interrupts vector table to the CPU.
-// To be called early in kernel initialization and when CPU is in EL1.
+        // Registers the interrupts' vector table to the CPU.
+        // To be called early in kernel initialization and when CPU is in EL1.
 // Signature: void init_interrupts_vector_table();
 .global init_interrupts_vector_table
 init_interrupts_vector_table:
