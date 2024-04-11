@@ -3,6 +3,10 @@
 #include <cstdint>
 #include "libk/string.hpp"
 
+/*
+      Page Allocator
+*/
+
 PageAlloc::PageAlloc(uint64_t memsize)
     : m_memsize(memsize), m_pagequant(memsize / PAGESIZE), memory_needed(m_pagequant / 4), m_mmap(nullptr, 0) {}
 
@@ -56,3 +60,7 @@ bool PageAlloc::freshpage(physical_address_t* addr) {
     }
   }
 }
+
+/*
+      Memory Allocator
+*/
