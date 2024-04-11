@@ -6,12 +6,14 @@ add_library(libk STATIC
         src/format_impl.cpp
         src/format_impl.hpp
         src/string.cpp
+        src/bit_array.cpp
 
         include/libk/assert.hpp
         include/libk/format.hpp
         include/libk/spinlock.hpp
         include/libk/string.hpp
         include/libk/utils.hpp
+        include/libk/bit_array.hpp
 )
 
 target_include_directories(libk PUBLIC include/)
