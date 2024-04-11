@@ -61,6 +61,9 @@ add_executable(kernel
         graphics/pkfont.hpp
         graphics/pkfont.cpp
 
+        mmu/mmu_kernel.cpp
+        mmu/mmu_kernel.hpp
+
         ../fonts/firacode_16.cpp
         graphics/graphics.hpp
         graphics/graphics.cpp

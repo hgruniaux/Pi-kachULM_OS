@@ -5,6 +5,10 @@
 
 typedef void* physical_address_t;
 
+/*
+      Page Allocator
+*/
+
 class PageAlloc {
  public:
   // Construcor
@@ -22,4 +26,21 @@ class PageAlloc {
   libk::BitArray m_mmap;
   const uint64_t m_memsize;
   const uint64_t m_pagequant;
+};
+
+/*
+      Memory Allocator
+*/
+
+class Malloc : public PageAlloc {
+  public : 
+    // Constructor
+    Malloc(PageAlloc ancestor);
+    // Utility
+    void* malloc(size_t nb_oct, uint64_t align);
+    void free(void* memory_allocated);
+
+  private :
+    PageAlloc m_ancestor;
+
 };
