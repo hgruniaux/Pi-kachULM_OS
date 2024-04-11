@@ -1,3 +1,4 @@
+add_subdirectory(src/optimized)
 #add_subdirectory(src/ryu)
 
 add_library(libk STATIC
@@ -7,12 +8,14 @@ add_library(libk STATIC
         src/string.cpp
         src/log.cpp
         src/assert.cpp
+        src/bit_array.cpp
 
         include/libk/assert.hpp
         include/libk/format.hpp
         include/libk/spinlock.hpp
         include/libk/string.hpp
         include/libk/utils.hpp
+        include/libk/bit_array.hpp
         include/libk/option.hpp
         include/libk/string_view.hpp
         include/libk/log.hpp
