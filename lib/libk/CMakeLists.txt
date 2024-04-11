@@ -1,4 +1,3 @@
-add_subdirectory(src/optimized)
 #add_subdirectory(src/ryu)
 
 add_library(libk STATIC
@@ -6,21 +5,20 @@ add_library(libk STATIC
         src/format_impl.cpp
         src/format_impl.hpp
         src/string.cpp
+        src/log.cpp
+        src/assert.cpp
 
         include/libk/assert.hpp
         include/libk/format.hpp
         include/libk/spinlock.hpp
         include/libk/string.hpp
         include/libk/utils.hpp
+        include/libk/log.hpp
 )
 
 target_include_directories(libk PUBLIC include/)
 
-target_link_libraries(libk PRIVATE optimized-routines)
 #target_link_libraries(libk PRIVATE ryu-algorithm)
-
-# Define LIBK_ENABLE_C so we export the C stdlib functions.
-target_compile_definitions(libk PUBLIC -DLIBK_ENABLE_C=1)
 
 # Use re2c to generate the format lexer. This is only required if
 # the lexer specification (in format.re2c) change. So, it is a soft
