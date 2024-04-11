@@ -1,11 +1,15 @@
-#include "debug.hpp"
 #include "dtb/dtb.hpp"
 #include "graphics/graphics.hpp"
 #include "graphics/pkfont.hpp"
 #include "hardware/device.hpp"
 #include "hardware/framebuffer.hpp"
+#include "hardware/interrupts.hpp"
 #include "hardware/mmio.hpp"
 #include "hardware/uart.hpp"
+#include "syscall.hpp"
+
+#include <libk/log.hpp>
+#include "hardware/timer.hpp"
 
 void print_property(const DeviceTree& dt, const char* property) {
   Property p;
@@ -17,18 +21,61 @@ void print_property(const DeviceTree& dt, const char* property) {
   LOG_INFO("DeviceTree property {} (size: {}) : {}", p.name, p.length, p.data);
 }
 
+void dump_current_el() {
+  switch (get_current_exception_level()) {
+    case ExceptionLevel::EL0:
+      LOG_INFO("CurrentEL: EL0");
+      break;
+    case ExceptionLevel::EL1:
+      LOG_INFO("CurrentEL: EL1");
+      break;
+    case ExceptionLevel::EL2:
+      LOG_INFO("CurrentEL: EL2");
+      break;
+    case ExceptionLevel::EL3:
+      LOG_INFO("CurrentEL: EL3");
+      break;
+  }
+}
+
+extern "C" void init_interrupts_vector_table();
+
+class UARTLogger : public libk::Logger {
+ public:
+  bool support_colors() const override { return true; }
+  void write(const char* data, size_t length) override {
+    UART::write((const uint8_t*)data, length);
+    UART::write((const uint8_t*)"\r\n", 2);
+  }
+};  // class UARTLogger
+
 extern "C" [[noreturn]] void kmain(const void* dtb) {
+#if 0
   const DeviceTree dt(dtb);
-  MMIO::init(dt);
-  UART::init(1000000);
-  UART::puts("Hello, kernel World from UART!\r\n");
+#endif
+  MMIO::init();
+  UART::init(115200);
 
+  UARTLogger logger;
+  libk::register_logger(logger);
+  libk::set_log_timer([]() { return GenericTimer::get_elapsed_time_in_ms(); });
 
+  dump_current_el();
+  enable_fpu_and_neon();
+  jump_to_el1();
+  dump_current_el();
+
+  init_interrupts_vector_table();
+
+  LOG_INFO("Kernel built at " __TIME__ " on " __DATE__);
+
+#if 0
   LOG_INFO("DeviceTree initialization: {}", dt.is_status_okay());
   LOG_INFO("DeviceTree Version: {}", dt.get_version());
   print_property(dt, "/model");
   print_property(dt, "/compatible");
   print_property(dt, "/serial-number");
+#endif
 
   Device device;
   LOG_INFO("Device initialization: {}", device.init());
@@ -37,8 +84,16 @@ extern "C" [[noreturn]] void kmain(const void* dtb) {
   LOG_INFO("Board serial: {}", device.get_board_serial());
   LOG_INFO("ARM memory: {} bytes at {}", device.get_arm_memory_info().size, device.get_arm_memory_info().base_address);
   LOG_INFO("VC memory: {} bytes at {}", device.get_vc_memory_info().size, device.get_vc_memory_info().base_address);
-  //  LOG_INFO("Temp: {} °C / {} °C", device.get_current_temp() / 1000.0f, device.get_max_temp() / 1000.0f);
+  // LOG_INFO("Temp: {} °C / {} °C", device.get_current_temp() / 1000.0f, device.get_max_temp() / 1000.0f);
 
+  SyscallManager::get().register_syscall(24, [](Registers& regs) { LOG_INFO("Syscall 24"); });
+
+  // Enter userspace
+  jump_to_el0();
+  asm volatile("mov w8, 24\n\tsvc #0");
+  libk::halt();
+
+#if 0
   FrameBuffer& framebuffer = FrameBuffer::get();
   if (!framebuffer.init(640, 480)) {
     LOG_CRITICAL("failed to initialize framebuffer");
@@ -58,7 +113,7 @@ extern "C" [[noreturn]] void kmain(const void* dtb) {
   painter.clear(graphics::Color::WHITE);
   painter.set_pen(graphics::Color::BLACK);
   painter.draw_text((fb_width - text_width) / 2, (fb_height - text_height) / 2, text);
-
+#endif
   while (true) {
     UART::write_one(UART::read_one());
   }

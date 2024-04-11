@@ -314,15 +314,19 @@ static StringSpec parse_string_spec(bool is_char, const char* spec) {
     if (*spec_it == '$') {
       parsed_spec.debug = true;
       continue;
-    } else if (is_char && *spec_it == 'c') {
-      parsed_spec.debug = false;
-      continue;
-    } else if (!is_char && *spec_it == 's') {
-      parsed_spec.debug = false;
-      continue;
-    } else {
-      KASSERT(false && "unknown string/char format specifier");
     }
+
+    if (is_char && *spec_it == 'c') {
+      parsed_spec.debug = false;
+      continue;
+    }
+
+    if (!is_char && *spec_it == 's') {
+      parsed_spec.debug = false;
+      continue;
+    }
+
+    KASSERT(false && "unknown string/char format specifier");
   }
 
   return parsed_spec;

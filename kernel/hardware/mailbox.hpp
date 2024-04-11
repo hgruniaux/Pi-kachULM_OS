@@ -2,11 +2,9 @@
 
 #include <cstdint>
 
-#include "../debug.hpp"
+#include <libk/assert.hpp>
 
 namespace MailBox {
-DEBUG_DECL_LOGGER(mailbox_logger);
-
 /** The different supported mailbox channels by our kernel. */
 enum class Channel : uint8_t {
   /** Property channel ARM CPU to VideoCore. */

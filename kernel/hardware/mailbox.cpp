@@ -2,8 +2,6 @@
 #include "mmio.hpp"
 
 namespace MailBox {
-DEBUG_IMPL_LOGGER(mailbox_logger);
-
 /** Base address for mailbox MMIO registers. */
 static constexpr uint32_t BASE = 0xB880;
 

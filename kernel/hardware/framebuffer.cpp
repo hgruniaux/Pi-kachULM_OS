@@ -1,8 +1,7 @@
 #include "framebuffer.hpp"
-#include "../debug.hpp"
+#include <libk/assert.hpp>
+#include <libk/log.hpp>
 #include "mailbox.hpp"
-
-DEBUG_IMPL_LOGGER(framebuffer_logger);
 
 FrameBuffer& FrameBuffer::get() {
   static FrameBuffer framebuffer;
@@ -77,15 +76,12 @@ bool FrameBuffer::init(uint32_t width, uint32_t height) {
   // buffers are cleared.
   clear(0x00000000);
 
-  LOG_TRACE_WITH_LOGGER(framebuffer_logger, "framebuffer of size {}x{} allocated (requested {}x{})", m_width, m_height,
-                        width, height);
+  LOG_TRACE("framebuffer of size {}x{} allocated (requested {}x{})", m_width, m_height, width, height);
 
   // Dump some debugging information in case of something is not working as intended.
-  LOG_DEBUG_WITH_LOGGER(framebuffer_logger, "framebuffer at {} of size {} bytes (pitch = {})", m_buffer, m_buffer_size,
-                        m_pitch);
-  LOG_DEBUG_WITH_LOGGER(framebuffer_logger, "framebuffer pixel order: {} (0 = BGR, 1 = RGB)",
-                        message.set_pixel_order_tag.buffer);
-  LOG_DEBUG_WITH_LOGGER(framebuffer_logger, "framebuffer depth: {}", message.set_depth_tag.buffer);
+  LOG_DEBUG("framebuffer at {} of size {} bytes (pitch = {})", m_buffer, m_buffer_size, m_pitch);
+  LOG_DEBUG("framebuffer pixel order: {} (0 = BGR, 1 = RGB)", message.set_pixel_order_tag.buffer);
+  LOG_DEBUG("framebuffer depth: {}", message.set_depth_tag.buffer);
 
   if (m_use_double_buffering) {
     // Display the screen 0.
