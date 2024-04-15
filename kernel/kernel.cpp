@@ -41,24 +41,23 @@ void dump_current_el() {
 
 void test_bit_array() {
   uint64_t mon_tableau[2];
-  libk::BitArray test = libk::BitArray(mon_tableau,sizeof(mon_tableau)*8);
+  libk::BitArray test = libk::BitArray(mon_tableau, sizeof(mon_tableau) * 8);
   // test.set_bit((size_t)0, true);
   // libk::print("Le premier bit est {}", test.get_bit((size_t)0));
   // libk::print("Le second bit est {}", test.get_bit((size_t)1));
-  test.set_bit((size_t) 3, false);
-  for (size_t i = 0; i <= 65; i++)
-  {
+  test.set_bit((size_t)3, false);
+  for (size_t i = 0; i <= 65; i++) {
     libk::print("Le bit {} est {}", i, test.get_bit(i));
   }
 }
 
 void test_page_alloc() {  // ATTENTION nb_page = multiple de 64
-  // test du PageAlloc
+  // test du Page_Alloc
   libk::print("Test begin");
-  PageAlloc test = PageAlloc((uint64_t)(64 * PAGESIZE));
+  Page_Alloc test = Page_Alloc((uint64_t)(64 * PAGESIZE));
   uint64_t tab_support[2];
   test.setmmap(tab_support);
-  test.mark_as_used((physical_address_t) (31*PAGESIZE));
+  test.mark_as_used((physical_address_t)(31 * PAGESIZE));
   libk::print("Mark 1");
   physical_address_t addr;
   test.freshpage(&addr);

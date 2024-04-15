@@ -9,10 +9,10 @@ typedef void* physical_address_t;
       Page Allocator
 */
 
-class PageAlloc {
+class Page_Alloc {
  public:
   // Construcor
-  PageAlloc(uint64_t memsize);
+  Page_Alloc(uint64_t memsize);
   // Utility functions
   void setmmap(void* array);
   void mark_as_used(physical_address_t addr);
@@ -32,15 +32,14 @@ class PageAlloc {
       Memory Allocator
 */
 
-class Malloc : public PageAlloc {
-  public : 
-    // Constructor
-    Malloc(PageAlloc ancestor);
-    // Utility
-    void* malloc(size_t nb_oct, uint64_t align);
-    void free(void* memory_allocated);
+class Mem_Alloc : public Page_Alloc {
+ public:
+  // Constructor
+  Mem_Alloc(Page_Alloc ancestor);
+  // Utility
+  void* malloc(size_t nb_oct, uint64_t align);
+  void free(void* memory_allocated);
 
-  private :
-    PageAlloc m_ancestor;
-
+ private:
+  Page_Alloc m_ancestor;
 };
