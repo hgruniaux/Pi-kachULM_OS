@@ -23,9 +23,9 @@ class PageAlloc {
   const uint64_t memory_needed;
 
  protected:
-  libk::BitArray m_mmap;
   const uint64_t m_memsize;
   const uint64_t m_pagequant;
+  libk::BitArray m_mmap;
 };
 
 /*

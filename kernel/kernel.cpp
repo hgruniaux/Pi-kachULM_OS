@@ -6,6 +6,7 @@
 #include "hardware/interrupts.hpp"
 #include "hardware/mmio.hpp"
 #include "hardware/uart.hpp"
+#include "mmu/mmu_kernel.hpp"
 #include "syscall.hpp"
 
 #include <libk/log.hpp>
@@ -35,6 +36,43 @@ void dump_current_el() {
     case ExceptionLevel::EL3:
       LOG_INFO("CurrentEL: EL3");
       break;
+  }
+}
+
+void test_bit_array() {
+  uint64_t mon_tableau[2];
+  libk::BitArray test = libk::BitArray(mon_tableau,sizeof(mon_tableau)*8);
+  // test.set_bit((size_t)0, true);
+  // libk::print("Le premier bit est {}", test.get_bit((size_t)0));
+  // libk::print("Le second bit est {}", test.get_bit((size_t)1));
+  test.set_bit((size_t) 3, false);
+  for (size_t i = 0; i <= 65; i++)
+  {
+    libk::print("Le bit {} est {}", i, test.get_bit(i));
+  }
+}
+
+void test_page_alloc() {  // ATTENTION nb_page = multiple de 64
+  // test du PageAlloc
+  libk::print("Test begin");
+  PageAlloc test = PageAlloc((uint64_t)(64 * PAGESIZE));
+  uint64_t tab_support[2];
+  test.setmmap(tab_support);
+  test.mark_as_used((physical_address_t) (31*PAGESIZE));
+  libk::print("Mark 1");
+  physical_address_t addr;
+  test.freshpage(&addr);
+  libk::print("Mark 2");
+  libk::print("Le statut de la page {} est {}", addr, test.page_status(addr));
+  while (test.freshpage(&addr)) {
+  };
+  test.freepage((physical_address_t)0);
+  libk::print("Mark 3");
+  libk::print("Le statut de la première page est {}", test.page_status((physical_address_t)0));
+  if (test.freshpage(&addr)) {
+    libk::print("Test succeded !");
+  } else {
+    libk::print("Test failed ...");
   }
 }
 
@@ -77,6 +115,9 @@ extern "C" [[noreturn]] void kmain(const void* dtb) {
   print_property(dt, "/serial-number");
 #endif
 
+  // test_page_alloc();
+  // test_bit_array();
+
   Device device;
   LOG_INFO("Device initialization: {}", device.init());
   LOG_INFO("Board model: {}", device.get_board_model());
@@ -114,6 +155,7 @@ extern "C" [[noreturn]] void kmain(const void* dtb) {
   painter.set_pen(graphics::Color::BLACK);
   painter.draw_text((fb_width - text_width) / 2, (fb_height - text_height) / 2, text);
 #endif
+
   while (true) {
     UART::write_one(UART::read_one());
   }
