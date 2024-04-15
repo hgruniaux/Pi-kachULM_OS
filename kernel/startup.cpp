@@ -7,12 +7,12 @@
 #include <cstdint>
 
 // The following pointers are provided by the linker.
-extern uint32_t __bss_start;
-extern uint32_t __bss_end;
+extern uint64_t __bss_start;
+extern uint64_t __bss_end;
 
 /** Erases the BSS section. */
 void zero_bss() {
-  uint32_t* dst = &__bss_start;
+  uint64_t* dst = &__bss_start;
   while (dst < &__bss_end) {
     *dst++ = 0;
   }
