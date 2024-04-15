@@ -1,38 +1,41 @@
 #include "mmu_kernel.hpp"
 #include <cstddef>
 #include <cstdint>
-#include "libk/string.hpp"
 #include "libk/log.hpp"
+#include "libk/string.hpp"
 #include "libk/utils.hpp"
 
 /*
       Page Allocator
 */
 
-PageAlloc::PageAlloc(uint64_t memsize)
-    : memory_needed((memsize*2) / PAGESIZE), m_memsize(memsize), m_pagequant(memsize / PAGESIZE), m_mmap(nullptr, 0) {}
+Page_Alloc::Page_Alloc(uint64_t memsize)
+    : memory_needed((memsize * 2) / PAGESIZE),
+      m_memsize(memsize),
+      m_pagequant(memsize / PAGESIZE),
+      m_mmap(nullptr, 0) {}
 
-void PageAlloc::setmmap(void* array) {
+void Page_Alloc::setmmap(void* array) {
   m_mmap = libk::BitArray(array, memory_needed);
 }
 
-bool PageAlloc::page_status(physical_address_t addr) {
+bool Page_Alloc::page_status(physical_address_t addr) {
   size_t index = m_pagequant + (uint64_t)addr / PAGESIZE;
   return m_mmap.get_bit(index);
 }
 
-void PageAlloc::mark_as_used(physical_address_t addr) {
+void Page_Alloc::mark_as_used(physical_address_t addr) {
   size_t index = m_pagequant + (uint64_t)addr / PAGESIZE;
   bool side_value = false;
   while (!side_value & (index != 0)) {
     m_mmap.set_bit(index, false);
-    side_value = m_mmap.get_bit(index^0x1ul);
+    side_value = m_mmap.get_bit(index ^ 0x1ul);
     // libk::print("Index = {} , Side_value = {} , func = {}", index, side_value, index^0x1ul);
     index = index / 2;
   }
 }
 
-void PageAlloc::freepage(physical_address_t addr) {
+void Page_Alloc::freepage(physical_address_t addr) {
   size_t index = m_pagequant + (uint64_t)addr / PAGESIZE;
   while (index != 0) {
     if (m_mmap.get_bit(index)) {
@@ -44,7 +47,7 @@ void PageAlloc::freepage(physical_address_t addr) {
   }
 }
 
-bool PageAlloc::freshpage(physical_address_t* addr) {
+bool Page_Alloc::freshpage(physical_address_t* addr) {
   size_t index = 1;
   while (true) {
     if (m_mmap.get_bit(index)) {
