@@ -33,3 +33,5 @@ execute_process(
 
 string(REGEX REPLACE "[ \n\t]+" ";" INCLUDE_COMPILER_HEADERS "${COMPILER_HEADERS}")
 set(CMAKE_CXX_STANDARD_INCLUDE_DIRECTORIES ${INCLUDE_COMPILER_HEADERS})
+
+add_compile_options(-mno-unaligned-access)
