@@ -1,7 +1,13 @@
 #include "dtb/dtb.hpp"
+#include "graphics/graphics.hpp"
+#include "graphics/pkfont.hpp"
+#include "hardware/device.hpp"
+#include "hardware/framebuffer.hpp"
 #include "hardware/interrupts.hpp"
 #include "hardware/mmio.hpp"
 #include "hardware/uart.hpp"
+#include "mmu/mmu_kernel.hpp"
+#include "syscall.hpp"
 
 #include <libk/log.hpp>
 #include "hardware/device.hpp"
@@ -51,24 +57,6 @@ void dump_current_el() {
     case ExceptionLevel::EL3:
       LOG_INFO("CurrentEL: EL3");
       break;
-  }
-}
-
-size_t fibo(int n) {
-  {
-    uint64_t tmp;
-    asm volatile("mov %x0, sp" : "=r"(tmp));
-    LOG_INFO("SP : {:#x}", tmp);
-  }
-
-  if (n <= 1) {
-    return n;
-  } else {
-    const auto __n = fibo(n - 1);
-    const auto dd = 1 + __n;
-    LOG_INFO("Fibo({}) = {}", n, dd);
-
-    return dd;
   }
 }
 

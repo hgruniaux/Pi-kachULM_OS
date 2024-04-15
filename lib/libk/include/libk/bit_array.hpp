@@ -14,7 +14,7 @@ class BitArray {
   bool operator[](size_t index) const { return get_bit(index); }
 
  private:
-  uint8_t* m_array;
+  uint64_t* m_array;
 };
 
 };  // namespace libk

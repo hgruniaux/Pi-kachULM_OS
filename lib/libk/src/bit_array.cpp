@@ -2,25 +2,25 @@
 #include "libk/string.hpp"
 
 namespace libk {
-BitArray::BitArray(void* begin, size_t taille) : m_array((uint8_t*)begin) {
+BitArray::BitArray(void* begin, size_t taille) : m_array((uint64_t*)begin) {
   if (begin != nullptr) {
-    bool value = 1;
+    uint8_t value = 0xff;
     libk::memset(m_array, value, taille / 8);
-    libk::memset(m_array, 0, 1);
+    set_bit((size_t)0, false);
   }
 }
 
 bool BitArray::get_bit(size_t index) const {
-  return m_array[index / (8 * sizeof(uint8_t))] & (1u << (index % (8 * sizeof(uint8_t))));
+  return m_array[index / (8 * sizeof(uint64_t))] & (1ull << (index % (8 * sizeof(uint64_t))));
 }
 
 void BitArray::set_bit(size_t index, bool value) {
-  const uint8_t v = m_array[index / (8 * sizeof(uint8_t))];
+  const uint64_t v = m_array[index / (8 * sizeof(uint64_t))];
   if (value) {
-    m_array[index / (8 * sizeof(uint8_t))] = v | (1u << (index % (8 * sizeof(uint8_t))));
+    m_array[index / (8 * sizeof(uint64_t))] = v | (1ull << (index % (8 * sizeof(uint64_t))));
   } else {
-    m_array[index / (8 * sizeof(uint8_t))] = v & ~(1u << (index % (8 * sizeof(uint8_t))));
+    m_array[index / (8 * sizeof(uint64_t))] = v & ~(1ull << (index % (8 * sizeof(uint64_t))));
   }
 }
 
-}
+}  // namespace libk
