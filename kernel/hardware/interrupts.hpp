@@ -54,12 +54,12 @@ extern "C" void enable_fpu_and_neon();
  * This works even if the CPU is initially in EL3 or EL2. If the CPU is already
  * in EL1, then nothing is done.  However, if the CPU is in EL0, the kernel will crash.
  */
-void jump_to_el1();
+extern "C" void jump_to_el1();
 
 /**
- * This function jumps the kernel from its current exception level to the EL0.
+ * This function jumps the kernel from EL1 to EL0.
  *
  * @warning It is assumed that the kernel is not yet in EL0. The kernel will
  * crash if the assumption is not hold.
  */
-void jump_to_el0();
+extern "C" void jump_to_el0();

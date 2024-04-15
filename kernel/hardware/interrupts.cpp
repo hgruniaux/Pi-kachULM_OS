@@ -2,6 +2,13 @@
 #include <libk/log.hpp>
 #include "../syscall.hpp"
 
+#define dump_reg(reg)                           \
+  {                                             \
+    uint64_t tmp;                               \
+    asm volatile("mrs %x0, " #reg : "=r"(tmp)); \
+    LOG_INFO("Register " #reg ": {}", tmp);     \
+  }
+
 ExceptionLevel get_current_exception_level() {
   // The current exception level is stored in the system register CurrentEL in the bits [3:2].
   // https://developer.arm.com/documentation/ddi0595/2021-12/AArch64-Registers/CurrentEL--Current-Exception-Level?lang=en
@@ -15,8 +22,6 @@ ExceptionLevel get_current_exception_level() {
 extern "C" void jump_from_el3_to_el2();
 /** Jumps from EL2 to EL1 (Non-secure). */
 extern "C" void jump_from_el2_to_el1();
-/** Jumps from EL1 to EL0 (Non-secure). */
-extern "C" void jump_from_el1_to_el0();
 
 void jump_to_el1() {
   switch (get_current_exception_level()) {
@@ -31,16 +36,6 @@ void jump_to_el1() {
   }
 }
 
-void jump_to_el0() {
-  // We cannot check if we are already at EL0 (the system register CurrentEL is
-  // not readable in EL0). Therefore, we assume that we are not in EL0.
-
-  // Jump to EL1 if not already in it.
-  jump_to_el1();
-
-  // Then jump to EL0!
-  jump_from_el1_to_el0();
-}
 
 extern "C" void exception_handler(InterruptSource source, InterruptKind kind, Registers& registers) {
   if (source == InterruptSource::LOWER_AARCH64 && kind == InterruptKind::SYNCHRONOUS) {
@@ -60,5 +55,14 @@ extern "C" void exception_handler(InterruptSource source, InterruptKind kind, Re
     return;
   }
 
-  LOG_WARNING("Unhandled exception/interrupt");
+  dump_reg(ELR_EL1);
+  dump_reg(ESR_EL1);
+  dump_reg(SPSR_EL1);
+  dump_reg(SCTLR_EL1);
+  dump_reg(TCR_EL1);
+  dump_reg(MAIR_EL1);
+  dump_reg(TTBR1_EL1);
+  dump_reg(SCTLR_EL1);
+
+  LOG_CRITICAL("Unhandled exception/interrupt");
 }
