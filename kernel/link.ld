@@ -1,9 +1,15 @@
 SECTIONS
 {
-    . = 0x80000;     /* Kernel load address for AArch64 */
-    .text : { KEEP(*(.text.boot)) *(.text .text.* .gnu.linkonce.t*) }
+    /* Kernel load address for AArch64 */
+    . = 0xffff000000000000 + 0x80000;
 
-    .rodata : { *(.rodata .rodata.* .gnu.linkonce.r*) }
+    _stext = .;
+    .text.boot : { KEEP(*(.text.boot)) }
+    .text : { *(.text) }
+    _etext = .;
+
+    .rodata : { *(.rodata) }
+
     /* For clang to compile the project, .init_array and .fini_array must be contiguous with rodata */
     /* Include the list of initialization functions sorted. */
     .init_array ALIGN(4):
@@ -26,16 +32,15 @@ SECTIONS
     }
 
     PROVIDE(_data = .);
-    .data : { *(.data .data.* .gnu.linkonce.d*) }
+    .data : { *(.data) }
     .bss (NOLOAD) : {
         . = ALIGN(16);
         __bss_start = .;
-        *(.bss .bss.*)
+        *(.bss)
         *(COMMON)
         __bss_end = .;
     }
 
-    _end = .;
-
-   /DISCARD/ : { *(.comment) *(.gnu*) *(.note*) *(.eh_frame*) }
+    . = ALIGN(0x1000);
+    _kend = .;
 }
