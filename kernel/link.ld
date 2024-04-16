@@ -12,7 +12,7 @@ SECTIONS
 
     /* For clang to compile the project, .init_array and .fini_array must be contiguous with rodata */
     /* Include the list of initialization functions sorted. */
-    .init_array ALIGN(4):
+    .init_array ALIGN(8):
     {
         __init_array_start = .;
         /* If we use constructor/destructor priorities, the compiler will append
@@ -23,7 +23,7 @@ SECTIONS
     }
 
     /* Include the list of termination functions sorted. */
-    .fini_array ALIGN(4):
+    .fini_array ALIGN(8):
     {
         __fini_array_start = .;
         KEEP (*(SORT(EXCLUDE_FILE(crti.o crtn.o) .fini_array.*)))

@@ -6,7 +6,7 @@
 
 #include <cstdint>
 
-// The following pointers are provided by the linker.
+// The linker provides the following pointers.
 extern uint64_t __bss_start;
 extern uint64_t __bss_end;
 
@@ -20,7 +20,7 @@ void zero_bss() {
 
 using FunctionPointer = void (*)();
 
-// The following pointers are provided by the linker.
+// The linker provides the following pointers.
 extern FunctionPointer __init_array_start[];
 extern FunctionPointer __init_array_end[];
 extern FunctionPointer __fini_array_start[];
