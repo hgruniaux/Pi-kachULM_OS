@@ -43,3 +43,4 @@ _deps
 *.su
 *.idb
 *.pdb
+/home_made/
