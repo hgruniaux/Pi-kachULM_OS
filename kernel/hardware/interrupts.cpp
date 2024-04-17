@@ -6,7 +6,7 @@
   {                                             \
     uint64_t tmp;                               \
     asm volatile("mrs %x0, " #reg : "=r"(tmp)); \
-    LOG_INFO("Register " #reg ": {}", tmp);     \
+    LOG_INFO("Register " #reg ": {:#x}", tmp);  \
   }
 
 ExceptionLevel get_current_exception_level() {
@@ -55,6 +55,38 @@ extern "C" void exception_handler(InterruptSource source, InterruptKind kind, Re
     return;
   }
 
+  const char* source_name = nullptr;
+  switch (source) {
+    case InterruptSource::CURRENT_SP_EL0:
+      source_name = "CURRENT_SP_EL0";
+      break;
+    case InterruptSource::CURRENT_SP_ELX:
+      source_name = "CURRENT_SP_ELX";
+      break;
+    case InterruptSource::LOWER_AARCH32:
+      source_name = "LOWER_AARCH32";
+      break;
+    case InterruptSource::LOWER_AARCH64:
+      source_name = "LOWER_AARCH64";
+      break;
+  }
+
+  const char* kind_name;
+  switch (kind) {
+    case InterruptKind::SYNCHRONOUS:
+      kind_name = "SYNCHRONOUS";
+      break;
+    case InterruptKind::IRQ:
+      kind_name = "IRQ";
+      break;
+    case InterruptKind::FIQ:
+      kind_name = "FIQ";
+      break;
+    case InterruptKind::SERROR:
+      kind_name = "SERROR";
+      break;
+  }
+
   dump_reg(ELR_EL1);
   dump_reg(ESR_EL1);
   dump_reg(SPSR_EL1);
@@ -64,5 +96,5 @@ extern "C" void exception_handler(InterruptSource source, InterruptKind kind, Re
   dump_reg(TTBR1_EL1);
   dump_reg(SCTLR_EL1);
 
-  LOG_CRITICAL("Unhandled exception/interrupt");
+  LOG_CRITICAL("Unhandled exception/interrupt, source = {}, kind = {}", source_name, kind_name);
 }
