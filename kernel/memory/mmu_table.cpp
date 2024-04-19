@@ -91,7 +91,7 @@ static inline constexpr libk::VirtualPA get_entry_va_from_table_index(const libk
 static inline constexpr libk::VirtualPA table_last_page(const libk::VirtualPA& table_first_page_va,
                                                         size_t table_level) {
   // Check that the virtual address is correctly aligned with the specified level.
-  assert((table_first_page_va & libk::mask_bits(0, 12 + 9 * (4 - table_level) - 1)) == 0);
+  KASSERT((table_first_page_va & libk::mask_bits(0, 12 + 9 * (4 - table_level) - 1)) == 0);
 
   return table_first_page_va + libk::mask_bits(12, 12 + 9 * (4 - table_level + 1) - 1);
 }
