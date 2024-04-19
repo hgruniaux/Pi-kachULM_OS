@@ -1,4 +1,4 @@
-#include "mmu.h"
+#include "memory/mmu.h"
 
 .section ".text.boot" // Make sure the linker puts this at the start of the kernel image
 
@@ -43,7 +43,7 @@ _start:
 _high_memory_jump:
     // And low-memory space is deactivated here
     msr ttbr0_el1, xzr
-    tlbi vmalle1is
+    tlbi vmalle1
     dsb sy
     isb
 
@@ -52,7 +52,7 @@ _high_memory_jump:
 
 // Temporary Debug Function (TODO : Remove this)
 // Registers used:
-// x0, x9, x10, x11, x12
+// x0, x1, x9, x10, x11, x12
 .global debug
 debug:
     adr x9, test

@@ -14,6 +14,7 @@ add_library(libk STATIC
         include/libk/string.hpp
         include/libk/utils.hpp
         include/libk/log.hpp
+        include/libk/memory_page.hpp
 )
 
 target_include_directories(libk PUBLIC include/)

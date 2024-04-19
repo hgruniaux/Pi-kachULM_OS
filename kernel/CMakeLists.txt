@@ -45,8 +45,13 @@ add_executable(kernel boot.S kernel.cpp cxxabi.cpp startup.cpp
 #        graphics/graphics.hpp
 #        graphics/graphics.cpp
 #
-        mmu.h
-        mmu.c
+        memory/mmu.h
+        memory/mmu.c
+
+        memory/simple_page_allocator.hpp
+
+        memory/mmu_table.cpp
+        memory/mmu_table.cpp
 )
 
 #add_dependencies(kernel linking)

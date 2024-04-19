@@ -10,7 +10,7 @@
 
 #include <libk/log.hpp>
 #include "hardware/timer.hpp"
-#include "mmu.h"
+#include "memory/mmu.h"
 
 // void print_property(const DeviceTree& dt, const char* property) {
 //   Property p;

@@ -3,7 +3,6 @@
 #include <stdint.h>
 
 #define PAGE_LENGTH (PAGE_SIZE / sizeof(uint64_t))
-#define PAGESIZE 4096
 
 // descriptor
 #define PT_PAGE 0b11
@@ -27,11 +26,24 @@
 
 #define TTBR_CNP 1
 
+/* TODO :
+ * - Set UWXN and WXN to 0 in SCTLR_EL1
+ * - Set TCR2_EL1 to 0
+ * - Set TCR_EL1.AS to 0 (ASID of 8bit)
+ * - Set TCR_EL1.A1 to 0 (The ASID is defined by TTBR0_EL1, ie. the process)
+ * - Not HCR_EL2.{NV, NV1} == {1, 1}
+ *
+ * And an important thing, be careful with identity mapping when you reach MMIO_BASE. You'll have to use a different
+ * AttrIndex and shareability. For normal memory it should be inner shareable and AttrIndex should point to a MAIR value
+ * of 0xCC or 0xFF (depending on you want alloc or not), while for device memory it must be outer shareable and
+ * AttrIndex must point to a MAIR value of 0x04 in order to work properly.
+ */
+
 /**
  * Set up page translation tables and enable virtual memory
  */
 void mmu_init(volatile uint64_t* ttbr0) {
-  volatile uint64_t* ttbr0_lvl2 = (uint64_t*)ttbr0 + PAGESIZE;
+  volatile uint64_t* ttbr0_lvl2 = (uint64_t*)((uintptr_t)ttbr0 + PAGE_SIZE);
 
   ttbr0[0] = (uintptr_t)ttbr0_lvl2 | PT_PAGE;  // physical address
 
