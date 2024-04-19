@@ -28,6 +28,15 @@ static inline constexpr T clamp(T val, T min_val, T max_val) {
   return min(max_val, max(min_val, val));
 }
 
+/** Returns a mask that covers bit from @a start to @a end *INCLUDED* */
+static inline constexpr uint64_t mask_bits(size_t start, size_t end) {
+  if (end < start) {
+    return 0;
+  } else {
+    return ((((uint64_t)1) << (end - start + 1)) - 1) << start;
+  }
+}
+
 /** @brief The NOP instruction. */
 [[gnu::always_inline]] static inline void nop() {
   asm volatile("nop");
