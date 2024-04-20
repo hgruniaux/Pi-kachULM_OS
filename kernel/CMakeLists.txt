@@ -8,7 +8,6 @@ add_custom_target(linking
 add_executable(kernel boot.S kernel.cpp cxxabi.cpp startup.cpp
         syscall.hpp
         syscall.cpp
-        memory/mmu_init/mmu_init.cpp
 
         hardware/mmio.hpp
         hardware/mmio.cpp
@@ -47,13 +46,10 @@ add_executable(kernel boot.S kernel.cpp cxxabi.cpp startup.cpp
 #        graphics/graphics.cpp
 #
         memory/mmu_defs.hpp
+        memory/mmu_init.cpp
 
         memory/mmu_table.cpp
         memory/mmu_table.cpp
-        memory/mmu_utils.cpp
-        memory/mmu_utils.hpp
-        memory/mmu_init/mmu_utilss.hpp
-        memory/mmu_init/mmu_utilss.cpp
 )
 
 add_dependencies(kernel linking)

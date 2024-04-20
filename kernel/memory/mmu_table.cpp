@@ -1,7 +1,6 @@
 #include "mmu_table.hpp"
 
 #include "mmu_defs.hpp"
-#include "mmu_utils.hpp"
 
 /*
  63     48             38       30             20       12                                          Physical Memory
@@ -36,13 +35,73 @@ static inline constexpr uintptr_t TTBR_MASK = 0xffff000000000000;
 
 static inline constexpr uintptr_t TABLE_ENTRIES = PAGE_SIZE / sizeof(uint64_t);
 
-static inline constexpr uint64_t* get_table_ptr_from_entry(uint64_t entry, libk::PageMapper* mapper) {
-  if (mapper == nullptr) {
+static inline constexpr uint64_t PAGE_MARKER = 0b11;
+static inline constexpr uint64_t BLOCK_MARKER = 0b01;
+static inline constexpr uint64_t TABLE_MARKER = 0b11;
+
+enum class EntryKind { Invalid, Table, Page, Block };
+
+static inline constexpr EntryKind get_entry_kind(uint64_t entry, size_t level) {
+  if ((entry & 0b1) == 0) {
+    // Entry last bits are 0bx1
+    return EntryKind::Invalid;
+  } else if ((entry & 0b10) == 0) {
+    // Entry last bits are 0b01
+    return EntryKind::Block;
+  } else if (level == 4) {
+    // Entry last bits are 0b11
+    return EntryKind::Page;
+  } else {
+    // Entry last bits are 0b11
+    return EntryKind::Table;
+  }
+}
+
+static inline constexpr PhysicalPA get_table_pa_from_entry(uint64_t entry) {
+  return PhysicalPA(entry & libk::mask_bits(12, 47));
+}
+
+static inline constexpr uint64_t get_index_in_table(VirtualPA va, size_t level) {
+  const size_t index_shift = 12 + 9 * (4 - level);
+  // We mask the 9 first bits.
+  return (va >> index_shift) & libk::mask_bits(0, 8);
+}
+
+static inline constexpr VirtualPA get_entry_va_from_table_index(VirtualPA table_va,
+                                                                size_t table_level,
+                                                                size_t entry_index) {
+  return table_va + (entry_index << (12 + 9 * (4 - table_level)));
+}
+
+static inline constexpr VirtualPA table_last_page(VirtualPA table_first_page_va, size_t table_level) {
+  // Check that the virtual address is correctly aligned with the specified level.
+  KASSERT((table_first_page_va & libk::mask_bits(0, 12 + 9 * (4 - table_level) - 1)) == 0);
+
+  return table_first_page_va + libk::mask_bits(12, 12 + 9 * (4 - table_level + 1) - 1);
+}
+
+uint64_t encode_new_entry(MMUTable* tbl, PhysicalPA pa, PagesAttributes attr, PageSize amount) {
+  const uint64_t upper_attr = (uint64_t)attr.exec << 53;
+
+  const uint64_t lower_attr = ((uint64_t)attr.type << 2) | ((uint64_t)attr.access << 6) | ((uint64_t)attr.rw << 7) |
+                              ((uint64_t)attr.sh << 8) |
+                              ((uint64_t)1 << 10)  // Set the Access flag to disable access interrupts
+                              | ((uint64_t)(tbl->kind == MMUTable::Kind::Process ? 1 : 0) << 11);
+
+  const uint64_t marker = amount == PageSize::Page_4Kio ? PAGE_MARKER : BLOCK_MARKER;
+
+  const uint64_t new_entry = upper_attr | (pa & libk::mask_bits(12, 47)) | lower_attr | marker;
+
+  return new_entry;
+}
+
+static inline constexpr uint64_t* get_table_ptr_from_entry(MMUTable* tbl, uint64_t entry) {
+  if (tbl->resolve_pa == nullptr) {
     return nullptr;
   }
 
-  libk::VirtualPA sub_table_va;
-  if (!mapper->resolve_pa(get_table_pa_from_entry(entry), &sub_table_va)) {
+  VirtualPA sub_table_va;
+  if (!tbl->resolve_pa(tbl->handle, get_table_pa_from_entry(entry), &sub_table_va)) {
     // Unable to convert the physical address back to a virtual one :/
     return nullptr;
   }
@@ -50,37 +109,35 @@ static inline constexpr uint64_t* get_table_ptr_from_entry(uint64_t entry, libk:
   return (uint64_t*)sub_table_va;
 }
 
-inline void MMUTable::invalid_va(libk::VirtualPA entry_va) const {
+inline void invalid_va(MMUTable* table, VirtualPA entry_va) {
   const uint64_t page_index = (entry_va & libk::mask_bits(12, 47)) >> 12;
 
-  switch (kind) {
-    case Kind::Kernel: {
+  switch (table->kind) {
+    case MMUTable::Kind::Kernel: {
       // Encoding from page D8-6757
       asm volatile("tlbi vaae1, %x0" ::"r"(page_index));
       break;
     }
-    case Kind::Process: {
+    case MMUTable::Kind::Process: {
       // Encoding from page D8-6757
-      const uint64_t tmp = ((uint64_t)asid << 48) | page_index;
+      const uint64_t tmp = ((uint64_t)table->asid << 48) | page_index;
       asm volatile("tlbi vae1, %x0" ::"r"(tmp));
       break;
     }
   }
 }
 
-uint64_t* MMUTable::find_table_for_entry(libk::VirtualPA entry_va,
-                                         size_t entry_level,
-                                         bool create_table_if_missing) const {
-  if (mapper == nullptr || alloc == nullptr) {
+uint64_t* find_table_for_entry(MMUTable* tbl, VirtualPA entry_va, size_t entry_level, bool create_table_if_missing) {
+  if (tbl->resolve_va == nullptr || tbl->alloc == nullptr) {
     return nullptr;
   }
 
-  if (kind == Kind::Kernel && (entry_va & TTBR_MASK) != KERNEL_BASE) {
+  if (tbl->kind == MMUTable::Kind::Kernel && (entry_va & TTBR_MASK) != KERNEL_BASE) {
     // Invalid kernel address
     return nullptr;
   };
 
-  if (kind == Kind::Process && (entry_va & TTBR_MASK) != PROCESS_BASE) {
+  if (tbl->kind == MMUTable::Kind::Process && (entry_va & TTBR_MASK) != PROCESS_BASE) {
     // Invalid process address
     return nullptr;
   }
@@ -91,7 +148,7 @@ uint64_t* MMUTable::find_table_for_entry(libk::VirtualPA entry_va,
   }
 
   size_t current_level = 1;
-  auto* current_table = (uint64_t*)pgd;
+  auto* current_table = (uint64_t*)tbl->pgd;
 
   while (current_level < entry_level) {
     uint64_t current_table_index = get_index_in_table(entry_va, current_level);
@@ -105,15 +162,15 @@ uint64_t* MMUTable::find_table_for_entry(libk::VirtualPA entry_va,
         }
 
         // We need a new page, let's allocate it !
-        libk::VirtualPA new_table;
-        if (!alloc->alloc_page(&new_table)) {
+        VirtualPA new_table;
+        if (!tbl->alloc(tbl->handle, &new_table)) {
           // Unable to allocate a fresh table :/
           return nullptr;
         }
 
         // We resolve its physical address
-        libk::PhysicalPA new_table_pa;
-        if (!mapper->resolve_va(new_table, &new_table_pa)) {
+        PhysicalPA new_table_pa;
+        if (!tbl->resolve_va(tbl->handle, new_table, &new_table_pa)) {
           return nullptr;
         }
 
@@ -125,7 +182,7 @@ uint64_t* MMUTable::find_table_for_entry(libk::VirtualPA entry_va,
         break;
       }
       case EntryKind::Table: {
-        current_table = get_table_ptr_from_entry(entry, mapper);
+        current_table = get_table_ptr_from_entry(tbl, entry);
 
         if (current_table == nullptr) {
           return nullptr;
@@ -144,9 +201,9 @@ uint64_t* MMUTable::find_table_for_entry(libk::VirtualPA entry_va,
   return current_table;
 }
 
-bool MMUTable::map_chunk(libk::VirtualPA va, libk::PhysicalPA pa, PageSize amount, PagesAttributes attr) {
+bool map_chunk(MMUTable* tbl, VirtualPA va, PhysicalPA pa, PageSize amount, PagesAttributes attr) {
   const auto entry_level = (size_t)amount;
-  uint64_t* table_for_entry = find_table_for_entry(va, entry_level, true);
+  uint64_t* table_for_entry = find_table_for_entry(tbl, va, entry_level, true);
 
   if (table_for_entry == nullptr) {
     return false;
@@ -171,15 +228,15 @@ bool MMUTable::map_chunk(libk::VirtualPA va, libk::PhysicalPA pa, PageSize amoun
     }
   }
 
-  const uint64_t new_entry = encode_new_entry(pa, attr, amount, kind == Kind::Process);
+  const uint64_t new_entry = encode_new_entry(tbl, pa, attr, amount);
   table_for_entry[entry_index] = new_entry;
 
   return true;
 }
 
-bool MMUTable::unmap_chunk(libk::VirtualPA va, PageSize amount) {
+bool unmap_chunk(MMUTable* tbl, VirtualPA va, PageSize amount) {
   const auto table_level = (size_t)amount;
-  uint64_t* table = find_table_for_entry(va, table_level, false);
+  uint64_t* table = find_table_for_entry(tbl, va, table_level, false);
 
   if (table == nullptr) {
     return false;
@@ -202,7 +259,7 @@ bool MMUTable::unmap_chunk(libk::VirtualPA va, PageSize amount) {
       // Good we can work !
       table[entry_index] = 0ull;
 
-      invalid_va(va);
+      invalid_va(tbl, va);
       return true;
     }
   }
@@ -210,45 +267,28 @@ bool MMUTable::unmap_chunk(libk::VirtualPA va, PageSize amount) {
   return true;  // Why GCC ?!
 }
 
-bool MMUTable::has_entry_at(libk::VirtualPA va, PageSize amount) const {
+bool has_entry_at(MMUTable* tbl, VirtualPA va, PageSize amount) {
   const auto entry_level = (size_t)amount;
-  return find_table_for_entry(va, entry_level, false) != nullptr;
+  return find_table_for_entry(tbl, va, entry_level, false) != nullptr;
 }
 
 /** All bound are *INCLUSIVE* */
-bool MMUTable::map_range(libk::VirtualPA va_start,
-                         libk::VirtualPA va_end,
-                         libk::PhysicalPA pa_start,
-                         PagesAttributes attr) {
-  if (va_start > va_end) {
-    return true;
-  }
-
-  if (va_start == va_end) {
-    return map_chunk(va_start, pa_start, PageSize::Page_4Kio, attr);
-  }
-
-  const auto initial_va = libk::VirtualPA(kind == Kind::Kernel ? KERNEL_BASE : PROCESS_BASE);
-
-  return map_range_in_table(va_start, va_end, pa_start, attr, (uint64_t*)pgd, 1, initial_va);
-}
-
-/** All bound are *INCLUSIVE* */
-bool MMUTable::map_range_in_table(libk::VirtualPA va_start,
-                                  libk::VirtualPA va_end,
-                                  libk::PhysicalPA pa_start,
-                                  PagesAttributes attr,
-                                  uint64_t* table,
-                                  size_t table_level,
-                                  libk::VirtualPA table_first_page_va) {
-  if (mapper == nullptr || alloc == nullptr) {
+bool map_range_in_table(MMUTable* tbl,
+                        VirtualPA va_start,
+                        VirtualPA va_end,
+                        PhysicalPA pa_start,
+                        PagesAttributes attr,
+                        uint64_t* table,
+                        size_t table_level,
+                        VirtualPA table_first_page_va) {
+  if (tbl == nullptr || table == nullptr || tbl->alloc == nullptr || tbl->resolve_va == nullptr) {
     return false;
   }
 
   if (va_start > va_end) {
     return true;
   }
-  
+
   const auto table_last_page_va = table_last_page(table_first_page_va, table_level);
 
   if ((va_end < table_first_page_va) || (va_start > table_last_page_va)) {
@@ -273,7 +313,7 @@ bool MMUTable::map_range_in_table(libk::VirtualPA va_start,
           // Map with a page
           const size_t offset = entry_va_start - va_start;
           const auto entry_pa = pa_start + offset;
-          const uint64_t new_entry = encode_new_entry(entry_pa, attr, PageSize::Page_4Kio, kind == Kind::Process);
+          const uint64_t new_entry = encode_new_entry(tbl, entry_pa, attr, PageSize::Page_4Kio);
           table[index] = new_entry;
         } else {
           // table_level < 4
@@ -283,21 +323,21 @@ bool MMUTable::map_range_in_table(libk::VirtualPA va_start,
             // Map with a block
             const size_t offset = entry_va_start - va_start;
             const auto entry_pa = pa_start + offset;
-            const uint64_t new_entry = encode_new_entry(entry_pa, attr, (PageSize)table_level, kind == Kind::Process);
+            const uint64_t new_entry = encode_new_entry(tbl, entry_pa, attr, (PageSize)table_level);
             table[index] = new_entry;
           } else {
             // Map with a table
 
             // We need a new page, let's allocate it !
-            libk::VirtualPA new_table;
-            if (!alloc->alloc_page(&new_table)) {
+            VirtualPA new_table;
+            if (!tbl->alloc(tbl->handle, &new_table)) {
               // Unable to allocate a fresh table :/
               return false;
             }
 
             // We resolve its physical address
-            libk::PhysicalPA new_table_pa;
-            if (!mapper->resolve_va(new_table, &new_table_pa)) {
+            PhysicalPA new_table_pa;
+            if (!tbl->resolve_va(tbl->handle, new_table, &new_table_pa)) {
               return false;
             }
 
@@ -305,7 +345,7 @@ bool MMUTable::map_range_in_table(libk::VirtualPA va_start,
             table[index] = new_table_pa | TABLE_MARKER;
 
             // And recursively map what's needed.
-            if (!map_range_in_table(va_start, va_end, pa_start, attr, (uint64_t*)new_table, table_level + 1,
+            if (!map_range_in_table(tbl, va_start, va_end, pa_start, attr, (uint64_t*)new_table, table_level + 1,
                                     entry_va_start)) {
               return false;
             }
@@ -327,15 +367,10 @@ bool MMUTable::map_range_in_table(libk::VirtualPA va_start,
       }
 
       case EntryKind::Table: {
-        uint64_t* sub_table = get_table_ptr_from_entry(entry, mapper);
-
-        if (sub_table == nullptr) {
-          // Cannot do any mapping in the table :/
-          return false;
-        }
+        uint64_t* sub_table = get_table_ptr_from_entry(tbl, entry);
 
         // And recursively map what's needed.
-        if (!map_range_in_table(va_start, va_end, pa_start, attr, sub_table, table_level + 1, entry_va_start)) {
+        if (!map_range_in_table(tbl, va_start, va_end, pa_start, attr, sub_table, table_level + 1, entry_va_start)) {
           return false;
         }
       }
@@ -345,16 +380,33 @@ bool MMUTable::map_range_in_table(libk::VirtualPA va_start,
   return true;
 }
 
-void MMUTable::clear_all() {
-  const auto initial_va = libk::VirtualPA(kind == Kind::Kernel ? KERNEL_BASE : PROCESS_BASE);
+/** All bound are *INCLUSIVE* */
+bool map_range(MMUTable* tbl, VirtualPA va_start, VirtualPA va_end, PhysicalPA pa_start, PagesAttributes attr) {
+  if (tbl == nullptr) {
+    return false;
+  }
 
-  clear_table((uint64_t*)pgd, 1, initial_va);
+  if (va_start > va_end) {
+    return true;
+  }
+
+  if (va_start == va_end) {
+    return map_chunk(tbl, va_start, pa_start, PageSize::Page_4Kio, attr);
+  }
+
+  const auto initial_va = VirtualPA(tbl->kind == MMUTable::Kind::Kernel ? KERNEL_BASE : PROCESS_BASE);
+
+  return map_range_in_table(tbl, va_start, va_end, pa_start, attr, (uint64_t*)tbl->pgd, 1, initial_va);
 }
 
-void MMUTable::clear_table(uint64_t* table, size_t table_level, libk::VirtualPA table_va) {
+void clear_table(MMUTable* tbl, uint64_t* table, size_t table_level, VirtualPA table_va) {
+  if (tbl == nullptr || tbl->free == nullptr || table == nullptr) {
+    return;
+  }
+
   for (size_t i = 0; i < TABLE_ENTRIES; ++i) {
     const uint64_t entry = table[i];
-    const libk::VirtualPA entry_va = get_entry_va_from_table_index(table_va, table_level, i);
+    const VirtualPA entry_va = get_entry_va_from_table_index(table_va, table_level, i);
     table[i] = 0ull;  // Clear entry
 
     switch (get_entry_kind(entry, table_level)) {
@@ -363,20 +415,93 @@ void MMUTable::clear_table(uint64_t* table, size_t table_level, libk::VirtualPA 
         break;
       }
       case EntryKind::Table: {
-        uint64_t* sub_table = get_table_ptr_from_entry(entry, mapper);
+        uint64_t* sub_table = get_table_ptr_from_entry(tbl, entry);
 
         if (sub_table != nullptr) {
-          clear_table(sub_table, table_level + 1, entry_va);
-          alloc->free_page(libk::VirtualPA((uintptr_t)sub_table));
+          clear_table(tbl, sub_table, table_level + 1, entry_va);
+          tbl->free(tbl->handle, VirtualPA((uintptr_t)sub_table));
         }
         break;
       }
 
       case EntryKind::Page:
       case EntryKind::Block: {
-        invalid_va(entry_va);
+        invalid_va(tbl, entry_va);
         break;
       }
     }
   }
+}
+
+void clear_all(MMUTable* tbl) {
+  if (tbl == nullptr) {
+    return;
+  }
+
+  const auto initial_va = VirtualPA(tbl->kind == MMUTable::Kind::Kernel ? KERNEL_BASE : PROCESS_BASE);
+
+  clear_table(tbl, (uint64_t*)tbl->pgd, 1, initial_va);
+}
+
+bool change_properties_for_range(VirtualPA va_start,
+                                 VirtualPA va_end,
+                                 PagesAttributes attr,
+                                 uint64_t* table,
+                                 size_t table_level,
+                                 VirtualPA table_first_page_va) {
+  if (va_start > va_end) {
+    return true;
+  }
+
+  const auto table_last_page_va = table_last_page(table_first_page_va, table_level);
+
+  if ((va_end < table_first_page_va) || (va_start > table_last_page_va)) {
+    // Input address space does not intersect with this table.
+    return true;
+  }
+
+  const auto inter_start_va = libk::max(va_start, table_first_page_va);
+  const auto inter_end_va = libk::min(va_end, table_last_page_va);
+
+  // We need to check all entries of the table within [start_table_index:end_table_index].
+  const size_t inter_start_index = get_index_in_table(inter_start_va, table_level);
+  const size_t inter_end_index = get_index_in_table(inter_end_va, table_level);
+
+  for (size_t index = inter_start_index; index <= inter_end_index; ++index) {
+    const uint64_t entry = table[index];
+    const auto entry_va_start = get_entry_va_from_table_index(table_first_page_va, table_level, index);
+
+    switch (get_entry_kind(entry, table_level)) {
+      case EntryKind::Invalid: {
+        // Nothing to change here !
+        continue;
+      }
+
+      case EntryKind::Block: {
+        // If split needed:
+        // - Decode Attrs and PA
+        // - We split in 3 parts : BeforeChange, Change, AfterChange
+        // - We call map_range for each part
+        break;
+      }
+      case EntryKind::Page: {
+        // Trivial case in theory
+        break;
+      }
+
+      case EntryKind::Table: {
+        PhysicalPA sub_table_pa = get_table_pa_from_entry(entry);
+
+        // HERE, and ONLY HERE, VirtualAddress = PhysicalAddress
+        auto* sub_table = (uint64_t*)sub_table_pa;
+
+        // And recursively map what's needed.
+        if (!change_properties_for_range(va_start, va_end, attr, sub_table, table_level + 1, entry_va_start)) {
+          return false;
+        }
+      }
+    }
+  }
+
+  return false;
 }

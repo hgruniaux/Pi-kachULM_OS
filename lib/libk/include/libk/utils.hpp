@@ -8,6 +8,8 @@
 #include "assert.hpp"
 
 #define KUNUSED(var) ((void)(var))
+extern "C" void debug(uint64_t, bool);
+extern "C" void debug_text(const char*, bool);
 
 namespace libk {
 /** @brief Returns the minimum of @a a and @a b. */

@@ -53,4 +53,7 @@ enum class PageSize : uint8_t {
   Page_4Kio = 4,  //!< Maps 4Kio of memory at specified address
 };
 
+using PhysicalPA = uintptr_t;
+using VirtualPA = uintptr_t;
+
 #endif
