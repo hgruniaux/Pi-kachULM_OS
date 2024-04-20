@@ -71,7 +71,7 @@ extern "C" void exception_handler(InterruptSource source, InterruptKind kind, Re
       break;
   }
 
-  const char* kind_name;
+  const char* kind_name = "";
   switch (kind) {
     case InterruptKind::SYNCHRONOUS:
       kind_name = "SYNCHRONOUS";
