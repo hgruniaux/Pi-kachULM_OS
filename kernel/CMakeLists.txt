@@ -17,8 +17,8 @@ add_executable(kernel boot.S kernel.cpp cxxabi.cpp startup.cpp
 
         hardware/utils.hpp
 
-#        hardware/miniuart.hpp
-#        hardware/miniuart.cpp
+        hardware/miniuart.hpp
+        hardware/miniuart.cpp
 
         hardware/mailbox.hpp
         hardware/mailbox.cpp

@@ -1,5 +1,6 @@
 #include "mmu_defs.hpp"
 
+#include "../hardware/miniuart.hpp"
 #include "libk/utils.hpp"
 #include "mmu_table.hpp"
 
@@ -101,7 +102,7 @@ void setup_initial_mapping(MMUTable* tbl, const uint32_t* dtb) {
   {
     const auto va_start = VirtualPA(KERNEL_BASE + dtb_stop + PAGE_SIZE);
     const auto va_end = VirtualPA(KERNEL_BASE + 0xffffff000);
-    if (!map_range(tbl, va_start, va_end, dtb_stop + PAGE_SIZE, rw_memory)) {
+    if (!map_range(tbl, va_start, va_end, dtb_stop + PAGE_SIZE, device_memory)) {
       libk::halt();
     }
   }
@@ -189,7 +190,13 @@ extern "C" bool alloc_page(void* handle_ptr, VirtualPA* page) {
   auto* handle = (MMUTableHandleData*)handle_ptr;
 
   if (handle->first_page + PAGE_SIZE * (handle->nb_allocated + 1) < handle->upper_bound) {
-    *page = VirtualPA(handle->first_page + PAGE_SIZE * handle->nb_allocated++);
+    uint64_t* new_page = (uint64_t*)(handle->first_page + PAGE_SIZE * handle->nb_allocated++);
+
+    for (size_t i = 0; i < PAGE_SIZE / sizeof(uint64_t); ++i) {
+      new_page[i] = 0;
+    }
+
+    *page = VirtualPA(new_page);
     return true;
   }
 
