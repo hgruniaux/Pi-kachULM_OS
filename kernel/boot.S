@@ -1,6 +1,6 @@
-#include "memory/mmu.h"
+#include "memory/mmu_defs.hpp"
 
-.section ".text.boot" // Make sure the linker puts this at the start of the kernel image
+//.section ".text.boot" // Make sure the linker puts this at the start of the kernel image
 
 .global _start // Execution starts here
 
@@ -21,15 +21,11 @@ _start:
     adr x0, _start
     mov sp, x0
 
-    // Temporary Exception Table (TODO : Remove this)
-    adr x0, inter_tabl
-    msr VBAR_EL1, x0
-
     // Jump to EL1
     bl jump_to_el1
 
     // Setup the MMU
-    adr x0, _kend
+    mov x0, x27
     bl mmu_init
 
     // Now, PC, SP & the DTB pointer are moved to high-memory space
@@ -87,49 +83,19 @@ debug:
 test:
     .quad 0xffff0000ffff0000
 
-// Temporary Debug Function (TODO : Remove this)
-.macro KERNEL_ENTRY source, kind
-.balign 0x80
-    str x0, [sp, #-16]!
-    mov x0, #0xffffffffffffffff
-    mov x1, #1
-    bl debug
-    mrs x0, elr_el1
-    mov x1, #1
-    bl debug
-    ldr x0, [sp], #16
-    mov x1, #1
-    bl debug
-
-999:
-    b 999b
-.endm
-
-.balign 2048
-inter_tabl:
-// The four first entries are for when we are using SP_EL0. This should never happen
-// as we requested that the CPU use SP_ELx for each exception level.
-    KERNEL_ENTRY 0, 0
-    KERNEL_ENTRY 0, 1
-    KERNEL_ENTRY 0, 2
-    KERNEL_ENTRY 0, 3
-// The following entries are for interrupts and exceptions coming from the
-// same exception level (that is from the kernel code). These entries will use
-// the EL1 stack pointer (the stack pointer of the kernel, and therefore the
-// same as the interrupt code).
-    KERNEL_ENTRY 1, 0
-    KERNEL_ENTRY 1, 1
-    KERNEL_ENTRY 1, 2
-    KERNEL_ENTRY 1, 3
-// The following entries are for interrupts and exceptions coming from lower
-// exception levels (like EL0, the user space).
-// From AArch64 mode:
-    KERNEL_ENTRY 2, 0
-    KERNEL_ENTRY 2, 1
-    KERNEL_ENTRY 2, 2
-    KERNEL_ENTRY 2, 3
-// From AArch32 mode (NOT SUPPORTED):
-    KERNEL_ENTRY 3, 0
-    KERNEL_ENTRY 3, 1
-    KERNEL_ENTRY 3, 2
-    KERNEL_ENTRY 3, 3
+.global debug_text
+debug_text:
+    ldr x9, =(0x3F000000+0x201000+0x0)
+    cmp x1, #0
+    b.eq 1f
+    mov x1, #KERNEL_BASE
+    add x9, x9, x1
+1:
+    ldrb w10, [x0]
+    cmp w10, #0
+    b.eq 2f
+    strb w10, [x9]
+    add x0, x0, #1
+    b 1b
+2:
+    ret

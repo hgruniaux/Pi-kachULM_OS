@@ -10,7 +10,7 @@
 
 #include <libk/log.hpp>
 #include "hardware/timer.hpp"
-#include "memory/mmu.h"
+#include "memory/mmu_defs.hpp"
 
 // void print_property(const DeviceTree& dt, const char* property) {
 //   Property p;
@@ -49,7 +49,6 @@ class UARTLogger : public libk::Logger {
     UART::write((const uint8_t*)"\r\n", 2);
   }
 };  // class UARTLogger
-
 
 extern "C" [[noreturn]] void kmain(const void* dtb) {
 #if 0
@@ -96,7 +95,7 @@ extern "C" [[noreturn]] void kmain(const void* dtb) {
   uintptr_t start_pos;
   asm volatile("adr %x0, _start" : "=r"(start_pos));
 
-  uintptr_t addr = start_pos - KERNEL_BASE ;
+  uintptr_t addr = start_pos - KERNEL_BASE;
   LOG_INFO("Try to read at : {:#x}", addr);
 
   uint32_t tmp = libk::read32(addr);

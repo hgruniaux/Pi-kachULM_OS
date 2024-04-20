@@ -1,13 +1,14 @@
 set(LINKER_SCRIPT ${CMAKE_SOURCE_DIR}/kernel/link.ld)
 
-#add_custom_target(linking
-#        COMMAND "${CMAKE_C_COMPILER}" -D__ASSEMBLER__ -P -E -x c "${LINKER_SCRIPT}" -o link.ld
-#        COMMENT "Preprocessing link.ld"
-#        SOURCES link.ld)
+add_custom_target(linking
+        COMMAND "${CMAKE_C_COMPILER}" -D__ASSEMBLER__ -P -E -x c "${LINKER_SCRIPT}" -o link.ld
+        COMMENT "Preprocessing link.ld"
+        SOURCES link.ld)
 
 add_executable(kernel boot.S kernel.cpp cxxabi.cpp startup.cpp
         syscall.hpp
         syscall.cpp
+        memory/mmu_init/mmu_init.cpp
 
         hardware/mmio.hpp
         hardware/mmio.cpp
@@ -45,23 +46,24 @@ add_executable(kernel boot.S kernel.cpp cxxabi.cpp startup.cpp
 #        graphics/graphics.hpp
 #        graphics/graphics.cpp
 #
-        memory/mmu.h
-        memory/mmu.c
-
-        memory/simple_page_allocator.hpp
+        memory/mmu_defs.hpp
 
         memory/mmu_table.cpp
         memory/mmu_table.cpp
+        memory/mmu_utils.cpp
+        memory/mmu_utils.hpp
+        memory/mmu_init/mmu_utilss.hpp
+        memory/mmu_init/mmu_utilss.cpp
 )
 
-#add_dependencies(kernel linking)
+add_dependencies(kernel linking)
 
 set_target_properties(kernel PROPERTIES OUTPUT_NAME "kernel8.elf")
 
 target_link_libraries(kernel PRIVATE libk device-tree)
 
 # Use the linker script.
-target_link_options(kernel PRIVATE -nostdlib -T "${LINKER_SCRIPT}")
+target_link_options(kernel PRIVATE -nostdlib -T "link.ld")
 
 # Extracting the elf file to a binary one
 add_custom_target(kernel-img

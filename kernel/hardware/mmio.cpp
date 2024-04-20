@@ -1,5 +1,5 @@
 #include "mmio.hpp"
-#include "../memory/mmu.h"
+#include "../memory/mmu_defs.hpp"
 
 namespace MMIO {
 uintptr_t BASE;

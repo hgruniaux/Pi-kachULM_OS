@@ -6,87 +6,12 @@
 
 #include "libk/assert.hpp"
 #include "libk/utils.hpp"
+extern "C" void debug(uint64_t, bool);
 
 namespace libk {
 
-#define PageAddressClass(Name)                                     \
-  class Name {                                                     \
-   public:                                                         \
-    inline constexpr explicit Name(uintptr_t ptr) : _ptr(ptr) {    \
-      KASSERT((_ptr & mask_bits(0, 12)) == 0);                     \
-    }                                                              \
-    inline constexpr Name() : _ptr(0) {}                           \
-    inline constexpr Name(const Name& other) : _ptr(other._ptr) {} \
-                                                                   \
-    inline constexpr Name& operator=(const Name& rhs) {            \
-      if (this == &rhs) {                                          \
-        return *this;                                              \
-      }                                                            \
-                                                                   \
-      _ptr = rhs._ptr;                                             \
-      return *this;                                                \
-    }                                                              \
-                                                                   \
-    inline constexpr auto operator==(const Name& rhs) const {      \
-      return _ptr == rhs._ptr;                                     \
-    }                                                              \
-    inline constexpr auto operator<=>(const Name& rhs) const {     \
-      return _ptr <=> rhs._ptr;                                    \
-    }                                                              \
-    inline constexpr auto operator==(const uintptr_t rhs) const {  \
-      return _ptr == rhs;                                          \
-    }                                                              \
-                                                                   \
-    inline constexpr Name operator|(uintptr_t address) const {     \
-      return Name(_ptr | address);                                 \
-    }                                                              \
-    inline constexpr Name operator&(uintptr_t address) const {     \
-      return Name(_ptr & address);                                 \
-    }                                                              \
-                                                                   \
-    inline constexpr Name operator|(const Name& address) const {   \
-      return Name(_ptr | address._ptr);                            \
-    }                                                              \
-    inline constexpr Name operator&(const Name& address) const {   \
-      return Name(_ptr & address._ptr);                            \
-    }                                                              \
-                                                                   \
-    inline constexpr Name operator+(size_t offset) const {         \
-      return Name(_ptr + offset);                                  \
-    }                                                              \
-    inline constexpr Name operator-(size_t offset) const {         \
-      return Name(_ptr - offset);                                  \
-    }                                                              \
-                                                                   \
-    inline constexpr size_t operator-(const Name& other) const {   \
-      KASSERT(_ptr >= other._ptr);                                 \
-      return _ptr - other._ptr;                                    \
-    }                                                              \
-                                                                   \
-    inline constexpr Name& operator+=(size_t offset) {             \
-      _ptr += offset;                                              \
-      return *this;                                                \
-    }                                                              \
-    inline constexpr Name& operator-=(size_t offset) {             \
-      _ptr -= offset;                                              \
-      return *this;                                                \
-    }                                                              \
-                                                                   \
-    [[nodiscard]] inline constexpr uintptr_t as_int() const {      \
-      return _ptr;                                                 \
-    }                                                              \
-                                                                   \
-    template <class T>                                             \
-    [[nodiscard]] inline constexpr T* as_ptr() const {             \
-      return (T*)_ptr;                                             \
-    }                                                              \
-                                                                   \
-   private:                                                        \
-    uintptr_t _ptr;                                                \
-  }
-
-PageAddressClass(PhysicalPA);
-PageAddressClass(VirtualPA);
+using PhysicalPA = uintptr_t;
+using VirtualPA = uintptr_t;
 
 /** This is what we expect of a Page Allocator */
 class PageAllocator {

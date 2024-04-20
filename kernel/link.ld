@@ -1,13 +1,19 @@
+#include "memory/mmu_defs.hpp"
+
+ENTRY(_start);
+
 SECTIONS
 {
+    . = KERNEL_BASE;
+
     /* Kernel load address for AArch64 */
-    . = 0xffff000000000000 + 0x80000;
+    . += 0x80000;
 
     _stext = .;
-    .text.boot : { KEEP(*(.text.boot)) }
     .text : { *(.text) }
-    _etext = .;
+    . = ALIGN(PAGE_SIZE);
 
+    _srodata = .;
     .rodata : { *(.rodata) }
 
     /* For clang to compile the project, .init_array and .fini_array must be contiguous with rodata */
@@ -30,7 +36,9 @@ SECTIONS
         KEEP (*(EXCLUDE_FILE(crti.o crtn.o) .fini_array))
         __fini_array_end = .;
     }
+    . = ALIGN(PAGE_SIZE);
 
+    _srwdata = .;
     PROVIDE(_data = .);
     .data : { *(.data) }
     .bss (NOLOAD) : {
@@ -41,6 +49,6 @@ SECTIONS
         __bss_end = .;
     }
 
-    . = ALIGN(0x1000);
+    . = ALIGN(PAGE_SIZE);
     _kend = .;
 }
