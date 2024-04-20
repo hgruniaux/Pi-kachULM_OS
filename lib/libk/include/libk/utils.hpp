@@ -69,12 +69,9 @@ concept unsigned_or_pointer = std::is_unsigned_v<T> || std::is_pointer_v<T>;
 template <unsigned_or_pointer T>
 [[nodiscard]] static inline constexpr T align(T value, size_t alignment) {
   KASSERT(is_power_of_two(alignment));
-  const auto addr = (uintptr_t)value;
-  const uintptr_t new_addr = addr ^ (addr & (alignment - 1));
-  if (new_addr < addr) {
-    return (T)(new_addr + alignment);
-  }
-  return (T)new_addr;
+  // Expression used by LD for ALIGN(xxx)
+  const size_t mask = alignment - 1;
+  return (T)(((uintptr_t)value + mask) & ~(mask));
 }
 
 /** @brief Reverses the bytes in @a value. */
