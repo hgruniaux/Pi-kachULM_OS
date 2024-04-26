@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include "libk/string_view.hpp"
 
 namespace libk {
 namespace detail {
@@ -22,8 +23,8 @@ struct Argument {
     // DOUBLE, // FIXME : Activate when floating point is activated
     /** @brief A pointer. */
     POINTER,
-    /** @brief A NUL-terminated UTF-8 string. */
-    C_STRING,
+    /** @brief A UTF-8 string (may not be NUL terminated). */
+    STRING,
   };
 
   Type type;
@@ -34,7 +35,10 @@ struct Argument {
     uintmax_t uintmax_value;
     float float_value;
     double double_value;
-    const char* c_string_value;
+    struct {
+      const char* value;
+      size_t length;
+    } string_value;
     const void* pointer_value;
   } data;
 
@@ -51,8 +55,15 @@ struct Argument {
   // FIXME : Activate when floating point is activated
   // Argument(float value) : type(Type::FLOAT) { data.float_value = value; }
   // Argument(double value) : type(Type::DOUBLE) { data.double_value = value; }
-  Argument(const char* value) : type(Type::C_STRING) { data.c_string_value = value; }
   Argument(const void* value) : type(Type::POINTER) { data.pointer_value = value; }
+  Argument(const char* value) : type(Type::STRING) {
+    data.string_value.value = value;
+    data.string_value.length = strlen(value);
+  }
+  Argument(StringView value) : type(Type::STRING) {
+    data.string_value.value = value.get_data();
+    data.string_value.length = value.get_length();
+  }
 };  // struct Argument
 
 char* format_to(char* out, const char* fmt, const Argument* args, size_t args_count);

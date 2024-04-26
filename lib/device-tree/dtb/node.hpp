@@ -3,7 +3,9 @@
 #include <cstddef>
 #include <iterator>
 
+#include "libk/option.hpp"
 #include "libk/string.hpp"
+#include "libk/string_view.hpp"
 #include "parser.hpp"
 
 class DeviceTree;
@@ -11,9 +13,18 @@ class DeviceTree;
 class Node;
 
 struct Property {
-  const char* name;
+  libk::StringView name;
   size_t length;
   const char* data;
+
+  /** @brief Parses the property value as a `<u32>`. */
+  [[nodiscard]] libk::Option<uint32_t> get_u32() const;
+  /** @brief Parses the property value as a `<u64>`. */
+  [[nodiscard]] libk::Option<uint64_t> get_u64() const;
+  /** @brief Parses the property value as a `<u32>` or `<u64>` depending on property length. */
+  [[nodiscard]] libk::Option<uint64_t> get_u32_or_u64() const;
+  /** @brief Parses the property value as a `<string>`. */
+  [[nodiscard]] libk::StringView get_string() const { return {data, length}; }
 };
 
 class PropertyIterator {
@@ -100,9 +111,9 @@ class Node {
 
   Node() = default;
 
-  [[nodiscard]] bool find_child(const char* child_name, Node* child) const {
-    for (Node const n : get_children()) {
-      if (libk::strcmp(n.get_name(), child_name) == 0) {
+  [[nodiscard]] bool find_child(libk::StringView child_name, Node* child) const {
+    for (const Node n : get_children()) {
+      if (n.get_name() == child_name) {
         *child = n;
         return true;
       }
@@ -110,9 +121,10 @@ class Node {
 
     return false;
   }
-  [[nodiscard]] bool find_property(const char* property_name, Property* property) const {
-    for (Property const p : get_properties()) {
-      if (libk::strcmp(p.name, property_name) == 0) {
+
+  [[nodiscard]] bool find_property(libk::StringView property_name, Property* property) const {
+    for (const Property p : get_properties()) {
+      if (p.name == property_name) {
         *property = p;
         return true;
       }
@@ -124,7 +136,7 @@ class Node {
   [[nodiscard]] Properties get_properties() const { return Properties(m_p, m_off); }
   [[nodiscard]] Children get_children() const { return Children(m_p, m_off); }
 
-  [[nodiscard]] const char* get_name() const { return m_name; }
+  [[nodiscard]] libk::StringView get_name() const { return m_name; }
 
  protected:
   friend DeviceTree;
@@ -134,17 +146,6 @@ class Node {
   const DeviceTreeParser* m_p = nullptr;
   const char* m_name = "";
   size_t m_off = 0;
-
-  [[nodiscard]] bool find_child(const char* child_name, size_t name_length, Node* child) const {
-    for (Node const n : get_children()) {
-      if (libk::strncmp(n.get_name(), child_name, name_length) == 0) {
-        *child = n;
-        return true;
-      }
-    }
-
-    return false;
-  }
 };
 
 static_assert(std::forward_iterator<PropertyIterator>);

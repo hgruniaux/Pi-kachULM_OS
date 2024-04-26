@@ -33,22 +33,22 @@ MemorySectionIterator& MemorySectionIterator::operator++() {
   return *this;
 }
 
-bool DeviceTree::find_node(const char* path, size_t path_length, Node* node) const {
+bool DeviceTree::find_node(libk::StringView path, Node* node) const {
   Node current_node = get_root();
   size_t begin = 0;
 
-  if (path[0] == '/') {
+  if (!path.is_empty() && path[0] == '/') {
     begin++;
   }
 
-  while (begin < path_length) {
-    const char* next_delim = libk::strchrnul(path + begin, '/');
-    const size_t node_name_length = next_delim - path - begin - 1;
+  while (begin < path.get_length()) {
+    const auto* next_delim = path.find('/', begin);
+    const size_t node_name_length = next_delim - path.begin() - begin;
 
     // Next node name is in path[0] ... path[node_name_length]
-    if (current_node.find_child(path + begin, node_name_length, &current_node)) {
-      begin += node_name_length + 1;
-      if (path[begin] != '\000') {
+    if (current_node.find_child(libk::StringView(path.begin() + begin, node_name_length), &current_node)) {
+      begin += node_name_length;
+      if (begin < path.get_length()) {
         begin++;  // Skip the '/'
       }
     } else {
@@ -60,15 +60,15 @@ bool DeviceTree::find_node(const char* path, size_t path_length, Node* node) con
   return true;
 }
 
-bool DeviceTree::find_property(const char* path, Property* property) const {
-  const char* last_delim = libk::strrchr(path, '/');
+bool DeviceTree::find_property(libk::StringView path, Property* property) const {
+  const auto* last_delim = path.rfind('/');
 
-  if (last_delim == nullptr) {
+  if (last_delim == path.end()) {
     return get_root().find_property(path, property);
   }
 
   Node node = {};
-  if (find_node(path, last_delim - path, &node)) {
+  if (find_node({path.begin(), last_delim}, &node)) {
     return node.find_property(last_delim + 1, property);
   }
 

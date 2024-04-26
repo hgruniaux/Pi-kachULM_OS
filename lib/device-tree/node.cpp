@@ -9,6 +9,40 @@
 static constexpr size_t max_val = -1;
 
 /*
+ * Property class
+ */
+
+libk::Option<uint32_t> Property::get_u32() const {
+  if (length != sizeof(uint32_t))
+    return {};
+
+  const uint32_t value = *((const uint32_t*)data);
+  return libk::from_be(value);
+}
+
+libk::Option<uint64_t> Property::get_u64() const {
+  if (length != sizeof(uint64_t))
+    return {};
+
+  const uint64_t value = *((const uint64_t*)data);
+  return libk::from_be(value);
+}
+
+[[nodiscard]] libk::Option<uint64_t> Property::get_u32_or_u64() const {
+  if (length == sizeof(uint32_t)) {
+    const uint32_t value = *((const uint32_t*)data);
+    return libk::from_be(value);
+  }
+
+  if (length == sizeof(uint64_t)) {
+    const uint64_t value = *((const uint64_t*)data);
+    return libk::from_be(value);
+  }
+
+  return {};
+}
+
+/*
  * PropertyIterator Class
  */
 
