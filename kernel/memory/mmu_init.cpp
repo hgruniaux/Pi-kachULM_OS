@@ -1,6 +1,5 @@
 #include "mmu_defs.hpp"
 
-#include "../hardware/miniuart.hpp"
 #include "libk/utils.hpp"
 #include "mmu_table.hpp"
 
@@ -186,33 +185,29 @@ struct MMUTableHandleData {
   size_t nb_allocated;
 };
 
-extern "C" bool alloc_page(void* handle_ptr, VirtualPA* page) {
+extern "C" VirtualPA alloc_page(void* handle_ptr) {
   auto* handle = (MMUTableHandleData*)handle_ptr;
 
-  if (handle->first_page + PAGE_SIZE * (handle->nb_allocated + 1) < handle->upper_bound) {
-    uint64_t* new_page = (uint64_t*)(handle->first_page + PAGE_SIZE * handle->nb_allocated++);
-
-    for (size_t i = 0; i < PAGE_SIZE / sizeof(uint64_t); ++i) {
-      new_page[i] = 0;
-    }
-
-    *page = VirtualPA(new_page);
-    return true;
+  if (handle->first_page + PAGE_SIZE * (handle->nb_allocated + 1) >= handle->upper_bound) {
+    // Allocation failed
+    libk::halt();
   }
 
-  return false;
+  uint64_t* new_page = (uint64_t*)(handle->first_page + PAGE_SIZE * handle->nb_allocated++);
+
+  for (size_t i = 0; i < PAGE_SIZE / sizeof(uint64_t); ++i) {
+    new_page[i] = 0;
+  }
+
+  return (VirtualPA)new_page;
 }
 
-extern "C" bool resolve_pa(void*, PhysicalPA va, VirtualPA* pa) {
-  // In our case, Virtual Space == Physical Space !
-  *pa = va;
-  return true;
+extern "C" VirtualPA resolve_pa(void*, PhysicalPA pa) {
+  return pa;
 }
 
-extern "C" bool resolve_va(void*, PhysicalPA pa, VirtualPA* va) {
-  // In our case, Virtual Space == Physical Space !
-  *va = pa;
-  return true;
+extern "C" PhysicalPA resolve_va(void*, VirtualPA va) {
+  return va;
 }
 
 extern "C" void mmu_init(const uint32_t* dtb) {
@@ -225,10 +220,7 @@ extern "C" void mmu_init(const uint32_t* dtb) {
       .nb_allocated = 0,
   };
 
-  VirtualPA pgd;
-  if (!alloc_page((void*)&handle, &pgd)) {
-    libk::halt();
-  }
+  VirtualPA pgd = alloc_page(&handle);
 
   MMUTable tbl = {
       .kind = MMUTable::Kind::Kernel,

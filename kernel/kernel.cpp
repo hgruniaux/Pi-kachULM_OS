@@ -65,10 +65,8 @@ class UARTLogger : public libk::Logger {
 
   dump_current_el();
   init_interrupts_vector_table();
-  const char * test = __PRETTY_FUNCTION__;
 
   LOG_INFO("Kernel built at " __TIME__ " on " __DATE__);
-  LOG_INFO("Welkome from {}", test);
 
   {
     uint64_t tmp;
