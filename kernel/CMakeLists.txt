@@ -26,30 +26,33 @@ add_executable(kernel boot.S kernel.cpp cxxabi.cpp startup.cpp
         hardware/uart.hpp
         hardware/uart.cpp
 
-#        hardware/device.hpp
-#        hardware/device.cpp
-#
-#        hardware/framebuffer.hpp
-#        hardware/framebuffer.cpp
+        hardware/device.hpp
+        hardware/device.cpp
+
+        hardware/framebuffer.hpp
+        hardware/framebuffer.cpp
 
         hardware/interrupts.hpp
         hardware/interrupts.cpp
         hardware/interrupts.S
 
         hardware/timer.hpp
-#
-#        graphics/pkfont.hpp
-#        graphics/pkfont.cpp
-#
-#        ../fonts/firacode_16.cpp
-#        graphics/graphics.hpp
-#        graphics/graphics.cpp
-#
+
+        graphics/pkfont.hpp
+        graphics/pkfont.cpp
+
+        ../fonts/firacode_16.cpp
+        graphics/graphics.hpp
+        graphics/graphics.cpp
+
         memory/mmu_defs.hpp
         memory/mmu_init.cpp
 
         memory/mmu_table.cpp
         memory/mmu_table.cpp
+        memory/memory.cpp
+        memory/memory.hpp
+        memory/mmu_init.hpp
 )
 
 add_dependencies(kernel linking)

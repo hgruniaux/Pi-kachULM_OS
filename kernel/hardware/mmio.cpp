@@ -8,7 +8,7 @@ DeviceType device;
 
 void init() {
 #if 1
-  BASE = 0x3F000000 + KERNEL_BASE;
+  BASE = KERNEL_BASE + 0x0000'2000'0000'0000;
   device = DeviceType::RaspberryPi3;
 #else
   BASE = 0xFE000000 + KERNEL_BASE;

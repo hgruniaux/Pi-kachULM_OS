@@ -9,6 +9,7 @@ SECTIONS
     /* Kernel load address for AArch64 */
     . += 0x80000;
 
+    _stack_bottom = .;
     _stext = .;
     .text : { *(.text) }
     . = ALIGN(PAGE_SIZE);

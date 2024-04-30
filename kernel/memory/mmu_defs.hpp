@@ -3,6 +3,18 @@
 #define KERNEL_BASE (0xffff000000000000)
 #define PROCESS_BASE (0x0000000000000000)
 #define PAGE_SIZE 4096
+#define STACK_SIZE (2 * PAGE_SIZE)
+
+#define NORMAL_MEMORY KERNEL_BASE
+#define VC_MEMORY (KERNEL_BASE + 0x0000100000000000)
+#define DEVICE_MEMORY (KERNEL_BASE + 0x0000200000000000)
+#define STACK_MEMORY (KERNEL_BASE + 0x0000f00000000000)
+
+#define STACK_PAGE_BOTTOM(core) (STACK_MEMORY + 0x00000000000ff000 + (core << 20))
+#define STACK_PAGE_TOP(core) (STACK_PAGE_BOTTOM(core) - STACK_SIZE + PAGE_SIZE)
+
+#define STACK_ADDRESS_BOTTOM(core) (STACK_PAGE_BOTTOM(core) + 0xff8)
+#define STACK_ADDRESS_TOP(core) (STACK_PAGE_TOP(core))
 
 #ifndef __ASSEMBLER__
 #include <cstdint>
@@ -36,10 +48,10 @@ enum class Accessibility : uint8_t {
 };
 
 enum class MemoryType : uint8_t {
-  Device_nGnRnE = 0,   //<! Device memory without any Gathering, Reordering nor Elimination
-  Device_nGRE = 1,     //<! Device memory without any Gathering but Reordering and Elimination allowed
-  Normal_NoCache = 2,  //<! Normal memory not cached
-  Normal = 3,          //<! Normal memory cached
+  Normal = 0,          //<! Normal memory cached
+  Device_nGnRnE = 1,   //<! Device memory without any Gathering, Reordering nor Elimination
+  Device_nGRE = 2,     //<! Device memory without any Gathering but Reordering and Elimination allowed
+  Normal_NoCache = 3,  //<! Normal memory not cached
 };
 
 struct PagesAttributes {

@@ -11,6 +11,49 @@ static constexpr size_t max_val = -1;
 /*
  * Property class
  */
+bool Property::is_string() const {
+  for (size_t i = 0; i < length - 1; ++i) {
+    if (data[i] <= 0x1f || data[i] >= 0x7f) {
+      return false;
+    }
+  }
+
+  return data[length - 1] == '\0';
+}
+
+bool Property::get_u32_at(size_t* index, uint64_t* value) const {
+  if (index == nullptr || *index + sizeof(uint32_t) > length) {
+    return false;
+  }
+
+  if (value != nullptr) {
+    *value = libk::from_be(*(const uint32_t*)(data + *index));
+  }
+
+  *index += sizeof(uint32_t);
+  return true;
+}
+
+bool Property::get_u64_at(size_t* index, uint64_t* value) const {
+  if (index == nullptr || *index + sizeof(uint64_t) > length) {
+    return false;
+  }
+
+  if (value != nullptr) {
+    *value = libk::from_be(*(const uint64_t*)(data + *index));
+  }
+
+  *index += sizeof(uint64_t);
+  return true;
+}
+
+bool Property::get_variable_int(size_t* index, uint64_t* value, bool is_u64_integer) const {
+  if (is_u64_integer) {
+    return get_u64_at(index, value);
+  } else {
+    return get_u32_at(index, value);
+  }
+}
 
 libk::Option<uint32_t> Property::get_u32() const {
   if (length != sizeof(uint32_t))

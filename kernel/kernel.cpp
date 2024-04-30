@@ -1,26 +1,41 @@
 #include "dtb/dtb.hpp"
-#include "graphics/graphics.hpp"
-#include "graphics/pkfont.hpp"
-#include "hardware/device.hpp"
-#include "hardware/framebuffer.hpp"
 #include "hardware/interrupts.hpp"
 #include "hardware/mmio.hpp"
 #include "hardware/uart.hpp"
-#include "syscall.hpp"
 
 #include <libk/log.hpp>
+#include "hardware/device.hpp"
+#include "hardware/framebuffer.hpp"
 #include "hardware/timer.hpp"
+#include "memory/memory.hpp"
 #include "memory/mmu_defs.hpp"
 
-// void print_property(const DeviceTree& dt, const char* property) {
-//   Property p;
-//
-//   if (!dt.find_property(property, &p)) {
-//     LOG_CRITICAL("Unable to find property {} in device tree.", property);
-//   }
-//
-//   LOG_INFO("DeviceTree property {} (size: {}) : {}", p.name, p.length, p.data);
-// }
+void print_property(const Property p) {
+  if (p.is_string()) {
+    LOG_INFO("DeviceTree property {} (size: {}) : '{}'", p.name, p.length, p.data);
+  } else if (p.length % sizeof(uint32_t) == 0) {
+    LOG_INFO("DeviceTree property {} (size: {}) :", p.name, p.length);
+    const auto* data = (const uint32_t*)p.data;
+    for (size_t i = 0; i < p.length / sizeof(uint32_t); i++) {
+      LOG_INFO("  - At {}: {:#x}", i, libk::from_be(data[i]));
+    }
+  } else {
+    LOG_INFO("DeviceTree property {} (size: {}) :", p.name, p.length);
+    for (size_t i = 0; i < p.length; i++) {
+      LOG_INFO("  - At {}: {:#x}", i, (uint8_t)p.data[i]);
+    }
+  }
+}
+
+void find_and_dump(const DeviceTree dt, libk::StringView path) {
+  Property p;
+
+  if (!dt.find_property(path, &p)) {
+    LOG_CRITICAL("Unable to find property: {}", path);
+  }
+
+  print_property(p);
+}
 
 void dump_current_el() {
   switch (get_current_exception_level()) {
@@ -39,6 +54,24 @@ void dump_current_el() {
   }
 }
 
+size_t fibo(int n) {
+  {
+    uint64_t tmp;
+    asm volatile("mov %x0, sp" : "=r"(tmp));
+    LOG_INFO("SP : {:#x}", tmp);
+  }
+
+  if (n <= 1) {
+    return n;
+  } else {
+    const auto __n = fibo(n - 1);
+    const auto dd = 1 + __n;
+    LOG_INFO("Fibo({}) = {}", n, dd);
+
+    return dd;
+  }
+}
+
 extern "C" void init_interrupts_vector_table();
 
 class UARTLogger : public libk::Logger {
@@ -51,9 +84,7 @@ class UARTLogger : public libk::Logger {
 };  // class UARTLogger
 
 [[noreturn]] void kmain(const void* dtb) {
-#if 0
   const DeviceTree dt(dtb);
-#endif
   MMIO::init();
 
   UART::init(115200);
@@ -66,13 +97,18 @@ class UARTLogger : public libk::Logger {
   dump_current_el();
   init_interrupts_vector_table();
 
-  LOG_INFO("Kernel built at " __TIME__ " on " __DATE__);
+#define resolve_symbol_pa(symbol)                     \
+  ({                                                  \
+    uintptr_t __dest;                                 \
+    asm volatile("adr %x0, " #symbol : "=r"(__dest)); \
+    __dest;                                           \
+  })
 
-  {
-    uint64_t tmp;
-    asm volatile("adr %x0, ." : "=r"(tmp));
-    LOG_INFO("PC : {:#x}", tmp);
-  }
+  LOG_INFO("Kernel built at " __TIME__ " on " __DATE__);
+  LOG_INFO("PGD0: {:#x}", libk::read64(resolve_symbol_pa(_mmu_init_data) + 0 * sizeof(uint64_t)));
+  LOG_INFO("PGD1: {:#x}", libk::read64(resolve_symbol_pa(_mmu_init_data) + 1 * sizeof(uint64_t)));
+  LOG_INFO("PGD2: {:#x}", libk::read64(resolve_symbol_pa(_mmu_init_data) + 2 * sizeof(uint64_t)));
+  LOG_INFO("PGD2: {:#x}", libk::read64(resolve_symbol_pa(_mmu_init_data) + 2 * sizeof(uint64_t)) + STACK_SIZE);
 
   {
     uint64_t tmp;
@@ -80,27 +116,13 @@ class UARTLogger : public libk::Logger {
     LOG_INFO("SP : {:#x}", tmp);
   }
 
-  {
-    uint64_t tmp;
-    asm volatile("adr %x0, _start" : "=r"(tmp));
-    LOG_INFO("_start : {:#x}", tmp);
-  }
+  LOG_WARNING("Stack First Page {:#x}", STACK_PAGE_TOP(0));
+  LOG_WARNING("Stack Last Page {:#x}", STACK_PAGE_BOTTOM(0));
 
-  {
-    uint64_t tmp;
-    asm volatile("ldr %x0, =_start" : "=r"(tmp));
-    LOG_INFO("_start : {:#x}", tmp);
-  }
+  LOG_WARNING("Stack First Address {:#x}", STACK_ADDRESS_TOP(0));
+  LOG_WARNING("Stack Last Address {:#x}", STACK_ADDRESS_BOTTOM(0));
 
-  uintptr_t start_pos;
-  asm volatile("adr %x0, _start" : "=r"(start_pos));
-
-  uintptr_t addr = start_pos - KERNEL_BASE;
-  LOG_INFO("Try to read at : {:#x}", addr);
-
-  uint32_t tmp = libk::read32(addr);
-  LOG_INFO("We have : {:#x}", tmp);
-
+  //  fibo(100);
   // #if 0
   //  LOG_INFO("DeviceTree initialization: {}", dt.is_status_okay());
   //  LOG_INFO("DeviceTree Version: {}", dt.get_version());
@@ -116,22 +138,21 @@ class UARTLogger : public libk::Logger {
   //  LOG_INFO("Board serial: {}", device.get_board_serial());
   //  LOG_INFO("ARM memory: {} bytes at {}", device.get_arm_memory_info().size,
   //  device.get_arm_memory_info().base_address); LOG_INFO("VC memory: {} bytes at {}",
-  //  device.get_vc_memory_info().size, device.get_vc_memory_info().base_address);
-  //   LOG_INFO("Temp: {} °C / {} °C", device.get_current_temp() / 1000.0f, device.get_max_temp() / 1000.0f);
+  //  device.get_vc_memory_info().size, device.get_vc_memory_info().base_address); LOG_INFO("Temp: {} °C / {} °C",
+  //  device.get_current_temp() / 1000, device.get_max_temp() / 1000);
+
+  //  SyscallManager::get().register_syscall(24, [](Registers& ) { LOG_INFO("Syscall 24"); });
   //
-  //  SyscallManager::get().register_syscall(24, [](Registers& regs) { LOG_INFO("Syscall 24"); });
-  //
-  //   Enter userspace
+  //  //  Enter userspace
   //  jump_to_el0();
   //  asm volatile("mov w8, 24\n\tsvc #0");
   //  libk::halt();
-  //
-  // #if 0
+
   //  FrameBuffer& framebuffer = FrameBuffer::get();
   //  if (!framebuffer.init(640, 480)) {
   //    LOG_CRITICAL("failed to initialize framebuffer");
   //  }
-  //
+
   //  const uint32_t fb_width = framebuffer.get_width();
   //  const uint32_t fb_height = framebuffer.get_height();
   //
@@ -146,7 +167,8 @@ class UARTLogger : public libk::Logger {
   //  painter.clear(graphics::Color::WHITE);
   //  painter.set_pen(graphics::Color::BLACK);
   //  painter.draw_text((fb_width - text_width) / 2, (fb_height - text_height) / 2, text);
-  // #endif
+
+  LOG_ERROR("END");
   while (true) {
     UART::write_one(UART::read_one());
   }

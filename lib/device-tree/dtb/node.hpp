@@ -17,6 +17,24 @@ struct Property {
   size_t length;
   const char* data;
 
+  /** @brief Tests if this property is likely a string */
+  [[nodiscard]] bool is_string() const;
+
+  /** Tries to parse an `<u32>` at *byte index* @a index into @a value.
+   * @returns - `true` if @a value contains the parsed integer, and @a index the next index to use for parsing
+   *          - `false` if the value can't be parsed, @a index and @a value are not modified.  */
+  [[nodiscard]] bool get_u32_at(size_t* index, uint64_t* value) const;
+
+  /** Tries to parse an `<u32>` at *byte index* @a index into @a value.
+   * @returns - `true` if @a value contains the parsed integer, and @a index the next index to use for parsing
+   *          - `false` if the value can't be parsed, @a index and @a value are not modified.  */
+  [[nodiscard]] bool get_u64_at(size_t* index, uint64_t* value) const;
+
+  /** Tries to parse an `<u32>` or an `<u64>` depending @a is_u64_integer at *byte index* @a index into @a value.
+   * @returns - `true` if @a value contains the parsed integer, and @a index the next index to use for parsing
+   *          - `false` if the value can't be parsed, @a index and @a value are not modified.  */
+  [[nodiscard]] bool get_variable_int(size_t* index, uint64_t* value, bool is_u64_integer) const;
+
   /** @brief Parses the property value as a `<u32>`. */
   [[nodiscard]] libk::Option<uint32_t> get_u32() const;
   /** @brief Parses the property value as a `<u64>`. */
