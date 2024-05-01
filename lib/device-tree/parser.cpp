@@ -6,7 +6,7 @@
 #include "utils.hpp"
 
 DeviceTreeParser DeviceTreeParser::from_memory(const void* dts) {
-  if (libk::align(dts, alignof(uint64_t)) != dts) {
+  if (dts == nullptr || libk::align(dts, alignof(uint64_t)) != dts) {
     return DeviceTreeParser(nullptr, 0, 0, 0, 0);
   }
 
