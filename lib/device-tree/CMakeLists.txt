@@ -1,16 +1,15 @@
 add_library(device-tree STATIC
-        dtb/dtb.hpp
-        dtb.cpp
+        include/dtb/dtb.hpp
+        include/dtb/node.hpp
+        include/dtb/parser.hpp
 
-        dtb/node.hpp
-        node.cpp
+        src/dtb.cpp
+        src/node.cpp
+        src/parser.cpp
 
-        dtb/parser.hpp
-        parser.cpp
-
-        utils.hpp
+        src/utils.hpp
 )
 
-target_include_directories(device-tree PUBLIC .)
+target_include_directories(device-tree PUBLIC include/)
 
 target_link_libraries(device-tree PRIVATE libk)
