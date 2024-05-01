@@ -40,7 +40,14 @@ bool Property::get_u64_at(size_t* index, uint64_t* value) const {
   }
 
   if (value != nullptr) {
-    *value = libk::from_be(*(const uint64_t*)(data + *index));
+    union {
+      uint64_t u64;
+      uint32_t u32s[2];
+    } u32_2_u64;
+
+    u32_2_u64.u32s[0] = *(const uint32_t*)(data + *index);
+    u32_2_u64.u32s[1] = *(const uint32_t*)(data + *index + sizeof(uint32_t));
+    *value = libk::from_be(u32_2_u64.u64);
   }
 
   *index += sizeof(uint64_t);
@@ -56,19 +63,28 @@ bool Property::get_variable_int(size_t* index, uint64_t* value, bool is_u64_inte
 }
 
 libk::Option<uint32_t> Property::get_u32() const {
-  if (length != sizeof(uint32_t))
+  if (length != sizeof(uint32_t)) {
     return {};
+  }
 
   const uint32_t value = *((const uint32_t*)data);
   return libk::from_be(value);
 }
 
 libk::Option<uint64_t> Property::get_u64() const {
-  if (length != sizeof(uint64_t))
+  if (length != sizeof(uint64_t)) {
     return {};
+  }
 
-  const uint64_t value = *((const uint64_t*)data);
-  return libk::from_be(value);
+  union {
+    uint64_t u64;
+    uint32_t u32s[2];
+  } u32_2_u64;
+
+  u32_2_u64.u32s[0] = *(const uint32_t*)(data);
+  u32_2_u64.u32s[1] = *(const uint32_t*)(data + sizeof(uint32_t));
+
+  return libk::from_be(u32_2_u64.u64);
 }
 
 [[nodiscard]] libk::Option<uint64_t> Property::get_u32_or_u64() const {
