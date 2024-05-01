@@ -7,9 +7,8 @@ SECTIONS
     . = KERNEL_BASE;
 
     /* Kernel load address for AArch64 */
-    . += 0x80000;
+    . += KERNEL_AARCH64_LOAD_ADDRESS;
 
-    _stack_bottom = .;
     _stext = .;
     .text : { *(.text) }
     . = ALIGN(PAGE_SIZE);

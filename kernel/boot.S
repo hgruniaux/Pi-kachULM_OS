@@ -18,7 +18,7 @@ _start:
 2: // We're on the main core!
 
     // Setup stack in low memory
-    adr x0, _stack_bottom
+    mov x0, #STACK_SIZE
     mov sp, x0
 
     // Jump to EL1
@@ -28,10 +28,10 @@ _start:
     mov x0, x27
     bl mmu_init
 
-    ldr x1, = STACK_ADDRESS_BOTTOM(0)
-    mov sp, x1
-
     // Now, PC, SP & the DTB pointer are moved to high-memory space
+    ldr x1, =(KERNEL_STACK_PAGE_TOP(DEFAULT_CORE))
+    add sp, sp, x1
+
     mov x1, #KERNEL_BASE
     add x0, x27, x1
 
@@ -54,10 +54,3 @@ _mmu_init_data:
     .quad 0
     .quad 0
     .quad 0
-
-//.global _stack_test
-//_stack_test:
-//    .quad 0
-//    .quad 0
-//    .quad 0
-//    .quad 0

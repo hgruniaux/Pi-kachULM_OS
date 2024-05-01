@@ -24,13 +24,4 @@ uintptr_t get_heap_end();
 /** Change Kernel Heap end by adding @a offsets *pages**/
 uintptr_t change_heap_end(long offset);
 
-#define resolve_symbol_pa(symbol)                     \
-  ({                                                  \
-    uintptr_t __dest;                                 \
-    asm volatile("adr %x0, " #symbol : "=r"(__dest)); \
-    __dest;                                           \
-  })
-
-
-
 }  // namespace Memory

@@ -200,9 +200,8 @@ void inline setup_device_mapping(MMUTable* tbl, const DeviceTree& dt, const Devi
 }
 
 void inline setup_stack_mapping(MMUTable* tbl) {
-  uintptr_t pa_stack_top = resolve_symbol_pa(_stack_bottom) - STACK_SIZE;
-
-  enforce(map_range(tbl, STACK_PAGE_TOP(0), STACK_PAGE_BOTTOM(0), pa_stack_top, rw_memory));
+  enforce(map_range(tbl, KERNEL_STACK_PAGE_TOP((uint64_t)DEFAULT_CORE),
+                    KERNEL_STACK_PAGE_BOTTOM((uint64_t)DEFAULT_CORE), 0, rw_memory));
 }
 
 void inline setup_mair() {
@@ -345,8 +344,7 @@ extern "C" void mmu_init(const uint32_t* dtb) {
 
   libk::write64(resolve_symbol_pa(_mmu_init_data) + 0 * sizeof(uint64_t), pgd);
   libk::write64(resolve_symbol_pa(_mmu_init_data) + 1 * sizeof(uint64_t), handle.first_page);
-  libk::write64(resolve_symbol_pa(_mmu_init_data) + 2 * sizeof(uint64_t),
-                resolve_symbol_pa(_stack_bottom) - STACK_SIZE);
+  libk::write64(resolve_symbol_pa(_mmu_init_data) + 2 * sizeof(uint64_t), handle.nb_allocated);
 
   setup_mair();
   setup_tcr();

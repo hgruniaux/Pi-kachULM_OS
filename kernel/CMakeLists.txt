@@ -5,9 +5,32 @@ add_custom_target(linking
         COMMENT "Preprocessing link.ld"
         SOURCES link.ld)
 
-add_executable(kernel boot.S kernel.cpp cxxabi.cpp startup.cpp
+add_executable(kernel
+        # Boot
+        boot.S
+
+        # MMU Setup
+        memory/mmu_defs.hpp
+        memory/mmu_init.cpp
+
+        memory/mmu_table.cpp
+        memory/mmu_table.hpp
+
+        memory/memory.cpp
+        memory/memory.hpp
+
+        # C++ Setup
+        startup.cpp
+        cxxabi.cpp
+        kernel.cpp
+
         syscall.hpp
         syscall.cpp
+
+        # Hardware
+        hardware/interrupts.hpp
+        hardware/interrupts.cpp
+        hardware/interrupts.S
 
         hardware/mmio.hpp
         hardware/mmio.cpp
@@ -32,27 +55,15 @@ add_executable(kernel boot.S kernel.cpp cxxabi.cpp startup.cpp
         hardware/framebuffer.hpp
         hardware/framebuffer.cpp
 
-        hardware/interrupts.hpp
-        hardware/interrupts.cpp
-        hardware/interrupts.S
-
         hardware/timer.hpp
 
+        # Graphics
         graphics/pkfont.hpp
         graphics/pkfont.cpp
 
         ../fonts/firacode_16.cpp
         graphics/graphics.hpp
         graphics/graphics.cpp
-
-        memory/mmu_defs.hpp
-        memory/mmu_init.cpp
-
-        memory/mmu_table.cpp
-        memory/mmu_table.cpp
-        memory/memory.cpp
-        memory/memory.hpp
-        memory/mmu_init.hpp
 )
 
 add_dependencies(kernel linking)

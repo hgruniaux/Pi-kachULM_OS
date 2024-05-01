@@ -108,7 +108,6 @@ class UARTLogger : public libk::Logger {
   LOG_INFO("PGD0: {:#x}", libk::read64(resolve_symbol_pa(_mmu_init_data) + 0 * sizeof(uint64_t)));
   LOG_INFO("PGD1: {:#x}", libk::read64(resolve_symbol_pa(_mmu_init_data) + 1 * sizeof(uint64_t)));
   LOG_INFO("PGD2: {:#x}", libk::read64(resolve_symbol_pa(_mmu_init_data) + 2 * sizeof(uint64_t)));
-  LOG_INFO("PGD2: {:#x}", libk::read64(resolve_symbol_pa(_mmu_init_data) + 2 * sizeof(uint64_t)) + STACK_SIZE);
 
   {
     uint64_t tmp;
@@ -116,12 +115,21 @@ class UARTLogger : public libk::Logger {
     LOG_INFO("SP : {:#x}", tmp);
   }
 
-  LOG_WARNING("Stack First Page {:#x}", STACK_PAGE_TOP(0));
-  LOG_WARNING("Stack Last Page {:#x}", STACK_PAGE_BOTTOM(0));
+  const uintptr_t sp_start = KERNEL_BASE + STACK_SIZE;
 
-  LOG_WARNING("Stack First Address {:#x}", STACK_ADDRESS_TOP(0));
-  LOG_WARNING("Stack Last Address {:#x}", STACK_ADDRESS_BOTTOM(0));
+  for (size_t i = sizeof(uint64_t); i < 0x100; i += sizeof(uint64_t)) {
+    const uintptr_t cur_sp_ptr = sp_start - i;
+    const uintptr_t shadow_sp_ptr = KERNEL_STACK_PAGE_BOTTOM((uint64_t)DEFAULT_CORE) + PAGE_SIZE - i;
+    const auto cur_sp_val = libk::read64(cur_sp_ptr);
+    const auto shadow_sp_val = libk::read64(shadow_sp_ptr);
+    LOG_INFO("[Stack Dump] Index {}: Current: {:#x} (Address: {:#x}) Shadow: {:#x} (Address: {:#x})", i, cur_sp_val,
+             cur_sp_ptr, shadow_sp_val, shadow_sp_ptr);
+//    if (cur_sp_val != shadow_sp_val) {
+//      LOG_CRITICAL("Aouch :/");
+//    }
+  }
 
+  //  pp_stack(0xfff);
   //  fibo(100);
   // #if 0
   //  LOG_INFO("DeviceTree initialization: {}", dt.is_status_okay());
