@@ -47,6 +47,5 @@ if (${ENABLE_CHECKS})
     endif ()
 endif ()
 
-add_subdirectory(lib/libk)
-add_subdirectory(lib/device-tree)
+add_subdirectory(lib)
 add_subdirectory(kernel)
