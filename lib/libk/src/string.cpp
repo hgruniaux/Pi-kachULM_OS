@@ -51,3 +51,36 @@ extern "C" void* memcpy(void* dst, const void* src, size_t length) {
 extern "C" void* memmove(void* dst, const void* src, size_t length) {
   return libk::memmove(dst, src, length);
 }
+
+/*
+ * Testing
+ */
+
+#include <libk/test.hpp>
+
+TEST("strlen") {
+  EXPECT_EQ(strlen(""), 0);
+  EXPECT_EQ(strlen("hello"), 5);
+}
+
+TEST("strcmp") {
+  EXPECT_EQ(strcmp("hello", "hello"), 0);
+  EXPECT_LT(strcmp("hello", "world"), 0);
+  EXPECT_LT(strcmp("hello", "hello world"), 0);
+  EXPECT_GT(strcmp("hello world", "hello"), 0);
+  EXPECT_LT(strcmp("", "hello"), 0);
+}
+
+TEST("strchr") {
+  const char* str = "hello";
+  EXPECT_EQ(strchr(str, 'l'), str + 2);
+  EXPECT_EQ(strchr(str, 'z'), nullptr);
+  EXPECT_EQ(strchr(str, '\0'), str + 5);
+}
+
+TEST("strchrnul") {
+  const char* str = "hello";
+  EXPECT_EQ(strchrnul(str, 'l'), str + 2);
+  EXPECT_EQ(strchrnul(str, 'z'), str + 5);
+  EXPECT_EQ(strchrnul(str, '\0'), str + 5);
+}

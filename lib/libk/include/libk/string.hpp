@@ -76,13 +76,10 @@ constexpr inline char* strrchr(const char* str, int ch) {
 
 /** Implementation of the POSIX standard `strchrnul()` function. */
 constexpr inline char* strchrnul(const char* str, int ch) {
-  do {
-    if (*str == (char)ch) {
-      return (char*)str;
-    }
-  } while (*str++ != '\0');
-
-  return (char*)str;
+  const char c = (char)(ch);
+  for (; *str && *str != c; ++str)
+    ;
+  return const_cast<char*>(str);
 }
 
 /** Implementation of the C standard `strchrnul()` function. */
