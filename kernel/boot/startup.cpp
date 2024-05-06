@@ -4,7 +4,8 @@
  * the kernel entry point kmain().
  */
 
-#include <cstdint>
+#include "device.hpp"
+#include "kernel_dt.hpp"
 
 // The linker provides the following pointers.
 extern uint64_t __bss_start;
@@ -51,14 +52,24 @@ void call_fini_array() {
 }
 
 // This function is defined in kernel.cpp. It is the real entry point of the kernel.
-void kmain(const void* dtb);
+void kmain();
 
 /** The C and C++ world entry point. It is called from the boot.S assembly script. */
-extern "C" void _startup(const void* dtb) {
+extern "C" void _startup(uintptr_t dtb) {
   // Erases the BSS section as required.
   zero_bss();
 
+  // Setup DeviceTree
+  if (!KernelDT::init(dtb)) {
+    libk::halt();
+  }
+
+  // Setup Device
+  if (!Device::init()) {
+    libk::halt();
+  }
+
   call_init_array();
-  kmain(dtb);  // the real kernel entry point
+  kmain();  // the real kernel entry point
   call_fini_array();
 }

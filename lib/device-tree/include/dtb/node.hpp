@@ -1,11 +1,9 @@
 #pragma once
 
-#include <cstddef>
 #include <iterator>
+#include <libk/option.hpp>
+#include <libk/string_view.hpp>
 
-#include "libk/option.hpp"
-#include "libk/string.hpp"
-#include "libk/string_view.hpp"
 #include "parser.hpp"
 
 class DeviceTree;
@@ -139,6 +137,7 @@ class Node {
 
     return false;
   }
+
 
   [[nodiscard]] bool find_property(libk::StringView property_name, Property* property) const {
     for (const Property p : get_properties()) {

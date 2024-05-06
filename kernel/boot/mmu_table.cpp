@@ -30,7 +30,6 @@
                                                                                   Level 4
  */
 
-static inline constexpr uintptr_t TTBR_MASK = 0xffff000000000000;
 static inline constexpr uintptr_t PAGE_ADDRESS_MASK = libk::mask_bits(0, 11);
 
 static inline constexpr uintptr_t TABLE_ENTRIES = PAGE_SIZE / sizeof(uint64_t);

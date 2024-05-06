@@ -1,4 +1,4 @@
-#include "memory/mmu_defs.hpp"
+#include "mmu_defs.hpp"
 
 ENTRY(_start);
 

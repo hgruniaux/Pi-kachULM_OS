@@ -1,27 +1,20 @@
-set(LINKER_SCRIPT ${CMAKE_SOURCE_DIR}/kernel/link.ld)
-
-add_custom_target(linking
-        COMMAND "${CMAKE_C_COMPILER}" -D__ASSEMBLER__ -P -E -x c "${LINKER_SCRIPT}" -o link.ld
-        COMMENT "Preprocessing link.ld"
-        SOURCES link.ld)
-
 add_executable(kernel
         # Boot
-        boot.S
+        boot/boot.S
 
         # MMU Setup
-        memory/mmu_defs.hpp
-        memory/mmu_init.cpp
+        boot/mmu_defs.hpp
+        boot/mmu_init.cpp
 
-        memory/mmu_table.cpp
-        memory/mmu_table.hpp
+        boot/mmu_table.cpp
+        boot/mmu_table.hpp
 
-        memory/memory.cpp
-        memory/memory.hpp
+        boot/memory.cpp
+        boot/memory.hpp
 
         # C++ Setup
-        startup.cpp
-        cxxabi.cpp
+        boot/startup.cpp
+        boot/cxxabi.cpp
         kernel.cpp
 
         syscall.hpp
@@ -31,9 +24,6 @@ add_executable(kernel
         hardware/interrupts.hpp
         hardware/interrupts.cpp
         hardware/interrupts.S
-
-        hardware/mmio.hpp
-        hardware/mmio.cpp
 
         hardware/gpio.hpp
         hardware/gpio.cpp
@@ -49,8 +39,8 @@ add_executable(kernel
         hardware/uart.hpp
         hardware/uart.cpp
 
-        hardware/device.hpp
-        hardware/device.cpp
+        boot/device.hpp
+        boot/device.cpp
 
         hardware/framebuffer.hpp
         hardware/framebuffer.cpp
@@ -61,15 +51,19 @@ add_executable(kernel
         graphics/pkfont.hpp
         graphics/pkfont.cpp
 
-        mmu/mmu_kernel.cpp
-        mmu/mmu_kernel.hpp
+        boot/page_alloc.cpp
+        boot/page_alloc.hpp
 
         ../fonts/firacode_16.cpp
         graphics/graphics.hpp
         graphics/graphics.cpp
-)
+        kernel.hpp
+        boot/mem_alloc.cpp
+        boot/mem_alloc.hpp
 
-add_dependencies(kernel linking)
+        boot/kernel_dt.cpp
+        boot/kernel_dt.hpp
+)
 
 set_target_properties(kernel PROPERTIES OUTPUT_NAME "kernel8.elf")
 

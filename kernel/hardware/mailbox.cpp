@@ -1,5 +1,6 @@
 #include "mailbox.hpp"
-#include "mmio.hpp"
+#include "../boot/mmu_defs.hpp"
+#include "libk/utils.hpp"
 
 namespace MailBox {
 /** Base address for mailbox MMIO registers. */
@@ -42,11 +43,11 @@ uint32_t receive(Channel channel) {
   do {
     // Wait until there is a mail to receive.
     do {
-      status = MMIO::read(MBOX0_STATUS);
+      status = libk::read32(DEVICE_MEMORY + MBOX0_STATUS);
     } while (is_status_empty(status));
 
     // Get the message.
-    response = MMIO::read(MBOX0_RW);
+    response = libk::read32(DEVICE_MEMORY + MBOX0_RW);
   } while (static_cast<Channel>(response & CHANNEL_MASK) != channel);
 
   return response >> CHANNEL_WIDTH;
@@ -57,12 +58,12 @@ void send(Channel channel, uint32_t message) {
 
   // Wait until we can send a mail.
   do {
-    status = MMIO::read(MBOX0_STATUS);
+    status = libk::read32(DEVICE_MEMORY + MBOX0_STATUS);
   } while (is_status_full(status));
 
   // Send the message. The protocol requires that we read from mailbox0
   // but that we write to mailbox1.
   message = (static_cast<uint32_t>(channel) & CHANNEL_MASK) | (message << CHANNEL_WIDTH);
-  MMIO::write(MBOX1_RW, message);
+  libk::write32(DEVICE_MEMORY + MBOX1_RW, message);
 }
 }  // namespace MailBox

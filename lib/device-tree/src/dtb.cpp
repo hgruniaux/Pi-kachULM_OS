@@ -1,40 +1,14 @@
 #include "dtb/dtb.hpp"
-
-#include "libk/assert.hpp"
-
 #include "dtb/node.hpp"
-#include "dtb/parser.hpp"
-#include "libk/string.hpp"
-
-static constexpr size_t max_value = -1;
-
-MemorySectionIterator::MemorySectionIterator(const DeviceTreeParser* parser) : m_p(parser), m_off(max_value) {}
-
-MemorySectionIterator::element_type MemorySectionIterator::operator*() const {
-  KASSERT(m_p != nullptr);
-  KASSERT(m_off != max_value);
-
-  const uint64_t address = m_p->get_uint64(m_off);
-  const uint64_t size = m_p->get_uint64(m_off + sizeof(uint64_t));
-
-  return {address, size};
-}
-
-MemorySectionIterator& MemorySectionIterator::operator++() {
-  const uint64_t tmp_address = m_p->get_uint64(m_off + 2 * sizeof(uint64_t));
-  const uint64_t tmp_size = m_p->get_uint64(m_off + 3 * sizeof(uint64_t));
-
-  if (tmp_address == 0 && tmp_size == 0) {
-    m_off = max_value;
-  } else {
-    m_off += 2 * sizeof(uint64_t);
-  }
-
-  return *this;
-}
+#include "libk/string_view.hpp"
 
 bool DeviceTree::find_node(libk::StringView path, Node* node) const {
-  Node current_node = get_root();
+  Node current_node = {};
+
+  if (!get_root(&current_node)) {
+    return false;
+  }
+
   size_t begin = 0;
 
   if (!path.is_empty() && path[0] == '/') {
@@ -61,16 +35,43 @@ bool DeviceTree::find_node(libk::StringView path, Node* node) const {
 }
 
 bool DeviceTree::find_property(libk::StringView path, Property* property) const {
+  Node node = {};
+
   const auto* last_delim = path.rfind('/');
 
   if (last_delim == path.end()) {
-    return get_root().find_property(path, property);
-  }
+    if (!get_root(&node)) {
+      return false;
+    }
 
-  Node node = {};
-  if (find_node({path.begin(), last_delim}, &node)) {
+    return node.find_property(path, property);
+  } else {
+    if (!find_node({path.begin(), last_delim}, &node)) {
+      return false;
+    }
+
     return node.find_property(last_delim + 1, property);
   }
+}
 
-  return false;
+bool DeviceTree::get_reserved_sections(ReservedSections* res) const {
+  if (!is_status_okay()) {
+    return false;
+  }
+
+  *res = ReservedSections(&m_p);
+  return true;
+}
+
+bool DeviceTree::get_root(Node* node) const {
+  if (!is_status_okay()) {
+    return false;
+  }
+
+  *node = Node(&m_p, m_p.get_struct_offset());
+  return true;
+}
+
+DeviceTree::DeviceTree(uintptr_t dts) {
+  (void)DeviceTreeParser::from_memory(dts, &m_p);
 }

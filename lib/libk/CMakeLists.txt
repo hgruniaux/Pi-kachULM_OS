@@ -1,4 +1,3 @@
-add_subdirectory(src/optimized)
 #add_subdirectory(src/ryu)
 
 add_library(libk STATIC
@@ -22,8 +21,6 @@ add_library(libk STATIC
 )
 
 target_include_directories(libk PUBLIC include/)
-
-#target_link_libraries(libk PRIVATE ryu-algorithm)
 
 # Use re2c to generate the format lexer. This is only required if
 # the lexer specification (in format.re2c) change. So, it is a soft

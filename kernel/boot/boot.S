@@ -1,7 +1,5 @@
-#include "memory/mmu_defs.hpp"
-
-//.section ".text.boot" // Make sure the linker puts this at the start of the kernel image
-
+#include "mmu_defs.hpp"
+    .text
 .global _start // Execution starts here
 
 _start:

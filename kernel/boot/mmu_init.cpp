@@ -1,9 +1,9 @@
 #include "mmu_defs.hpp"
 
+#include <dtb/dtb.hpp>
+#include <libk/utils.hpp>
 #include <limits>
 
-#include "dtb/dtb.hpp"
-#include "libk/utils.hpp"
 #include "mmu_table.hpp"
 
 #define resolve_symbol_pa(symbol)                     \
@@ -92,11 +92,14 @@ DeviceMemoryProperties inline get_memory_properties(const DeviceTree& dt) {
 
 void inline setup_memory_mapping(MMUTable* tbl,
                                  const DeviceTree& dt,
-                                 const uint32_t* dtb,
+                                 uintptr_t dtb,
                                  const DeviceMemoryProperties& prop) {
+  Node root;
+  enforce(dt.get_root(&root));
+
   Property tmp_prop;
 
-  for (const auto& node : dt.get_root().get_children()) {
+  for (const auto& node : root.get_children()) {
     if (node.get_name().starts_with("memory@")) {
       // Found a memory node !
 
@@ -137,7 +140,7 @@ void inline setup_memory_mapping(MMUTable* tbl,
   {
     // Mapping device tree in read-only
     const auto dtb_start = PhysicalPA((uintptr_t)dtb & ~(PAGE_SIZE - 1));
-    const size_t dtb_size = libk::from_be(dtb[1]);
+    const size_t dtb_size = libk::from_be(libk::read32(dtb + sizeof(uint32_t)));
     const auto dtb_stop = PhysicalPA(libk::align((uintptr_t)dtb + dtb_size, PAGE_SIZE));
     enforce(change_attr_range(tbl, NORMAL_MEMORY + dtb_start, NORMAL_MEMORY + dtb_stop, ro_memory));
   }
@@ -310,9 +313,9 @@ extern "C" PhysicalPA resolve_va(void*, VirtualPA va) {
   return va;
 }
 
-extern "C" void mmu_init(const uint32_t* dtb) {
+extern "C" void mmu_init(uintptr_t dtb) {
   const auto alloc_start = PhysicalPA(resolve_symbol_pa(_kend));
-  const auto dtb_start = PhysicalPA((uintptr_t)dtb & ~(PAGE_SIZE - 1));
+  const auto dtb_start = PhysicalPA(dtb & ~(PAGE_SIZE - 1));
 
   MMUTableHandleData handle = {
       .first_page = alloc_start,
@@ -333,7 +336,7 @@ extern "C" void mmu_init(const uint32_t* dtb) {
       .resolve_va = (ResolveVA)resolve_symbol_pa(resolve_va),
   };
 
-  const DeviceTree dt(dtb);
+  DeviceTree dt(dtb);
   enforce(dt.is_status_okay());
 
   const auto mem_prop = get_memory_properties(dt);

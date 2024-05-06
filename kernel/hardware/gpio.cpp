@@ -1,6 +1,7 @@
-#include "utils.hpp"
 #include "gpio.hpp"
-#include "mmio.hpp"
+#include "../boot/mmu_defs.hpp"
+#include "libk/utils.hpp"
+#include "utils.hpp"
 
 // Offset from the peripheral base, taken from BCM2835-ARM-Peripherals.pdf, page 90-91
 
@@ -73,7 +74,7 @@ void GPIO::set_mode(GPIO::Pin gpio_pin, GPIO::Mode target_mode) {
   // We use 3 bits per pin in each register to specify their modes
   const uint8_t shift = (gpio_pin_int % 10) * 3;
 
-  const uint32_t old_mode = MMIO::read(GPFSEL + 4 * reg);
+  const uint32_t old_mode = libk::read32(DEVICE_MEMORY + (GPFSEL + 4 * reg));
 
   // If we already are in the good mode, do nothing.
   if (target_mode_int != ((old_mode >> shift) & 7)) {
@@ -81,7 +82,7 @@ void GPIO::set_mode(GPIO::Pin gpio_pin, GPIO::Mode target_mode) {
     //                                  v
     // new_mode = (old_mode & 111...111000111...111) | (target_mode << shift)
     const uint32_t new_mode = (old_mode & ~(7 << shift)) | (target_mode_int << shift);
-    MMIO::write(GPFSEL + 4 * reg, new_mode);
+    libk::write32(DEVICE_MEMORY + GPFSEL + 4 * reg, new_mode);
   }
 }
 
@@ -94,7 +95,7 @@ GPIO::Mode GPIO::get_mode(GPIO::Pin gpio_pin) {
   // We use 3 bits per pin in each register to specify their modes
   const uint8_t shift = (gpio_pin_int % 10) * 3;
 
-  const uint32_t mode = MMIO::read(GPFSEL + 4 * reg);
+  const uint32_t mode = libk::read32(DEVICE_MEMORY + (GPFSEL + 4 * reg));
 
   return static_cast<GPIO::Mode>((mode >> shift) & 7);
 }
@@ -114,18 +115,18 @@ void GPIO::set_pull_up_down(GPIO::Pin gpio_pin, GPIO::PUD_Mode target_pud_mode) 
    */
 
   const auto control_signal = static_cast<uint8_t>(target_pud_mode);
-  MMIO::write(GPPUD, control_signal);
+  libk::write32(DEVICE_MEMORY + GPPUD, control_signal);
 
   wait_cycles(150);
 
   const uint8_t reg = gpio_pin_int / 32;
   const uint8_t shift = gpio_pin_int % 32;
-  MMIO::write(GPPUDCLK + 4 * reg, 1ul << shift);
+  libk::write32(DEVICE_MEMORY + GPPUDCLK + 4 * reg, 1ul << shift);
 
   wait_cycles(150);
 
-  MMIO::write(GPPUD, 0);
-  MMIO::write(GPPUDCLK + 4 * reg, 0);
+  libk::write32(DEVICE_MEMORY + GPPUD, 0);
+  libk::write32(DEVICE_MEMORY + GPPUDCLK + 4 * reg, 0);
 }
 
 bool GPIO::read(GPIO::Pin gpio_pin) {
@@ -134,7 +135,7 @@ bool GPIO::read(GPIO::Pin gpio_pin) {
   const uint8_t reg = gpio_pin_int / 32;
   const uint8_t shift = gpio_pin_int % 32;
 
-  const uint32_t val = MMIO::read(GPLEV + 4 * reg);
+  const uint32_t val = libk::read32(DEVICE_MEMORY + (GPLEV + 4 * reg));
 
   return ((val >> shift) & 0x1) != 0u;
 }
@@ -147,8 +148,8 @@ void GPIO::write(GPIO::Pin gpio_pin, bool on) {
   const uint8_t shift = gpio_pin_int % 32;
 
   if (on) {
-    MMIO::write(GPSET + 4 * reg, 1ul << shift);
+    libk::write32(DEVICE_MEMORY + GPSET + 4 * reg, 1ul << shift);
   } else {
-    MMIO::write(GPCLR + 4 * reg, 1ul << shift);
+    libk::write32(DEVICE_MEMORY + GPCLR + 4 * reg, 1ul << shift);
   }
 }

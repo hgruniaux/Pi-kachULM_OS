@@ -1,6 +1,7 @@
 #include "miniuart.hpp"
+#include "../boot/mmu_defs.hpp"
 #include "gpio.hpp"
-#include "mmio.hpp"
+#include "libk/utils.hpp"
 
 namespace MiniUART {
 /** Auxiliary Interrupt status (size: 3) */
@@ -47,47 +48,50 @@ void init(uint32_t baud_rate) {
   GPIO::set_mode(GPIO::Pin::BCM15, GPIO::Mode::ALT5);
 
   // Enable Mini UART (this also enables access to its registers)
-  MMIO::write(AUX_ENABLES, 1);
+  libk::write32(DEVICE_MEMORY + AUX_ENABLES, 1);
 
   // Disable auto flow control and disable receiver and transmitter (for now)
-  MMIO::write(AUX_MU_CNTL_REG, 0);
+  libk::write32(DEVICE_MEMORY + AUX_MU_CNTL_REG, 0);
 
   // Disable receive and transmit interrupts
-  MMIO::write(AUX_MU_IER_REG, 0);
+  libk::write32(DEVICE_MEMORY + AUX_MU_IER_REG, 0);
 
   // Enable 8 bit mode
-  MMIO::write(AUX_MU_LCR_REG, 3);
+  libk::write32(DEVICE_MEMORY + AUX_MU_LCR_REG, 3);
 
   // Set RTS line to be always high
-  MMIO::write(AUX_MU_MCR_REG, 0);
+  libk::write32(DEVICE_MEMORY + AUX_MU_MCR_REG, 0);
 
-  switch (MMIO::device) {
-    case MMIO::DeviceType::RaspberryPi3:
-      MMIO::write(AUX_MU_BAUD_REG, RPI3_CORE_CLOCK / ((uint64_t)8 * baud_rate) - 1);
-      break;
-    case MMIO::DeviceType::RaspberryPi4:
-      MMIO::write(AUX_MU_BAUD_REG, RPI4_CORE_CLOCK / ((uint64_t)8 * baud_rate) - 1);
-      break;
-  }
+  //  TODO : FixThis!
+  //  switch (MMIO::device) {
+  //    case MMIO::DeviceType::RaspberryPi3:
+  libk::write32(DEVICE_MEMORY + AUX_MU_BAUD_REG, RPI3_CORE_CLOCK / ((uint64_t)8 * baud_rate) - 1);
+  //      break;
+  //    case MMIO::DeviceType::RaspberryPi4:
+  //      libk::write32(DEVICE_MEMORY + AUX_MU_BAUD_REG, RPI4_CORE_CLOCK / ((uint64_t)8 * baud_rate) - 1);
+  //      break;
+  //  }
 
   // Finally, enable transmitter and receiver
-  MMIO::write(AUX_MU_CNTL_REG, 3);
+  libk::write32(DEVICE_MEMORY + AUX_MU_CNTL_REG, 3);
 }
 
 void write_one(uint8_t value) {
-  while ((MMIO::read(AUX_MU_LSR_REG) & 0x20) == 0) {
+  const uintptr_t base =  DEVICE_MEMORY;
+
+  while ((libk::read32(base + AUX_MU_LSR_REG) & 0x20) == 0) {
     asm("yield");
   }
 
-  MMIO::write(AUX_MU_IO_REG, value);
+  libk::write32(base + AUX_MU_IO_REG, value);
 }
 
 uint8_t read_one() {
-  while ((MMIO::read(AUX_MU_LSR_REG) & 0x01) == 0) {
+  while ((libk::read32(DEVICE_MEMORY + AUX_MU_LSR_REG) & 0x01) == 0) {
     asm("yield");
   }
 
-  return (MMIO::read(AUX_MU_IO_REG) & 0xFF);
+  return (libk::read32(DEVICE_MEMORY + AUX_MU_IO_REG) & 0xFF);
 }
 
 void puts(const char* buffer) {

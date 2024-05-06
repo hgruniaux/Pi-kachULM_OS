@@ -1,9 +1,6 @@
 #include "dtb/node.hpp"
 
-#include "dtb/parser.hpp"
-#include "libk/assert.hpp"
-#include "libk/string.hpp"
-#include "libk/utils.hpp"
+#include <libk/assert.hpp>
 #include "utils.hpp"
 
 static constexpr size_t max_val = -1;
@@ -158,7 +155,7 @@ PropertyIterator::element_type PropertyIterator::operator*() const {
 
   // Get property string offset
   const size_t property_name_offset = m_p->get_uint32(m_off + 2 * sizeof(uint32_t));
-  const char* prop_name = m_p->get_string(m_p->string_offset + property_name_offset);
+  const char* prop_name = m_p->get_string(m_p->get_string_offset() + property_name_offset);
 
   // Get property data
   const char* prop_data = m_p->get_string(m_off + 3 * sizeof(uint32_t));

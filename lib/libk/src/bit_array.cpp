@@ -2,12 +2,8 @@
 #include "libk/string.hpp"
 
 namespace libk {
-BitArray::BitArray(void* begin, size_t taille) : m_array((uint64_t*)begin) {
-  if (begin != nullptr) {
-    uint8_t value = 0xff;
-    libk::memset(m_array, value, taille / 8);
-    set_bit((size_t)0, false);
-  }
+BitArray::BitArray(void* begin, size_t bytes_size) : m_array((uint64_t*)begin), m_bytes_size(bytes_size) {
+  fill_array(false);
 }
 
 bool BitArray::get_bit(size_t index) const {
@@ -23,4 +19,8 @@ void BitArray::set_bit(size_t index, bool value) {
   }
 }
 
+void BitArray::fill_array(bool value) {
+  const uint8_t int_value = value ? 0xff : 0x00;
+  libk::memset(m_array, int_value, m_bytes_size);
+}
 }  // namespace libk

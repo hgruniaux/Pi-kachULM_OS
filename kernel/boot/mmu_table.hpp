@@ -4,12 +4,13 @@
 #include <cstdint>
 
 #include "mmu_defs.hpp"
+static inline constexpr uintptr_t TTBR_MASK = 0xffff000000000000;
 
-using AllocFun = VirtualPA (*)(void *); //<! This function fail internally if the allocation fail
-using FreeFun = void (*)(void *, VirtualPA);
+using AllocFun = VirtualPA (*)(void*);  //<! This function fail internally if the allocation fail
+using FreeFun = void (*)(void*, VirtualPA);
 
-using ResolvePA = VirtualPA (*)(void *, PhysicalPA); //<! This function fail internally if the conversion fail
-using ResolveVA = PhysicalPA (*)(void *, VirtualPA); //<! This function fail internally if the conversion fail
+using ResolvePA = VirtualPA (*)(void*, PhysicalPA);  //<! This function fail internally if the conversion fail
+using ResolveVA = PhysicalPA (*)(void*, VirtualPA);  //<! This function fail internally if the conversion fail
 
 struct MMUTable {
   enum class Kind : uintptr_t { Kernel = KERNEL_BASE, Process = PROCESS_BASE };
@@ -18,7 +19,7 @@ struct MMUTable {
   const VirtualPA pgd;  //<! The top level of the MMU table
   const uint8_t asid;   //<! The Address Space Identifier, used to differentiate between process memory spaces.
 
-  void *handle;          //<! The handle passed to the following function, in case they need some context of theirs
+  void* handle;          //<! The handle passed to the following function, in case they need some context of theirs
   const AllocFun alloc;  //<! The function used to allocate a page
   const FreeFun free;    //<! The function used to free a page
   const ResolvePA resolve_pa;  //<! The function used to convert a physical address to a virtual one
@@ -31,14 +32,14 @@ struct MMUTable {
  * @returns - `true` if the entry exists, @a attr is modified if not null. @n
  *          - `false` if the entry is not found, @a attr is not modified.
  */
-[[nodiscard]] bool get_attr(const MMUTable *table, VirtualPA va, PagesAttributes *attr);
+[[nodiscard]] bool get_attr(const MMUTable* table, VirtualPA va, PagesAttributes* attr);
 
 /** Change parameters associated with the virtual address @a va.
  *
  * @returns - `true` if the operation was completed successfully. @n
  *          - `false` if the entry is not found.
  */
-[[nodiscard]] bool change_attr_va(MMUTable *table, VirtualPA va, PagesAttributes attr);
+[[nodiscard]] bool change_attr_va(MMUTable* table, VirtualPA va, PagesAttributes attr);
 
 /** Maps the virtual address range from @a va_start to @a va_end *INCLUSIVE*
  * to the physical addresses @a pa_start and following, using the attributes @a attr.
@@ -48,7 +49,7 @@ struct MMUTable {
  * @returns - `true` if the full operation was completed successfully. @n
  *          - `false` if certain prerequisites are not checked, the table is not modified.
  */
-[[nodiscard]] bool map_range(MMUTable *table,
+[[nodiscard]] bool map_range(MMUTable* table,
                              VirtualPA va_start,
                              VirtualPA va_end,
                              PhysicalPA pa_start,
@@ -59,14 +60,14 @@ struct MMUTable {
  * @returns - `true` if the full operation was completed successfully. @n
  *          - `false` if certain prerequisites are not checked. The table is not modified in this case.
  */
-[[nodiscard]] bool unmap_range(MMUTable *table, VirtualPA va_start, VirtualPA va_end);
+[[nodiscard]] bool unmap_range(MMUTable* table, VirtualPA va_start, VirtualPA va_end);
 
 /** Change parameters associated with the virtual address range from @a va_start to @a va_end *INCLUSIVE*.
  *
  * @returns - `true` if the full operation was completed successfully. @n
  *          - `false` if certain prerequisites are not checked. The table is not modified in this case.
  */
-[[nodiscard]] bool change_attr_range(MMUTable *table, VirtualPA va_start, VirtualPA va_end, PagesAttributes attr);
+[[nodiscard]] bool change_attr_range(MMUTable* table, VirtualPA va_start, VirtualPA va_end, PagesAttributes attr);
 
 /** Clear the whole table, deallocating all used pages and unmapping everything. */
-void clear_all(MMUTable *table);
+void clear_all(MMUTable* table);
