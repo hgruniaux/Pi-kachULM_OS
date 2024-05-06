@@ -70,13 +70,15 @@ set_target_properties(kernel PROPERTIES OUTPUT_NAME "kernel8.elf")
 target_link_libraries(kernel PRIVATE libk device-tree)
 
 # Use the linker script.
-set(LINKER_SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/link.ld)
+set(LINKER_SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/boot/link.ld)
 add_custom_target(linker_script
         DEPENDS ${LINKER_SCRIPT}
-        COMMAND ${CMAKE_C_COMPILER} -E -P ${LINKER_SCRIPT} -o ${CMAKE_CURRENT_BINARY_DIR}/link.ld
+        COMMAND ${CMAKE_C_COMPILER} -D__ASSEMBLER__  -E -P -x c ${LINKER_SCRIPT} -o ${CMAKE_CURRENT_BINARY_DIR}/link-gen.ld
 )
-target_link_options(kernel PRIVATE -nostdlib -T ${CMAKE_CURRENT_BINARY_DIR}/link.ld)
-set_property(TARGET kernel PROPERTY LINK_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/link.ld)
+target_link_options(kernel PRIVATE -nostdlib -T ${CMAKE_CURRENT_BINARY_DIR}/link-gen.ld)
+# In order to be compatible with MAKE
+# See: https://discourse.cmake.org/t/link-depends-on-output-of-add-custom-command-no-rule-to-make-target/10179
+add_dependencies(kernel linker_script)
 
 # Extracting the elf file to a binary one
 add_custom_target(kernel-img
