@@ -9,6 +9,7 @@
 #include "syscall.hpp"
 
 #include <libk/log.hpp>
+#include <libk/test.hpp>
 #include "hardware/timer.hpp"
 
 void print_property(const DeviceTree& dt, const char* property) {
@@ -68,6 +69,8 @@ extern "C" [[noreturn]] void kmain(const void* dtb) {
   init_interrupts_vector_table();
 
   LOG_INFO("Kernel built at " __TIME__ " on " __DATE__);
+
+  ktest::run_tests();
 
 #if 0
   LOG_INFO("DeviceTree initialization: {}", dt.is_status_okay());
