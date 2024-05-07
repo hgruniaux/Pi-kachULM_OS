@@ -1,6 +1,5 @@
 #include "device.hpp"
 
-#include "libk/log.hpp"
 #include "mailbox.hpp"
 
 uint32_t _max_temp = 0;

@@ -1,10 +1,8 @@
-#include "mmu_utils.hpp"
+#include "memory/mmu_table.hpp"
 
 #include <dtb/dtb.hpp>
 #include <libk/utils.hpp>
 #include <limits>
-
-#include "mmu_table.hpp"
 
 #define resolve_symbol_pa(symbol)                     \
   ({                                                  \
@@ -264,9 +262,9 @@ void inline setup_sctlr() {
          (1 << 1));  // clear A, no alignment check
 
   r |= (1 << 0) |  // set M, enable MMU
-                   //(1 << 2) |  // set C, enable caching of normal memory
-                   //(1 << 12);  // set I, enable instruction cache
-       0;
+       (1 << 2) |  // set C, enable caching of normal memory
+       (1 << 12);  // set I, enable instruction cache
+
   asm volatile("msr sctlr_el1, %0" : : "r"(r));
   asm volatile("isb");
 }

@@ -4,9 +4,9 @@
  * the kernel entry point kmain().
  */
 
-#include "../hardware/device.hpp"
+#include "hardware/device.hpp"
+#include "memory/memory.hpp"
 #include "kernel_dt.hpp"
-#include "memory.hpp"
 
 // The linker provides the following pointers.
 extern uint64_t __bss_start;

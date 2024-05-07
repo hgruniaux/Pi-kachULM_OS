@@ -1,8 +1,17 @@
 #include "memory.hpp"
-#include "kernel_dt.hpp"
-#include "libk/linear_allocator.hpp"
-#include "libk/log.hpp"
-#include "mmu_utils.hpp"
+#include <libk/linear_allocator.hpp>
+#include <libk/log.hpp>
+
+#include "boot/kernel_dt.hpp"
+#include "boot/mmu_utils.hpp"
+#include "memory/page_alloc.hpp"
+#include "memory_page_builder.hpp"
+
+static inline constexpr PagesAttributes rw_memory = {.sh = Shareability::InnerShareable,
+                                                     .exec = ExecutionPermission::NeverExecute,
+                                                     .rw = ReadWritePermission::ReadWrite,
+                                                     .access = Accessibility::Privileged,
+                                                     .type = MemoryType::Normal};
 
 struct PageAllocList {
   PhysicalPA section_start;
@@ -14,6 +23,7 @@ struct PageAllocList {
 MMUTable _tbl;
 PageAllocList* _physical_alloc_list;
 libk::LinearAllocator _memory_alloc;
+MemoryPageBuilder _p_builder;
 
 bool alloc_page(PageAllocList* list, PhysicalPA* addr) {
   if (list == nullptr) {
@@ -53,6 +63,36 @@ void mark_as_used_range(PageAllocList* list, PhysicalPA start, PhysicalPA end) {
 }
 
 size_t _heap_size;
+
+bool MemoryPageBuilder::create_memory_page(MemoryPage* page) {
+  PhysicalPA new_page = -1;
+
+  if (!alloc_page(_physical_alloc_list, &new_page)) {
+    return false;
+  }
+
+  VirtualPA kernel_address = CUSTOM_PAGES_MEMORY + _custom_page_cpt++ * PAGE_SIZE * 2;
+
+  if (!map_range(&_tbl, kernel_address, kernel_address, new_page, rw_memory)) {
+    return false;
+  }
+
+  if (page != nullptr) {
+    *page = MemoryPage(new_page, kernel_address, this);
+  }
+
+  return true;
+}
+
+void MemoryPageBuilder::unregister_page(PhysicalPA physical_addr, VirtualPA kernel_virtual_addr) {
+  if (!unmap_range(&_tbl, kernel_virtual_addr, kernel_virtual_addr)) {
+    LOG_CRITICAL("[KernelMemory] Unable to unmap custom page at address {:#x}", kernel_virtual_addr);
+  }
+
+  if (!free_page(_physical_alloc_list, physical_addr)) {
+    LOG_CRITICAL("[KernelMemory] Unable to free physical page {:#x}", physical_addr);
+  }
+}
 
 VirtualPA mmu_resolve_pa(void*, PhysicalPA page_address) {
   return page_address + KERNEL_BASE;
@@ -197,12 +237,6 @@ size_t KernelMemory::get_heap_byte_size() {
   return _heap_size;
 }
 
-static inline constexpr PagesAttributes heap_memory = {.sh = Shareability::InnerShareable,
-                                                       .exec = ExecutionPermission::NeverExecute,
-                                                       .rw = ReadWritePermission::ReadWrite,
-                                                       .access = Accessibility::Privileged,
-                                                       .type = MemoryType::Normal};
-
 VirtualPA KernelMemory::change_heap_end(long byte_offset) {
   if (byte_offset > 0) {
     // Increase heap here.
@@ -218,7 +252,7 @@ VirtualPA KernelMemory::change_heap_end(long byte_offset) {
       }
       const VirtualPA new_heap_va_page = current_heap_end + i * PAGE_SIZE;
 
-      if (!map_range(&_tbl, new_heap_va_page, new_heap_va_page, new_heap_pa_page, heap_memory)) {
+      if (!map_range(&_tbl, new_heap_va_page, new_heap_va_page, new_heap_pa_page, rw_memory)) {
         return 0;
       }
     }
@@ -242,4 +276,8 @@ VirtualPA KernelMemory::change_heap_end(long byte_offset) {
 
 size_t KernelMemory::get_memory_overhead() {
   return _lin_alloc->nb_allocated * PAGE_SIZE;
+}
+
+bool KernelMemory::new_page(MemoryPage* page) {
+  return _p_builder.create_memory_page(page);
 }

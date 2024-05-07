@@ -4,7 +4,7 @@
 #include <cstdint>
 
 #include <cstdint>
-#include "mmu_utils.hpp"
+#include "boot/mmu_utils.hpp"
 
 enum class Shareability : uint8_t {
   NonShareable = 0b00,    //<! Memory not shared at all

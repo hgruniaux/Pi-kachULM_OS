@@ -2,23 +2,38 @@ add_executable(kernel
         # Boot
         boot/boot.S
 
-        # MMU Setup
-        boot/mmu_utils.hpp
         boot/mmu_init.cpp
-
-        boot/mmu_table.cpp
-        boot/mmu_table.hpp
-
-        boot/memory.cpp
-        boot/memory.hpp
-
-        # C++ Setup
         boot/startup.cpp
         boot/cxxabi.cpp
+
+        boot/kernel_dt.hpp
+        boot/kernel_dt.cpp
+
+        boot/mmu_utils.hpp
+        boot/mmu_utils.cpp
+
+        # C++ Body
+        kernel.hpp
         kernel.cpp
 
         syscall.hpp
         syscall.cpp
+
+        # Memory
+        memory/mmu_table.hpp
+        memory/mmu_table.cpp
+
+        memory/memory.hpp
+        memory/memory.cpp
+
+        memory/page_alloc.hpp
+        memory/page_alloc.cpp
+
+        memory/mem_alloc.hpp
+        memory/mem_alloc.cpp
+
+        memory/memory_page.hpp
+        memory/memory_page.cpp
 
         # Hardware
         hardware/interrupts.hpp
@@ -51,21 +66,16 @@ add_executable(kernel
         graphics/pkfont.hpp
         graphics/pkfont.cpp
 
-        boot/page_alloc.cpp
-        boot/page_alloc.hpp
-
         ../fonts/firacode_16.cpp
+
         graphics/graphics.hpp
         graphics/graphics.cpp
-        kernel.hpp
-        boot/mem_alloc.cpp
-        boot/mem_alloc.hpp
-
-        boot/kernel_dt.cpp
-        boot/kernel_dt.hpp
-        boot/mmu_utils.cpp
+        memory/process_memory.cpp
+        memory/process_memory.hpp
+        memory/memory_page_builder.hpp
 )
 
+target_include_directories(kernel PUBLIC .)
 set_target_properties(kernel PROPERTIES OUTPUT_NAME "kernel8.elf")
 
 target_link_libraries(kernel PRIVATE libk device-tree)
@@ -74,7 +84,7 @@ target_link_libraries(kernel PRIVATE libk device-tree)
 set(LINKER_SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/boot/link.ld)
 add_custom_target(linker_script
         DEPENDS ${LINKER_SCRIPT}
-        COMMAND ${CMAKE_C_COMPILER} -D__ASSEMBLER__  -E -P -x c ${LINKER_SCRIPT} -o ${CMAKE_CURRENT_BINARY_DIR}/link-gen.ld
+        COMMAND ${CMAKE_C_COMPILER} -D__ASSEMBLER__ -E -P -x c ${LINKER_SCRIPT} -o ${CMAKE_CURRENT_BINARY_DIR}/link-gen.ld
 )
 target_link_options(kernel PRIVATE -nostdlib -T ${CMAKE_CURRENT_BINARY_DIR}/link-gen.ld)
 # In order to be compatible with MAKE

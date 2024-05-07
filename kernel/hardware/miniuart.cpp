@@ -1,6 +1,6 @@
 #include "miniuart.hpp"
 #include <libk/utils.hpp>
-#include "../boot/mmu_utils.hpp"
+#include "boot/mmu_utils.hpp"
 #include "gpio.hpp"
 
 namespace MiniUART {
@@ -71,13 +71,14 @@ void init(uint32_t baud_rate) {
   //      libk::write32(DEVICE_MEMORY + AUX_MU_BAUD_REG, RPI4_CORE_CLOCK / ((uint64_t)8 * baud_rate) - 1);
   //      break;
   //  }
+  (void)RPI4_CORE_CLOCK;
 
   // Finally, enable transmitter and receiver
   libk::write32(DEVICE_MEMORY + AUX_MU_CNTL_REG, 3);
 }
 
-void write_one(uint8_t value) {
-  const uintptr_t base =  DEVICE_MEMORY;
+void write_one(uint8_t value, bool mmu_setup = true) {
+  const uintptr_t base = mmu_setup ? DEVICE_MEMORY : 0x3f000000;
 
   while ((libk::read32(base + AUX_MU_LSR_REG) & 0x20) == 0) {
     asm("yield");
@@ -94,15 +95,15 @@ uint8_t read_one() {
   return (libk::read32(DEVICE_MEMORY + AUX_MU_IO_REG) & 0xFF);
 }
 
-void puts(const char* buffer) {
+void puts(const char* buffer, bool mmu_setup = true) {
   while (*buffer != '\0') {
-    write_one(*(buffer++));
+    write_one(*(buffer++), mmu_setup);
   }
 }
 
 void write(const uint8_t* buffer, size_t buffer_length) {
   for (size_t i = 0; i < buffer_length; ++i) {
-    write_one(buffer[i]);
+    write_one(buffer[i], true);
   }
 }
 
@@ -113,3 +114,23 @@ void read(uint8_t* buffer, size_t buffer_length) {
 }
 
 };  // namespace MiniUART
+
+extern "C" void _puts(const char* buffer, bool mmu_setup);
+extern "C" void _puts_int(uint64_t buffer, bool mmu_setup);
+
+extern "C" void _puts(const char* buffer, bool mmu_setup) {
+  MiniUART::puts(buffer, mmu_setup);
+  MiniUART::puts("\r\n", mmu_setup);
+}
+
+extern "C" void _puts_int(uint64_t buffer, bool mmu_setup) {
+  const char* hex_data = "0123456789abcdef";
+
+  MiniUART::puts("0x", mmu_setup);
+
+  for (int i = 15; i >= 0; --i) {
+    MiniUART::write_one(hex_data[(buffer >> (4 * i)) & 0xf], mmu_setup);
+  }
+
+  MiniUART::puts("\r\n", mmu_setup);
+}

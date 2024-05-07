@@ -1,6 +1,6 @@
 #include "interrupts.hpp"
 #include <libk/log.hpp>
-#include "../syscall.hpp"
+#include "syscall.hpp"
 
 #define dump_reg(reg)                           \
   {                                             \

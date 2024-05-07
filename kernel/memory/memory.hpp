@@ -1,18 +1,13 @@
 #pragma once
 
 #include <cstdint>
-#include "dtb/reserved_sections.hpp"
-
+#include "memory_page.hpp"
 #include "mmu_table.hpp"
-#include "page_alloc.hpp"
 
 namespace KernelMemory {
-enum class Kind { Invalid, Reserved, VC, Device, Special, Heap, Stack, Process };
+enum class Kind { Invalid, Reserved, VideoCore, Device, CustomPage, Heap, Stack, Process };
 
 [[nodiscard]] bool init();
-
-/** Returns the kind of @a address. */
-[[nodiscard]] Kind get_address_kind(uintptr_t address);
 
 /** Returns the start of the Kernel Heap. */
 [[nodiscard]] VirtualPA get_heap_start();
@@ -29,4 +24,10 @@ VirtualPA change_heap_end(long byte_offset);
 
 /** @returns the amount of memory used to manage the memory */
 size_t get_memory_overhead();
+
+/** Allocate a new page into @a page
+ * @returns - `true` in case of success, @a page is modified.
+ *          - `false` in case of failure, @a page is left untouched. */
+bool new_page(MemoryPage* page);
+
 };  // namespace KernelMemory

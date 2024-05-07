@@ -13,7 +13,7 @@
 #define NORMAL_MEMORY KERNEL_BASE
 #define VC_MEMORY (KERNEL_BASE + 0x0000100000000000)
 #define DEVICE_MEMORY (KERNEL_BASE + 0x0000200000000000)
-#define SPECIAL_MEMORY (KERNEL_BASE + 0x0000300000000000)
+#define CUSTOM_PAGES_MEMORY (KERNEL_BASE + 0x0000300000000000)
 #define HEAP_MEMORY (KERNEL_BASE + 0x0000400000000000)
 #define STACK_MEMORY (KERNEL_BASE + 0x0000f00000000000)
 
@@ -61,6 +61,6 @@ extern MMUInitData _init_data asm("_init_data");
 inline constexpr auto* _lin_alloc = &_init_data.lin_alloc;
 inline constexpr auto* _mem_prop = &_init_data.mem_prop;
 
-bool allocate_pages(LinearPageAllocator* alloc, size_t nb_pages, PhysicalPA * page);
+bool allocate_pages(LinearPageAllocator* alloc, size_t nb_pages, PhysicalPA* page);
 void zero_pages(VirtualPA pages, size_t nb_pages);
 #endif

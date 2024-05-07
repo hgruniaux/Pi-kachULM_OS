@@ -52,6 +52,7 @@ static inline constexpr int UART_CR = 0x30;
 // static inline constexpr int UART_TDR = 0x8c;
 
 uintptr_t find_uart_base(const UART::Id uart_id) {
+  (void)uart_id;
   return 0xffff'2000'0000'0000 + 0x201000;
 }
 

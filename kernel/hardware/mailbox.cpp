@@ -1,6 +1,6 @@
 #include "mailbox.hpp"
 #include <libk/utils.hpp>
-#include "../boot/mmu_utils.hpp"
+#include "boot/mmu_utils.hpp"
 
 namespace MailBox {
 /** Base address for mailbox MMIO registers. */

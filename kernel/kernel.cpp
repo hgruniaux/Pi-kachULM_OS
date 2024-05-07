@@ -55,7 +55,7 @@ void dump_current_el() {
 extern "C" void init_interrupts_vector_table();
 
 [[noreturn]] void kmain() {
-  UART u0(UART::Id::UART0, 2000000);
+  UART u0(UART::Id::UART0, 2000000);  // Set to a High Baud-rate, otherwise UART is THE bottleneck :/
 
   libk::register_logger(u0);
 
@@ -89,6 +89,22 @@ extern "C" void init_interrupts_vector_table();
   LOG_INFO("Uart address: {:#x}", KernelDT::get_device_mmio_address("uart0"));
 
   LOG_INFO("Memory overhead: {:#x}", KernelMemory::get_memory_overhead());
+
+  MemoryPage page;
+  LOG_INFO("Allocate Page: {}", KernelMemory::new_page(&page));
+
+  const char* data = "Hello World!";
+
+  LOG_INFO("Page Write: {}", page.write(4090, data, sizeof(data)));
+
+  char buffer[1024];
+  const size_t nb_read = page.read(4090, buffer, sizeof(data));
+
+  LOG_INFO("Page Read: {}", nb_read);
+  LOG_INFO("Read: {:$}", libk::StringView(buffer, nb_read));
+
+  page.free();
+
   //  SyscallManager::get().register_syscall(24, [](Registers& ) { LOG_INFO("Syscall 24"); });
   //
   //  //  Enter userspace

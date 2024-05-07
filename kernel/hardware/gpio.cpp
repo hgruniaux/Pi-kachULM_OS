@@ -1,6 +1,6 @@
 #include "gpio.hpp"
 #include <libk/utils.hpp>
-#include "../boot/mmu_utils.hpp"
+#include "boot/mmu_utils.hpp"
 #include "utils.hpp"
 
 // Offset from the peripheral base, taken from BCM2835-ARM-Peripherals.pdf, page 90-91

@@ -1,5 +1,5 @@
 #include "graphics.hpp"
-#include "../hardware/framebuffer.hpp"
+#include "hardware/framebuffer.hpp"
 #include "pkfont.hpp"
 
 extern const uint8_t firacode_16_pkf[100];
@@ -204,12 +204,12 @@ uint32_t Painter::draw_text(uint32_t x, uint32_t y, uint32_t w, const char* text
   return current_x;
 }
 
-[[gnu::always_inline, gnu::hot]] void Painter::draw_alpha_map(uint32_t x,
-                                                              uint32_t y,
-                                                              const uint8_t* alpha_map,
-                                                              uint32_t w,
-                                                              uint32_t h,
-                                                              Color color) {
+[[gnu::hot]] void Painter::draw_alpha_map(uint32_t x,
+                                          uint32_t y,
+                                          const uint8_t* alpha_map,
+                                          uint32_t w,
+                                          uint32_t h,
+                                          Color color) {
   // This function is a performance bottleneck.
   // It is called to draw each glyph.
   // Therefore, it must be heavily optimized if possible.
