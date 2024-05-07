@@ -58,29 +58,64 @@ extern "C" void* memmove(void* dst, const void* src, size_t length) {
 
 #include <libk/test.hpp>
 
-TEST("strlen") {
-  EXPECT_EQ(strlen(""), 0);
-  EXPECT_EQ(strlen("hello"), 5);
+TEST("libk.strlen") {
+  EXPECT_EQ(libk::strlen(""), 0);
+  EXPECT_EQ(libk::strlen("hello"), 5);
 }
 
-TEST("strcmp") {
-  EXPECT_EQ(strcmp("hello", "hello"), 0);
-  EXPECT_LT(strcmp("hello", "world"), 0);
-  EXPECT_LT(strcmp("hello", "hello world"), 0);
-  EXPECT_GT(strcmp("hello world", "hello"), 0);
-  EXPECT_LT(strcmp("", "hello"), 0);
+TEST("libk.strcmp") {
+  EXPECT_EQ(libk::strcmp("hello", "hello"), 0);
+  EXPECT_LT(libk::strcmp("hello", "world"), 0);
+  EXPECT_LT(libk::strcmp("hello", "hello world"), 0);
+  EXPECT_GT(libk::strcmp("hello world", "hello"), 0);
+  EXPECT_LT(libk::strcmp("", "hello"), 0);
 }
 
-TEST("strchr") {
+TEST("libk.strchr") {
   const char* str = "hello";
-  EXPECT_EQ(strchr(str, 'l'), str + 2);
-  EXPECT_EQ(strchr(str, 'z'), nullptr);
-  EXPECT_EQ(strchr(str, '\0'), str + 5);
+  EXPECT_EQ(libk::strchr(str, 'l'), str + 2);
+  EXPECT_EQ(libk::strchr(str, 'z'), nullptr);
+  EXPECT_EQ(libk::strchr(str, '\0'), str + 5);
 }
 
-TEST("strchrnul") {
+TEST("libk.strrchr") {
   const char* str = "hello";
-  EXPECT_EQ(strchrnul(str, 'l'), str + 2);
-  EXPECT_EQ(strchrnul(str, 'z'), str + 5);
-  EXPECT_EQ(strchrnul(str, '\0'), str + 5);
+  EXPECT_EQ(libk::strrchr(str, 'l'), str + 3);
+  EXPECT_EQ(libk::strrchr(str, 'z'), nullptr);
+  EXPECT_EQ(libk::strrchr(str, '\0'), str + 5);
+}
+
+TEST("libk.strchrnul") {
+  const char* str = "hello";
+  EXPECT_EQ(libk::strchrnul(str, 'l'), str + 2);
+  EXPECT_EQ(libk::strchrnul(str, 'z'), str + 5);
+  EXPECT_EQ(libk::strchrnul(str, '\0'), str + 5);
+}
+
+TEST("libk.memset") {
+  char buffer[] = {1, 2, 3, 4};
+  libk::memset(buffer, 10, sizeof(char) * 3);
+  EXPECT_EQ(buffer[0], 10);
+  EXPECT_EQ(buffer[1], 10);
+  EXPECT_EQ(buffer[2], 10);
+  EXPECT_EQ(buffer[3], 4);
+}
+
+TEST("libk.bzero") {
+  char buffer[] = {1, 2, 3, 4};
+  libk::bzero(buffer, sizeof(char) * 3);
+  EXPECT_EQ(buffer[0], 0);
+  EXPECT_EQ(buffer[1], 0);
+  EXPECT_EQ(buffer[2], 0);
+  EXPECT_EQ(buffer[3], 4);
+}
+
+TEST("libk.memcpy") {
+  const char src[] = {1, 2, 3};
+  char dst[] = {10, 11, 12, 13};
+  libk::memcpy(dst, src, sizeof src);
+  EXPECT_EQ(dst[0], 1);
+  EXPECT_EQ(dst[1], 2);
+  EXPECT_EQ(dst[2], 3);
+  EXPECT_EQ(dst[3], 13);
 }

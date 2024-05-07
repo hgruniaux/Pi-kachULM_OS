@@ -77,12 +77,12 @@ constexpr inline char* strrchr(const char* str, int ch) {
 /** Implementation of the POSIX standard `strchrnul()` function. */
 constexpr inline char* strchrnul(const char* str, int ch) {
   const char c = (char)(ch);
-  for (; *str && *str != c; ++str)
+  for (; (*str != '\0') && *str != c; ++str)
     ;
   return const_cast<char*>(str);
 }
 
-/** Implementation of the C standard `strchrnul()` function. */
+/** Implementation of the C standard `memchr()` function. */
 inline void* memchr(const void* ptr, int value, size_t length) {
   const unsigned char* p = (const unsigned char*)ptr;
 
