@@ -206,6 +206,7 @@ static char* format_bool_to(char* out, bool value, const char* spec) {
   strcpy(out, "false");
   return out + 5;
 }
+/* // FIXME : Activate when floating point is activated
 
 enum class FloatFormat : uint8_t { GENERAL, FIXED, EXP };
 
@@ -215,7 +216,6 @@ struct FloatSpec {
   uint32_t precision = 3;
 };  // struct FloatSpec
 
-/* // FIXME : Activate when floating point is activated
 static FloatSpec parse_float_spec(const char* spec) {
   FloatSpec parsed_spec = {};
   if (spec == nullptr)
@@ -389,7 +389,7 @@ static char* format_string_to(char* out, const char* value, size_t length, const
   }
 
   memcpy(out, value, sizeof(char) * length);
-  return out + strlen(value);
+  return out + length;
 }
 
 char* format_argument_to(char* out, const Argument& argument, const char* spec) {
