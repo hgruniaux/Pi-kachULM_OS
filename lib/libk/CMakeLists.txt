@@ -7,6 +7,7 @@ add_library(libk STATIC
         src/string.cpp
         src/log.cpp
         src/assert.cpp
+        src/test.cpp
 
         include/libk/assert.hpp
         include/libk/format.hpp
@@ -14,8 +15,8 @@ add_library(libk STATIC
         include/libk/string.hpp
         include/libk/utils.hpp
         include/libk/log.hpp
+        include/libk/hash.hpp
         include/libk/test.hpp
-        src/test.cpp
 )
 
 target_include_directories(libk PUBLIC include/)
