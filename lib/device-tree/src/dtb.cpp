@@ -1,6 +1,6 @@
 #include "dtb/dtb.hpp"
 #include "dtb/node.hpp"
-#include "libk/string_view.hpp"
+#include <libk/string_view.hpp>
 
 bool DeviceTree::find_node(libk::StringView path, Node* node) const {
   Node current_node = {};

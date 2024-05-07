@@ -3,8 +3,51 @@
 #include <cstddef>
 #include <cstdint>
 
-#include "mmu_defs.hpp"
-static inline constexpr uintptr_t TTBR_MASK = 0xffff000000000000;
+#include <cstdint>
+#include "mmu_utils.hpp"
+
+enum class Shareability : uint8_t {
+  NonShareable = 0b00,    //<! Memory not shared at all
+  OuterShareable = 0b10,  //<! Memory shared across CPU cores
+  InnerShareable = 0b11,  //<! Memory shared across multiples peripheral
+};
+
+enum class ExecutionPermission : uint8_t {
+  // {UXN, PXN} = {0, 0}
+  // {UXN, PXN} = {0, 1}
+  // {UXN, PXN} = {1, 0}
+  // {UXN, PXN} = {1, 1}
+
+  AllExecute = 0b00,         //<! Kernel and Process can execute the memory
+  ProcessExecute = 0b01,     //<! Only the Process can execute the memory
+  PrivilegedExecute = 0b10,  //<! Only the Kernel can execute the memory
+  NeverExecute = 0b11,       //<! No one can execute the memory
+};
+
+enum class ReadWritePermission : uint8_t {
+  ReadWrite = 0b0,  //<! Read and write allowed on the memory
+  ReadOnly = 0b1,   //<! Only read allowed on the memory
+};
+
+enum class Accessibility : uint8_t {
+  Privileged = 0b0,  //<! Read and write (if allowed) only allowed by the Kernel
+  AllProcess = 0b1,  //<! Read and write (if allowed) allowed by everyone (Kernel included)
+};
+
+enum class MemoryType : uint8_t {
+  Normal = 0,          //<! Normal memory cached
+  Device_nGnRnE = 1,   //<! Device memory without any Gathering, Reordering nor Elimination
+  Device_nGRE = 2,     //<! Device memory without any Gathering but Reordering and Elimination allowed
+  Normal_NoCache = 3,  //<! Normal memory not cached
+};
+
+struct PagesAttributes {
+  Shareability sh;
+  ExecutionPermission exec;
+  ReadWritePermission rw;
+  Accessibility access;
+  MemoryType type;
+};
 
 using AllocFun = VirtualPA (*)(void*);  //<! This function fail internally if the allocation fail
 using FreeFun = void (*)(void*, VirtualPA);
@@ -15,15 +58,15 @@ using ResolveVA = PhysicalPA (*)(void*, VirtualPA);  //<! This function fail int
 struct MMUTable {
   enum class Kind : uintptr_t { Kernel = KERNEL_BASE, Process = PROCESS_BASE };
 
-  const Kind kind;      //<! The kind of Memory mapping we're dealing with.
-  const VirtualPA pgd;  //<! The top level of the MMU table
-  const uint8_t asid;   //<! The Address Space Identifier, used to differentiate between process memory spaces.
+  Kind kind;      //<! The kind of Memory mapping we're dealing with.
+  VirtualPA pgd;  //<! The top level of the MMU table
+  uint8_t asid;   //<! The Address Space Identifier, used to differentiate between process memory spaces.
 
   void* handle;          //<! The handle passed to the following function, in case they need some context of theirs
-  const AllocFun alloc;  //<! The function used to allocate a page
-  const FreeFun free;    //<! The function used to free a page
-  const ResolvePA resolve_pa;  //<! The function used to convert a physical address to a virtual one
-  const ResolveVA resolve_va;  //<! The function used to convert a virtual address to a physical one
+  AllocFun alloc;        //<! The function used to allocate a page
+  FreeFun free;          //<! The function used to free a page
+  ResolvePA resolve_pa;  //<! The function used to convert a physical address to a virtual one
+  ResolveVA resolve_va;  //<! The function used to convert a virtual address to a physical one
 };
 
 /** Finds, if it exists, the entry specific to the virtual address @a va.

@@ -1,4 +1,4 @@
-#include "mmu_defs.hpp"
+#include "mmu_utils.hpp"
 
 ENTRY(_start);
 
@@ -7,7 +7,7 @@ SECTIONS
     . = KERNEL_BASE;
 
     /* Kernel load address for AArch64 */
-    . += KERNEL_AARCH64_LOAD_ADDRESS;
+    . += PHYSICAL_KERNEL_LOAD_ADDRESS;
 
     _stext = .;
     .text : { *(.text) }

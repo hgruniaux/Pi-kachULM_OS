@@ -1,7 +1,7 @@
 #include "miniuart.hpp"
-#include "../boot/mmu_defs.hpp"
+#include <libk/utils.hpp>
+#include "../boot/mmu_utils.hpp"
 #include "gpio.hpp"
-#include "libk/utils.hpp"
 
 namespace MiniUART {
 /** Auxiliary Interrupt status (size: 3) */
@@ -42,7 +42,7 @@ void init(uint32_t baud_rate) {
   // We deactivate Pull Up/Down fot the pins 14 and 15
   GPIO::set_pull_up_down(GPIO::Pin::BCM14, GPIO::PUD_Mode::Off);
   GPIO::set_pull_up_down(GPIO::Pin::BCM15, GPIO::PUD_Mode::Off);
-
+  //  TODO : FixThis!
   // Pin 14 and 15 must be in mode Alt5
   GPIO::set_mode(GPIO::Pin::BCM14, GPIO::Mode::ALT5);
   GPIO::set_mode(GPIO::Pin::BCM15, GPIO::Mode::ALT5);

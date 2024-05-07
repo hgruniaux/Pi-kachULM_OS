@@ -1,8 +1,9 @@
 #include "page_alloc.hpp"
-#include "libk/log.hpp"
+#include <climits>
+#include <libk/log.hpp>
 
 uint64_t PageAlloc::memory_needed(uintptr_t nb_pages) {
-  return (nb_pages * 2 + 7) / 8;
+  return libk::div_round_up(nb_pages * 2, CHAR_BIT);
 }
 
 PageAlloc::PageAlloc(size_t nb_pages, void* array) : m_nb_pages(nb_pages), m_mmap(array, memory_needed(nb_pages)) {
@@ -24,7 +25,6 @@ void PageAlloc::mark_as_used(PhysicalPA addr) {
   while (!side_value & (index != 0)) {
     m_mmap.set_bit(index, false);
     side_value = m_mmap.get_bit(index ^ 0x1ul);
-    // libk::print("Index = {} , Side_value = {} , func = {}", index, side_value, index^0x1ul);
     index = index / 2;
   }
 }
@@ -45,9 +45,8 @@ bool PageAlloc::fresh_page(PhysicalPA* addr) {
   size_t index = 1;
   while (true) {
     if (m_mmap.get_bit(index)) {
-      if (index >= (size_t)m_nb_pages) {
+      if (index >= m_nb_pages) {
         *addr = (index - m_nb_pages) * PAGE_SIZE;
-        LOG_INFO("La page allouée est {:#x}, son index est {}", *addr, index);
         mark_as_used(*addr);
         return true;
       } else {
@@ -90,7 +89,7 @@ void test_page_alloc() {
   libk::print("Le statut de la page {} est {}", addr, test.page_status(addr));
   while (test.fresh_page(&addr)) {
   }
-  test.free_page(0);
+  test.mmu_free_page(0);
   libk::print("Mark 3");
   libk::print("Le statut de la première page est {}", test.page_status(0));
   if (test.fresh_page(&addr)) {

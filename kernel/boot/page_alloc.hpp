@@ -1,9 +1,10 @@
 #pragma once
 #include <libk/bit_array.hpp>
-#include "mmu_defs.hpp"
+#include "mmu_table.hpp"
 
 class PageAlloc {
  public:
+  explicit PageAlloc() = default;
   explicit PageAlloc(size_t nb_pages, void* array);
 
   // Utility functions
@@ -29,6 +30,6 @@ class PageAlloc {
 
  protected:
   inline size_t page_index(PhysicalPA addr) const;
-  const uint64_t m_nb_pages;
+  uint64_t m_nb_pages;
   libk::BitArray m_mmap;
 };

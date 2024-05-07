@@ -40,7 +40,7 @@ struct Property {
   /** @brief Parses the property value as a `<u32>` or `<u64>` depending on property length. */
   [[nodiscard]] libk::Option<uint64_t> get_u32_or_u64() const;
   /** @brief Parses the property value as a `<string>`. */
-  [[nodiscard]] libk::StringView get_string() const { return {data, length}; }
+  [[nodiscard]] libk::StringView get_string() const;
 };
 
 class PropertyIterator {
@@ -137,7 +137,6 @@ class Node {
 
     return false;
   }
-
 
   [[nodiscard]] bool find_property(libk::StringView property_name, Property* property) const {
     for (const Property p : get_properties()) {

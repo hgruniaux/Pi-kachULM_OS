@@ -1,4 +1,4 @@
-#include "mmu_defs.hpp"
+#include "mmu_utils.hpp"
 
 #include <dtb/dtb.hpp>
 #include <libk/utils.hpp>
@@ -56,14 +56,6 @@ static inline constexpr PagesAttributes vc_memory = {.sh = Shareability::OuterSh
                                                      .access = Accessibility::Privileged,
                                                      .type = MemoryType::Device_nGRE};
 
-struct DeviceMemoryProperties {
-  const bool is_arm_mem_address_u64;
-  const bool is_arm_mem_size_u64;
-
-  const bool is_soc_mem_address_u64;
-  const bool is_soc_mem_size_u64;
-};
-
 DeviceMemoryProperties inline get_memory_properties(const DeviceTree& dt) {
   Property tmp_prop;
 
@@ -90,10 +82,7 @@ DeviceMemoryProperties inline get_memory_properties(const DeviceTree& dt) {
   return {is_u64_arm_mem_address, is_u64_arm_mem_size, is_u64_soc_mem_address, is_u64_soc_mem_size};
 }
 
-void inline setup_memory_mapping(MMUTable* tbl,
-                                 const DeviceTree& dt,
-                                 uintptr_t dtb,
-                                 const DeviceMemoryProperties& prop) {
+void inline setup_memory_mapping(MMUTable* tbl, const DeviceTree& dt, const MMUInitData* init_data) {
   Node root;
   enforce(dt.get_root(&root));
 
@@ -111,8 +100,8 @@ void inline setup_memory_mapping(MMUTable* tbl,
         uint64_t memory_chunk_start = 0;
         uint64_t memory_chunk_size = 0;
 
-        enforce(tmp_prop.get_variable_int(&index, &memory_chunk_start, prop.is_arm_mem_address_u64));
-        enforce(tmp_prop.get_variable_int(&index, &memory_chunk_size, prop.is_arm_mem_size_u64));
+        enforce(tmp_prop.get_variable_int(&index, &memory_chunk_start, init_data->mem_prop.is_arm_mem_address_u64));
+        enforce(tmp_prop.get_variable_int(&index, &memory_chunk_size, init_data->mem_prop.is_arm_mem_size_u64));
 
         const VirtualPA va_start = NORMAL_MEMORY + memory_chunk_start;
         const VirtualPA va_end = va_start + memory_chunk_size - PAGE_SIZE;
@@ -139,10 +128,8 @@ void inline setup_memory_mapping(MMUTable* tbl,
 
   {
     // Mapping device tree in read-only
-    const auto dtb_start = PhysicalPA((uintptr_t)dtb & ~(PAGE_SIZE - 1));
-    const size_t dtb_size = libk::from_be(libk::read32(dtb + sizeof(uint32_t)));
-    const auto dtb_stop = PhysicalPA(libk::align((uintptr_t)dtb + dtb_size, PAGE_SIZE));
-    enforce(change_attr_range(tbl, NORMAL_MEMORY + dtb_start, NORMAL_MEMORY + dtb_stop, ro_memory));
+    enforce(change_attr_range(tbl, NORMAL_MEMORY + init_data->dtb_page_start,
+                              NORMAL_MEMORY + init_data->dtb_page_end - PAGE_SIZE, ro_memory));
   }
 }
 
@@ -204,7 +191,7 @@ void inline setup_device_mapping(MMUTable* tbl, const DeviceTree& dt, const Devi
 
 void inline setup_stack_mapping(MMUTable* tbl) {
   enforce(map_range(tbl, KERNEL_STACK_PAGE_TOP((uint64_t)DEFAULT_CORE),
-                    KERNEL_STACK_PAGE_BOTTOM((uint64_t)DEFAULT_CORE), 0, rw_memory));
+                    KERNEL_STACK_PAGE_BOTTOM((uint64_t)DEFAULT_CORE), PHYSICAL_STACK_TOP, rw_memory));
 }
 
 void inline setup_mair() {
@@ -277,80 +264,69 @@ void inline setup_sctlr() {
          (1 << 1));  // clear A, no alignment check
 
   r |= (1 << 0) |  // set M, enable MMU
-       (1 << 2) |  // set C, enable caching of normal memory
-       (1 << 12);  // set I, enable instruction cache
-
+                   //(1 << 2) |  // set C, enable caching of normal memory
+                   //(1 << 12);  // set I, enable instruction cache
+       0;
   asm volatile("msr sctlr_el1, %0" : : "r"(r));
   asm volatile("isb");
 }
-
-struct MMUTableHandleData {
-  const size_t first_page;
-  const size_t upper_bound;
-  size_t nb_allocated;
-};
-
-extern "C" VirtualPA alloc_page(void* handle_ptr) {
-  auto* handle = (MMUTableHandleData*)handle_ptr;
-
-  uintptr_t current_page_offset = handle->first_page + PAGE_SIZE * handle->nb_allocated;
-  enforce(current_page_offset + PAGE_SIZE < handle->upper_bound);
-  uint64_t* new_page = (uint64_t*)current_page_offset;
-  handle->nb_allocated++;
-
-  for (size_t i = 0; i < PAGE_SIZE / sizeof(uint64_t); ++i) {
-    new_page[i] = 0;
-  }
-
-  return (VirtualPA)new_page;
+extern "C" VirtualPA mmu_resolve_pa(void*, PhysicalPA page_address) {
+  return page_address;  // 1:1 mapping here so PhysicalPA == VirtualPA
 }
 
-extern "C" VirtualPA resolve_pa(void*, PhysicalPA pa) {
-  return pa;
+extern "C" PhysicalPA mmu_resolve_va(void*, VirtualPA page_address) {
+  return page_address;  // 1:1 mapping here so PhysicalPA == VirtualPA
 }
 
-extern "C" PhysicalPA resolve_va(void*, VirtualPA va) {
-  return va;
+extern "C" VirtualPA mmu_alloc_page(void* handle_ptr) {
+  PhysicalPA new_page;
+  enforce(allocate_pages((LinearPageAllocator*)handle_ptr, 1, &new_page));
+  zero_pages(new_page, 1);
+  return mmu_resolve_pa(nullptr, new_page);
 }
 
 extern "C" void mmu_init(uintptr_t dtb) {
-  const auto alloc_start = PhysicalPA(resolve_symbol_pa(_kend));
-  const auto dtb_start = PhysicalPA(dtb & ~(PAGE_SIZE - 1));
+  MMUInitData* init_data = (MMUInitData*)resolve_symbol_pa(_init_data);
 
-  MMUTableHandleData handle = {
-      .first_page = alloc_start,
-      .upper_bound = dtb_start,
+  init_data->kernel_start = resolve_symbol_pa(_stext);
+  init_data->kernel_stop = resolve_symbol_pa(_kend);
+
+  init_data->dtb_page_start = libk::align_to_previous(dtb, PAGE_SIZE);
+  const size_t dtb_size = libk::from_be(libk::read32(dtb + sizeof(uint32_t)));
+  init_data->dtb_page_end = libk::align_to_next(dtb + dtb_size, PAGE_SIZE);
+
+  init_data->lin_alloc = {
+      .first_page = init_data->kernel_stop,
+      .upper_bound = init_data->dtb_page_start,
       .nb_allocated = 0,
   };
 
-  VirtualPA pgd = alloc_page(&handle);
+  init_data->pgd = mmu_alloc_page(&init_data->lin_alloc);
 
   MMUTable tbl = {
       .kind = MMUTable::Kind::Kernel,
-      .pgd = pgd,
+      .pgd = init_data->pgd,
       .asid = 0,
-      .handle = (void*)&handle,
-      .alloc = (AllocFun)resolve_symbol_pa(alloc_page),
+      .handle = (void*)&init_data->lin_alloc,
+      .alloc = (AllocFun)resolve_symbol_pa(mmu_alloc_page),
       .free = nullptr,  // We don't free anything here !
-      .resolve_pa = (ResolvePA)resolve_symbol_pa(resolve_pa),
-      .resolve_va = (ResolveVA)resolve_symbol_pa(resolve_va),
+      .resolve_pa = (ResolvePA)resolve_symbol_pa(mmu_resolve_pa),
+      .resolve_va = (ResolveVA)resolve_symbol_pa(mmu_resolve_va),
   };
 
   DeviceTree dt(dtb);
   enforce(dt.is_status_okay());
-
-  const auto mem_prop = get_memory_properties(dt);
-  setup_memory_mapping(&tbl, dt, dtb, mem_prop);
-  setup_vc_mapping(&tbl, dt, mem_prop);
-  setup_device_mapping(&tbl, dt, mem_prop);
+  init_data->mem_prop = get_memory_properties(dt);
+  setup_memory_mapping(&tbl, dt, init_data);
+  setup_vc_mapping(&tbl, dt, init_data->mem_prop);
+  setup_device_mapping(&tbl, dt, init_data->mem_prop);
   setup_stack_mapping(&tbl);
-
-  libk::write64(resolve_symbol_pa(_mmu_init_data) + 0 * sizeof(uint64_t), pgd);
-  libk::write64(resolve_symbol_pa(_mmu_init_data) + 1 * sizeof(uint64_t), handle.first_page);
-  libk::write64(resolve_symbol_pa(_mmu_init_data) + 2 * sizeof(uint64_t), handle.nb_allocated);
 
   setup_mair();
   setup_tcr();
   setup_ttbr0_ttbr1(&tbl);
   setup_sctlr();
+
+  // Convert the PGD to a Virtual Address
+  init_data->pgd += KERNEL_BASE;
 }

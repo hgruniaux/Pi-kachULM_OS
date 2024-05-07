@@ -2,7 +2,7 @@
 
 #include <cstddef>
 #include <cstdint>
-#include "libk/log.hpp"
+#include <libk/log.hpp>
 
 class UART : public libk::Logger {
  public:

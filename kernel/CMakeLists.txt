@@ -3,7 +3,7 @@ add_executable(kernel
         boot/boot.S
 
         # MMU Setup
-        boot/mmu_defs.hpp
+        boot/mmu_utils.hpp
         boot/mmu_init.cpp
 
         boot/mmu_table.cpp
@@ -39,8 +39,8 @@ add_executable(kernel
         hardware/uart.hpp
         hardware/uart.cpp
 
-        boot/device.hpp
-        boot/device.cpp
+        hardware/device.hpp
+        hardware/device.cpp
 
         hardware/framebuffer.hpp
         hardware/framebuffer.cpp
@@ -63,6 +63,7 @@ add_executable(kernel
 
         boot/kernel_dt.cpp
         boot/kernel_dt.hpp
+        boot/mmu_utils.cpp
 )
 
 set_target_properties(kernel PROPERTIES OUTPUT_NAME "kernel8.elf")

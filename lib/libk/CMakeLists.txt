@@ -8,6 +8,7 @@ add_library(libk STATIC
         src/log.cpp
         src/assert.cpp
         src/bit_array.cpp
+        src/linear_allocator.cpp
 
         include/libk/assert.hpp
         include/libk/format.hpp
@@ -18,6 +19,7 @@ add_library(libk STATIC
         include/libk/option.hpp
         include/libk/string_view.hpp
         include/libk/log.hpp
+        include/libk/linear_allocator.hpp
 )
 
 target_include_directories(libk PUBLIC include/)

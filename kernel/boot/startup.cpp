@@ -4,8 +4,9 @@
  * the kernel entry point kmain().
  */
 
-#include "device.hpp"
+#include "../hardware/device.hpp"
 #include "kernel_dt.hpp"
+#include "memory.hpp"
 
 // The linker provides the following pointers.
 extern uint64_t __bss_start;
@@ -61,11 +62,6 @@ extern "C" void _startup(uintptr_t dtb) {
 
   // Setup DeviceTree
   if (!KernelDT::init(dtb)) {
-    libk::halt();
-  }
-
-  // Setup Device
-  if (!Device::init()) {
     libk::halt();
   }
 

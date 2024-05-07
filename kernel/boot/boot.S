@@ -1,5 +1,5 @@
-#include "mmu_defs.hpp"
-    .text
+#include "mmu_utils.hpp"
+.text
 .global _start // Execution starts here
 
 _start:
@@ -45,10 +45,3 @@ _high_memory_jump:
 
     // We now jump into C++ World !
     b _startup
-
-    .data
-.global _mmu_init_data
-_mmu_init_data:
-    .quad 0
-    .quad 0
-    .quad 0

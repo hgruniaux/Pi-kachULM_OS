@@ -6,7 +6,7 @@
   {                                             \
     uint64_t tmp;                               \
     asm volatile("mrs %x0, " #reg : "=r"(tmp)); \
-    LOG_INFO("Register " #reg ": {:#x}", tmp);  \
+    LOG_ERROR("Register " #reg ": {:#x}", tmp);  \
   }
 
 ExceptionLevel get_current_exception_level() {
@@ -35,7 +35,6 @@ void jump_to_el1() {
       break;
   }
 }
-
 
 extern "C" void exception_handler(InterruptSource source, InterruptKind kind, Registers& registers) {
   if (source == InterruptSource::LOWER_AARCH64 && kind == InterruptKind::SYNCHRONOUS) {
@@ -87,14 +86,13 @@ extern "C" void exception_handler(InterruptSource source, InterruptKind kind, Re
       break;
   }
 
+  LOG_ERROR("");
+  LOG_ERROR("");
+  LOG_ERROR("Arrrgl");
+  LOG_ERROR("");
+
   dump_reg(ELR_EL1);
   dump_reg(ESR_EL1);
-  dump_reg(SPSR_EL1);
-  dump_reg(SCTLR_EL1);
-  dump_reg(TCR_EL1);
-  dump_reg(MAIR_EL1);
-  dump_reg(TTBR1_EL1);
-  dump_reg(SCTLR_EL1);
 
   LOG_CRITICAL("Unhandled exception/interrupt, source = {}, kind = {}", source_name, kind_name);
 }

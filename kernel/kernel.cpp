@@ -1,5 +1,5 @@
 #include "kernel.hpp"
-#include "boot/device.hpp"
+#include "hardware/device.hpp"
 #include "hardware/interrupts.hpp"
 #include "hardware/uart.hpp"
 
@@ -55,7 +55,7 @@ void dump_current_el() {
 extern "C" void init_interrupts_vector_table();
 
 [[noreturn]] void kmain() {
-  UART u0(UART::Id::UART0, 115200);
+  UART u0(UART::Id::UART0, 2000000);
 
   libk::register_logger(u0);
 
@@ -64,29 +64,17 @@ extern "C" void init_interrupts_vector_table();
   dump_current_el();
   init_interrupts_vector_table();
 
-#define resolve_symbol_pa(symbol)                     \
-  ({                                                  \
-    uintptr_t __dest;                                 \
-    asm volatile("adr %x0, " #symbol : "=r"(__dest)); \
-    __dest;                                           \
-  })
-
   LOG_INFO("Kernel built at " __TIME__ " on " __DATE__);
 
-#if 0
-  LOG_INFO("DeviceTree initialization: {}", dt.is_status_okay());
-  LOG_INFO("DeviceTree Version: {}", dt.get_version());
-  print_property(dt, "/model");
-  print_property(dt, "/compatible");
-  print_property(dt, "/serial-number");
-#endif
+  // Setup DeviceTree
+  if (!KernelMemory::init()) {
+    libk::halt();
+  }
 
-  // test_page_alloc();
-  // test_bit_array();
-
-  LOG_INFO("PGD0: {:#x}", libk::read64(resolve_symbol_pa(_mmu_init_data) + 0 * sizeof(uint64_t)));
-  LOG_INFO("PGD1: {:#x}", libk::read64(resolve_symbol_pa(_mmu_init_data) + 1 * sizeof(uint64_t)));
-  LOG_INFO("PGD2: {:#x}", libk::read64(resolve_symbol_pa(_mmu_init_data) + 2 * sizeof(uint64_t)));
+  // Setup Device
+  if (!Device::init()) {
+    libk::halt();
+  }
 
   {
     uint64_t tmp;
@@ -98,7 +86,9 @@ extern "C" void init_interrupts_vector_table();
   LOG_INFO("Board revision: {:#x}", KernelDT::get_board_revision());
   LOG_INFO("Board serial: {:#x}", KernelDT::get_board_serial());
   LOG_INFO("Temp: {} °C / {} °C", Device::get_current_temp() / 1000, Device::get_max_temp() / 1000);
+  LOG_INFO("Uart address: {:#x}", KernelDT::get_device_mmio_address("uart0"));
 
+  LOG_INFO("Memory overhead: {:#x}", KernelMemory::get_memory_overhead());
   //  SyscallManager::get().register_syscall(24, [](Registers& ) { LOG_INFO("Syscall 24"); });
   //
   //  //  Enter userspace

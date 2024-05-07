@@ -1,6 +1,6 @@
 #include "gpio.hpp"
-#include "../boot/mmu_defs.hpp"
-#include "libk/utils.hpp"
+#include <libk/utils.hpp>
+#include "../boot/mmu_utils.hpp"
 #include "utils.hpp"
 
 // Offset from the peripheral base, taken from BCM2835-ARM-Peripherals.pdf, page 90-91
@@ -63,7 +63,7 @@ static constexpr int32_t GPPUDCLK = 0x200098;  // GPIO Pin Pull-up/down Enable C
 
 //  GPPUDCLK + 0 = 0x200098, GPIO Pin Pull-up/down Enable Clock 0
 //  GPPUDCLK + 4 = 0x20009C, GPIO Pin Pull-up/down Enable Clock 1
-
+//  TODO : FixThis!
 void GPIO::set_mode(GPIO::Pin gpio_pin, GPIO::Mode target_mode) {
   const auto target_mode_int = static_cast<uint8_t>(target_mode);
   const auto gpio_pin_int = static_cast<uint8_t>(gpio_pin);

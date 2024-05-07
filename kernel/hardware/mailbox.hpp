@@ -3,6 +3,8 @@
 #include <cstdint>
 
 #include <libk/assert.hpp>
+#include "../boot/mmu_utils.hpp"
+#include "libk/log.hpp"
 
 namespace MailBox {
 /** The different supported mailbox channels by our kernel. */
@@ -43,7 +45,7 @@ template <class Message>
 bool send_property(Message& message) {
   static_assert(alignof(Message) >= 16, "property messages must be 16-bytes aligned");
 
-  const uint32_t addr = (uint32_t)((uintptr_t)&message >> 4);
+  const uint32_t addr = (uint32_t)((uintptr_t)&message >> 4);  // TODO: Convert Address Here
   MailBox::send(MailBox::Channel::TagArmToVC, addr);
   const uint32_t response = MailBox::receive(MailBox::Channel::TagArmToVC);
   KASSERT(response == addr);

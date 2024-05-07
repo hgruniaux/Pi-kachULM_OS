@@ -97,6 +97,9 @@ libk::Option<uint64_t> Property::get_u64() const {
 
   return {};
 }
+libk::StringView Property::get_string() const {
+  return {data, length - 1};
+}
 
 /*
  * PropertyIterator Class
@@ -259,5 +262,5 @@ Node::Node(const DeviceTreeParser* parser, size_t offset) : m_p(parser) {
   m_name = m_p->get_string(offset);
   const size_t name_size = libk::strlen(m_name) + 1;  // We count the \000 at the end
 
-  m_off = libk::align(offset + name_size, alignof(uint32_t));
+  m_off = libk::align_to_next(offset + name_size, alignof(uint32_t));
 }

@@ -5,7 +5,7 @@
 #include "utils.hpp"
 
 bool DeviceTreeParser::from_memory(uintptr_t dts, DeviceTreeParser* dt_parser) {
-  if (dts == 0 || libk::align(dts, alignof(uint64_t)) != dts) {
+  if (dts == 0 || libk::align_to_next(dts, alignof(uint64_t)) != dts) {
     // Unaligned DeviceTree blob
     return false;
   }
@@ -17,13 +17,13 @@ bool DeviceTreeParser::from_memory(uintptr_t dts, DeviceTreeParser* dt_parser) {
   }
 
   const uint32_t off_struct = libk::from_be(header[2]);
-  if (libk::align(off_struct, alignof(uint32_t)) != off_struct) {
+  if (libk::align_to_next(off_struct, alignof(uint32_t)) != off_struct) {
     // Unaligned property section
     return false;
   }
 
   const uint32_t off_mem_reserved_map = libk::from_be(header[4]);
-  if (libk::align(off_mem_reserved_map, alignof(uint64_t)) != off_mem_reserved_map) {
+  if (libk::align_to_next(off_mem_reserved_map, alignof(uint64_t)) != off_mem_reserved_map) {
     // Unaligned reserved memory section
     return false;
   }
@@ -51,7 +51,7 @@ size_t DeviceTreeParser::skip_property(size_t offset) const {
   offset += sizeof(uint32_t);
 
   // Skip property data
-  offset = libk::align(offset + property_size, alignof(uint32_t));
+  offset = libk::align_to_next(offset + property_size, alignof(uint32_t));
 
   return offset;
 }
@@ -64,7 +64,7 @@ size_t DeviceTreeParser::skip_node(size_t offset) const {
 
   // And ignore the node's name
   const size_t name_size = libk::strlen(get_string(offset)) + 1;  // We count the \000 at the end
-  offset = libk::align(offset + name_size, alignof(uint32_t));
+  offset = libk::align_to_next(offset + name_size, alignof(uint32_t));
 
   while (true) {
     const uint32_t token = get_uint32(offset);

@@ -18,6 +18,7 @@ bool init(uintptr_t dtb);
 [[nodiscard]] uint32_t get_board_revision();
 [[nodiscard]] uint64_t get_board_serial();
 
+[[nodiscard]] Node get_device_node(libk::StringView device);
 [[nodiscard]] uintptr_t get_device_mmio_address(libk::StringView device);
 
 };  // namespace KernelDT

@@ -1,6 +1,6 @@
 #include "uart.hpp"
 #include "gpio.hpp"
-#include "libk/utils.hpp"
+#include <libk/utils.hpp>
 #include "mailbox.hpp"
 
 /** UART0 Data Register (size: 32) */
