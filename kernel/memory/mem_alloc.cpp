@@ -1,32 +1,30 @@
 #include "mem_alloc.hpp"
+#include "memory.hpp"
 
-/*
-      Memory Allocator
-*/
+#include <libk/utils.hpp>
 
-namespace Malloc {
+// FIXME: Retrieve this constant directly from KernelMemory
+#define PAGESIZE 4096
 
-meta_ptr base = nullptr;  // init at 0
+using MetaPtr = struct MetaBlock*;
 
-meta_ptr find_suitable_block(size_t memory, uint64_t align) {
-  meta_ptr b = base;
-  meta_ptr end = (meta_ptr)KernelMemory::get_heap_end();
-  if (b) {
-    while (b->ptr < end) {
-      size_t offset = (((((uintptr_t)(b->ptr) - 1) / align) + 1) * align) - (uintptr_t)b->ptr;
-      if (b->size >= memory + offset) {
-        b->ptr = (meta_ptr)(((((uintptr_t)b - 1) / align) + 1) * align);
-        return b;
-      }
-    }
-  }
-  return extend_heap(b, memory, align);
-}
+struct MetaBlock {
+  size_t size;
+  MetaPtr next;
+  MetaPtr previous;
+  void* ptr;
+  bool is_free;
+  char data[1];
+};  // struct MetaBlock
 
-void split_space(meta_ptr block, size_t size) {
-  meta_ptr sub_block;
+constexpr size_t META_BLOCK_SIZE = offsetof(MetaBlock, data);
+
+static MetaPtr g_malloc_meta_head = nullptr;
+
+static void split_space(MetaPtr block, size_t size) {
+  MetaPtr sub_block;
   sub_block = block + size;
-  sub_block->is_free = 1;
+  sub_block->is_free = true;
   sub_block->next = block->next;
   sub_block->previous = block;
   sub_block->size = (block->size - size - META_BLOCK_SIZE);
@@ -34,38 +32,47 @@ void split_space(meta_ptr block, size_t size) {
   block->next = sub_block;
 }
 
-meta_ptr extend_heap(meta_ptr last, size_t size, uint64_t align) {  // align is always at least 1
-  meta_ptr end, brk;
-  end = (meta_ptr)KernelMemory::get_heap_end();
-  long heap_offset = (size + META_BLOCK_SIZE + align) / PAGESIZE;
-  brk = (meta_ptr)KernelMemory::change_heap_end(heap_offset);
+static MetaPtr extend_heap(MetaPtr last, size_t size, size_t alignment) {  // alignment is always at least 1
+  auto* end = (MetaPtr)KernelMemory::get_heap_end();
+  const auto heap_offset = libk::div_round_up(size + META_BLOCK_SIZE + alignment, PAGESIZE);
+  auto* brk = (MetaPtr)KernelMemory::change_heap_end(heap_offset);
   if (brk == nullptr) {
     return nullptr;
-  } else {
-    end->size = size;
-    end->is_free = 1;
-    end->next = nullptr;
-    end->previous = last;
-    *(end->data) = (((((uintptr_t)(end->data) - 1) / align) * align) + align);
-    end->ptr = end->data;
-    if (last) {
-      last->next = end;
+  }
+
+  end->size = size;
+  end->is_free = true;
+  end->next = nullptr;
+  end->previous = last;
+  *(end->data) = (((((uintptr_t)(end->data) - 1) / alignment) * alignment) + alignment);
+  end->ptr = end->data;
+
+  if (last != nullptr)
+    last->next = end;
+
+  return end;
+}
+
+static MetaPtr find_suitable_block(size_t memory, size_t alignment) {
+  MetaPtr base = g_malloc_meta_head;
+  MetaPtr end = (MetaPtr)KernelMemory::get_heap_end();
+  if (base != nullptr) {
+    while (base->ptr < end) {
+      const auto offset = (((((uintptr_t)(base->ptr) - 1) / alignment) + 1) * alignment) - (uintptr_t)base->ptr;
+      if (base->size >= memory + offset) {
+        base->ptr = (MetaPtr)(((((uintptr_t)base - 1) / alignment) + 1) * alignment);
+        return base;
+      }
     }
-    return end;
   }
+
+  return extend_heap(base, memory, alignment);
 }
 
-bool is_addr_valid(VirtualPA addr) {
-  if (base && (meta_ptr)addr > base && addr < KernelMemory::get_heap_end()) {
-    return (addr = (VirtualPA)get_block_addr(addr)->ptr);
-  }
-  return 0;
-}
-
-meta_ptr get_block_addr(VirtualPA addr) {
+static MetaPtr get_block_addr(VirtualPA addr) {
   if (addr < KernelMemory::get_heap_end()) {
-    meta_ptr b = base;
-    while (b->ptr <= (meta_ptr)addr) {
+    MetaPtr b = g_malloc_meta_head;
+    while (b->ptr <= (MetaPtr)addr) {
       b = b->next;
     }
     return b->previous;
@@ -73,59 +80,107 @@ meta_ptr get_block_addr(VirtualPA addr) {
   return nullptr;
 }
 
-void merge_block(meta_ptr block1, meta_ptr block2) {
-  if (block1 && block2 && (block1->next = block2)) {
-    block1->is_free = block1->is_free && block2->is_free;
-    block1->size += block2->size + META_BLOCK_SIZE;
-    block1->next = block2->next;
-    (block2->next)->previous = block1;
+static inline bool is_addr_valid(VirtualPA addr) {
+  if ((g_malloc_meta_head != nullptr) && (MetaPtr)addr > g_malloc_meta_head && addr < KernelMemory::get_heap_end()) {
+    return (addr == (VirtualPA)get_block_addr(addr)->ptr);
+  }
+
+  return false;
+}
+
+static void merge_block(MetaPtr lhs, MetaPtr rhs) {
+  if ((lhs != nullptr) && (rhs != nullptr) && (lhs->next == rhs)) {
+    lhs->is_free = lhs->is_free && rhs->is_free;
+    lhs->size += rhs->size + META_BLOCK_SIZE;
+    lhs->next = rhs->next;
+    (rhs->next)->previous = lhs;
   }
 }
 
-VirtualPA malloc(size_t nb_octet, uint64_t align) {
-  if (!align) {
-    align++;
-  }
-  meta_ptr block;
-  if (!base) {
-    block = extend_heap(0, nb_octet, align);
-    if (!block) {
-      return 0;
-    } else {
-      base = block;
-      block->is_free = 0;
-      return (VirtualPA)block->data;
+void* kmalloc(size_t byte_count, size_t alignment) {
+  if (alignment == 0)
+    alignment++;
+  if (byte_count == 0)
+    byte_count++;  // ensure that we have a unique pointer address even when allocating 0 bytes
+
+  MetaPtr block;
+  if (g_malloc_meta_head != nullptr) {
+    block = extend_heap(nullptr, byte_count, alignment);
+    if (block == nullptr) {
+      return nullptr;
     }
-  } else {
-    block = find_suitable_block(nb_octet, align);
-    if (!block) {
-      return 0;
-    } else {
-      block->is_free = 0;
-      if (block->size > nb_octet + META_BLOCK_SIZE) {
-        split_space(block, nb_octet);
-        free(*(block->next)->data);
-      }
-      return (VirtualPA)block->data;
-    }
+
+    g_malloc_meta_head = block;
+    block->is_free = false;
+    return block->data;
   }
+
+  block = find_suitable_block(byte_count, alignment);
+  if (block == nullptr) {
+    return nullptr;
+  }
+
+  block->is_free = false;
+  if (block->size > byte_count + META_BLOCK_SIZE) {
+    split_space(block, byte_count);
+    kfree((block->next)->data);
+  }
+  return block->data;
 }
 
-void free(VirtualPA memory_allocated) {
-  if (is_addr_valid(memory_allocated)) {
-    meta_ptr block = get_block_addr(memory_allocated);
-    block->is_free = 1;
+void kfree(void* ptr) {
+  if (ptr == nullptr)
+    return;
+
+  if (is_addr_valid((VirtualPA)ptr)) {
+    MetaPtr block = get_block_addr((VirtualPA)ptr);
+    block->is_free = true;
+
     if ((block->next)->is_free) {
       merge_block(block, block->next);
     }
+
     if ((block->previous)->is_free) {
       merge_block(block->previous, block);
     }
   }
 }
 
-}  // namespace Malloc
+#include <new>
 
+// Provide the C++ operators new and delete:
+
+void* operator new(size_t bytes_count) {
+  return kmalloc(bytes_count, alignof(std::max_align_t));
+}
+
+void* operator new(size_t bytes_count, std::align_val_t alignment) {
+  return kmalloc(bytes_count, (size_t)alignment);
+}
+
+void* operator new[](size_t bytes_count) {
+  return kmalloc(bytes_count, alignof(std::max_align_t));
+}
+
+void* operator new[](size_t bytes_count, std::align_val_t alignment) {
+  return kmalloc(bytes_count, (size_t)alignment);
+}
+
+void operator delete(void* ptr) {
+  kfree(ptr);
+}
+
+void operator delete(void* ptr, size_t) {
+  kfree(ptr);
+}
+
+void operator delete[](void* ptr) {
+  kfree(ptr);
+}
+
+void operator delete[](void* ptr, size_t) {
+  kfree(ptr);
+}
 
 /*
         Test function
