@@ -2,9 +2,7 @@
 #include "libk/string.hpp"
 
 namespace libk {
-BitArray::BitArray(void* begin, size_t bytes_size) : m_array((uint64_t*)begin), m_bytes_size(bytes_size) {
-  fill_array(false);
-}
+BitArray::BitArray(uintptr_t begin, size_t bytes_size) : m_array((uint64_t*)begin), m_bytes_size(bytes_size) {}
 
 bool BitArray::get_bit(size_t index) const {
   if (m_array == nullptr) {

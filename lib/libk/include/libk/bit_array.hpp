@@ -8,7 +8,7 @@ class BitArray {
  public:
   // Constructors
   explicit BitArray() = default;
-  explicit BitArray(void* begin, size_t bytes_size);
+  explicit BitArray(uintptr_t begin, size_t bytes_size);
 
   // Modifiers
   bool get_bit(size_t index) const;

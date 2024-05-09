@@ -3,15 +3,19 @@
 #include "libk/utils.hpp"
 
 namespace libk {
-LinearAllocator::LinearAllocator(void* begin_section, size_t section_bytes_size)
-    : _beg((uintptr_t)begin_section), _max_address(_beg + section_bytes_size) {}
+LinearAllocator::LinearAllocator(uintptr_t begin_section, size_t section_bytes_size)
+    : _beg(begin_section), _max_address(begin_section + section_bytes_size) {}
 
 void* LinearAllocator::malloc(size_t byte_size, size_t align) {
+  if (_beg == 0) {
+    return nullptr;
+  }
+
   const uintptr_t aligned_beg = libk::align_to_next(_beg, align);
   const uintptr_t next_beg = aligned_beg + byte_size;
 
   if (next_beg >= _max_address) {
-    return 0;
+    return nullptr;
   }
 
   const auto block_start = (void*)aligned_beg;

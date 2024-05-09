@@ -6,6 +6,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include "libk/assert.hpp"
 
 // See https://itanium-cxx-abi.github.io/cxx-abi/abi.html.
 
@@ -19,9 +20,7 @@ extern "C" [[noreturn]] void __cxa_pure_virtual() {
   //  > expected that it will terminate the program, possibly with an error
   //  > message.
 
-  // TODO: replace this by a call to kernel panic (debug::panic).
-  while (true)
-    ;
+  libk::panic("Pure virtual function called. Are you calling virtual methods from a destructor?");
 }
 
 /// A standard entry point that a compiler will reference in virtual tables to
@@ -32,9 +31,7 @@ extern "C" [[noreturn]] void __cxa_deleted_virtual() {
   //  > specify its behavior, it is expected that it will terminate the program,
   //  > possibly with an error message.
 
-  // TODO: replace this by a call to kernel panic (debug::panic).
-  while (true)
-    ;
+  libk::panic("Deleted virtual function called.");
 }
 
 // FIXME: The following __cxa_guard_*() functions should be thread safe. We

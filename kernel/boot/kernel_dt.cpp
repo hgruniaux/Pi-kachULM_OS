@@ -70,7 +70,7 @@ ReservedSections KernelDT::get_reserved_sections() {
   ReservedSections res(nullptr);
 
   if (!_dt.get_reserved_sections(&res)) {
-    LOG_CRITICAL("[DeviceTree] Unable to retrieve reserved sections.");
+    libk::panic("[DeviceTree] Unable to retrieve reserved sections.");
   }
 
   return res;
@@ -80,7 +80,7 @@ Node KernelDT::get_root() {
   Node n = {};
 
   if (!_dt.get_root(&n)) {
-    LOG_CRITICAL("[DeviceTree] Unable to retrieve root node.");
+    libk::panic("[DeviceTree] Unable to retrieve root node.");
   }
 
   return n;
@@ -110,13 +110,13 @@ Node KernelDT::get_device_node(libk::StringView device) {
   Property prop;
 
   if (!_alias.find_property(device, &prop)) {
-    LOG_CRITICAL("[DeviceTree] Unable to resolve device alias.");
+    libk::panic("[DeviceTree] Unable to resolve device alias.");
   }
 
   Node device_node;
 
   if (!_dt.find_node(prop.get_string(), &device_node)) {
-    LOG_CRITICAL("[DeviceTree] Unable to resolve device alias.");
+    libk::panic("[DeviceTree] Unable to resolve device alias.");
   }
 
   return device_node;
@@ -128,14 +128,14 @@ uintptr_t KernelDT::get_device_mmio_address(libk::StringView device) {
   Property prop;
 
   if (!dev_node.find_property("reg", &prop)) {
-    LOG_CRITICAL("[DeviceTree] Unable to retrieve device address property.");
+    libk::panic("[DeviceTree] Unable to retrieve device address property.");
   }
 
   size_t index = 0;
   uintptr_t address = 0;
 
   if (!prop.get_variable_int(&index, &address, _mem_prop->is_soc_mem_address_u64)) {
-    LOG_CRITICAL("[DeviceTree] Unable to parse device address.");
+    libk::panic("[DeviceTree] Unable to parse device address.");
   }
 
   return address;

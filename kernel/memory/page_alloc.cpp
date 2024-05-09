@@ -7,7 +7,7 @@ uint64_t PageAlloc::memory_needed(uintptr_t nb_pages) {
   return libk::div_round_up(nb_pages * 2, CHAR_BIT);
 }
 
-PageAlloc::PageAlloc(size_t nb_pages, void* array) : m_nb_pages(nb_pages), m_mmap(array, memory_needed(nb_pages)) {
+PageAlloc::PageAlloc(size_t nb_pages, uintptr_t array) : m_nb_pages(nb_pages), m_mmap(array, memory_needed(nb_pages)) {
   m_mmap.fill_array(true);
   m_mmap.set_bit(0, false);
 }

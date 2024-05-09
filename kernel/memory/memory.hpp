@@ -7,7 +7,7 @@
 namespace KernelMemory {
 enum class Kind { Invalid, Reserved, VideoCore, Device, CustomPage, Heap, Stack, Process };
 
-[[nodiscard]] bool init();
+void init();
 
 /** Returns the start of the Kernel Heap. */
 [[nodiscard]] VirtualPA get_heap_start();

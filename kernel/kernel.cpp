@@ -67,9 +67,7 @@ extern "C" void init_interrupts_vector_table();
   LOG_INFO("Kernel built at " __TIME__ " on " __DATE__);
 
   // Setup DeviceTree
-  if (!KernelMemory::init()) {
-    libk::halt();
-  }
+  KernelMemory::init();
 
   // Setup Device
   if (!Device::init()) {
@@ -104,6 +102,18 @@ extern "C" void init_interrupts_vector_table();
   LOG_INFO("Read: {:$}", libk::StringView(buffer, nb_read));
 
   page.free();
+
+  LOG_INFO("Heap test start:");
+
+  char* heap_start = (char*)KernelMemory::get_heap_end();
+  LOG_INFO("Current kernel end: {:#x}", (uintptr_t)heap_start);
+
+  constexpr const char* m_data = "Hello Kernel Heap!";
+  constexpr size_t m_data_size = libk::strlen(m_data);
+  LOG_INFO("New kernel end: {:#x}", KernelMemory::change_heap_end(m_data_size));
+
+  libk::memcpy(heap_start, m_data, m_data_size);
+  LOG_INFO("Written: {:$}", heap_start);
 
   //  SyscallManager::get().register_syscall(24, [](Registers& ) { LOG_INFO("Syscall 24"); });
   //

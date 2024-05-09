@@ -5,7 +5,7 @@
 class PageAlloc {
  public:
   explicit PageAlloc() = default;
-  explicit PageAlloc(size_t nb_pages, void* array);
+  explicit PageAlloc(size_t nb_pages, uintptr_t array);
 
   // Utility functions
   /** @brief Mark page as used */

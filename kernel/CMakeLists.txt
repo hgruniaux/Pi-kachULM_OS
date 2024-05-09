@@ -70,9 +70,11 @@ add_executable(kernel
 
         graphics/graphics.hpp
         graphics/graphics.cpp
-        memory/process_memory.cpp
         memory/process_memory.hpp
-        memory/memory_page_builder.hpp
+        memory/page_builder.hpp
+        memory/page_alloc_list.hpp
+        memory/page_alloc_list.cpp
+        memory/page_builder.cpp
 )
 
 target_include_directories(kernel PUBLIC .)

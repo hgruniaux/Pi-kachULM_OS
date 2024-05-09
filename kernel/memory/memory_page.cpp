@@ -2,14 +2,15 @@
 #include <libk/log.hpp>
 #include <libk/string.hpp>
 #include "boot/mmu_utils.hpp"
-#include "memory/memory_page_builder.hpp"
+#include "memory/page_builder.hpp"
 
 MemoryPage::MemoryPage(PhysicalPA pa, VirtualPA va, MemoryPageBuilder* builder)
     : _pa(pa), _kernel_va(va), _builder(builder) {
-  zero_pages(_kernel_va, 1);
+  LOG_INFO("New page ! {:#x} ->> {:#x}", pa, va);
+  zero_pages(va, 1);
 }
 
-size_t MemoryPage::write(size_t byte_offset, const void* data, size_t data_byte_length) const {
+size_t MemoryPage::write(size_t byte_offset, const void* data, size_t data_byte_length) {
   if (byte_offset >= PAGE_SIZE || _kernel_va == 0) {
     return 0;
   }
@@ -28,7 +29,7 @@ size_t MemoryPage::read(size_t byte_offset, void* data, size_t data_byte_length)
     return 0;
   }
 
-  const void* begin = (const void*)(_kernel_va + byte_offset);
+  const auto* begin = (const void*)(_kernel_va + byte_offset);
   const size_t available_to_read = PAGE_SIZE - byte_offset;
   const size_t to_read = libk::min(available_to_read, data_byte_length);
 
@@ -36,8 +37,9 @@ size_t MemoryPage::read(size_t byte_offset, void* data, size_t data_byte_length)
 
   return to_read;
 }
+
 void MemoryPage::free() {
-  _builder->unregister_page(_pa, _kernel_va);
+  _builder->unregister_page(*this);
   _pa = 0;
   _kernel_va = 0;
 }

@@ -1,6 +1,7 @@
 #include "dtb/node.hpp"
 
 #include <libk/assert.hpp>
+#include "libk/log.hpp"
 #include "utils.hpp"
 
 static constexpr size_t max_val = -1;
@@ -129,9 +130,8 @@ bool find_next_property(const DeviceTreeParser* m_p, size_t* offset) {
         return false;
       }
       default: {
-        KASSERT(false);
-        // TODO : Fix this with a message
-        // LOG_CRITICAL("Unrecognized token in Device Tree Blob at offset {} : {}.", offset, token);
+        LOG_ERROR("Unrecognized token in Device Tree Blob at offset {} : {}.", offset, token);
+        libk::panic("[DeviceTree] Unable to parse device tree.");
       }
     }
   }
@@ -207,9 +207,8 @@ bool find_next_node(const DeviceTreeParser* m_p, size_t* offset) {
         return false;
       }
       default: {
-        KASSERT(false);
-        // TODO : Fix this with a message
-        // LOG_CRITICAL("Unrecognized token in Device Tree Blob at offset {} : {}.", offset, token);
+        LOG_ERROR("Unrecognized token in Device Tree Blob at offset {} : {}.", offset, token);
+        libk::panic("[DeviceTree] Unable to parse device tree.");
       }
     }
   }

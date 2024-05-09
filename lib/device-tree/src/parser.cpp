@@ -2,6 +2,7 @@
 
 #include <libk/assert.hpp>
 #include <libk/string.hpp>
+#include "libk/log.hpp"
 #include "utils.hpp"
 
 bool DeviceTreeParser::from_memory(uintptr_t dts, DeviceTreeParser* dt_parser) {
@@ -93,9 +94,8 @@ size_t DeviceTreeParser::skip_node(size_t offset) const {
       }
 
       default: {
-        KASSERT(false);
-        // TODO : Fix this with a message
-        // LOG_CRITICAL("Unrecognized token in Device Tree Blob at offset {} : {}.", offset, token);
+        LOG_ERROR("Unrecognized token in Device Tree Blob at offset {} : {}.", offset, token);
+        libk::panic("[DeviceTree] Unable to parse device tree.");
       }
     }
   }
