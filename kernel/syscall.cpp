@@ -2,12 +2,7 @@
 #include <libk/assert.hpp>
 #include <libk/log.hpp>
 
-SyscallManager& SyscallManager::get() {
-  static SyscallManager manager;
-  return manager;
-}
-
-void SyscallManager::call_syscall(uint32_t id, Registers& registers) {
+void SyscallTable::call_syscall(uint32_t id, Registers& registers) {
   if (id >= MAX_ENTRIES || (m_entries[id].id != id)) {
     // Invalid syscall number
     LOG_WARNING("invalid syscall #{}", id);
@@ -17,11 +12,11 @@ void SyscallManager::call_syscall(uint32_t id, Registers& registers) {
 
   LOG_TRACE("syscall #{}", id);
 
-  Entry& entry = m_entries[id];
+  const Entry& entry = m_entries[id];
   entry.callback(registers);
 }
 
-bool SyscallManager::register_syscall(uint32_t id, SyscallCallback callback) {
+bool SyscallTable::register_syscall(uint32_t id, SyscallCallback callback) {
   KASSERT(id < MAX_ENTRIES);
 
   Entry& entry = m_entries[id];
@@ -36,7 +31,7 @@ bool SyscallManager::register_syscall(uint32_t id, SyscallCallback callback) {
   return true;
 }
 
-void SyscallManager::unregister_syscall(uint32_t id) {
+void SyscallTable::unregister_syscall(uint32_t id) {
   KASSERT(id < MAX_ENTRIES);
 
   Entry& entry = m_entries[id];

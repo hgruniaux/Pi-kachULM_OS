@@ -1,12 +1,13 @@
 #include "interrupts.hpp"
 #include <libk/log.hpp>
+#include "../scheduler.hpp"
 #include "syscall.hpp"
 
 #define dump_reg(reg)                           \
   {                                             \
     uint64_t tmp;                               \
     asm volatile("mrs %x0, " #reg : "=r"(tmp)); \
-    LOG_ERROR("Register " #reg ": {:#x}", tmp);  \
+    LOG_ERROR("Register " #reg ": {:#x}", tmp); \
   }
 
 ExceptionLevel get_current_exception_level() {
@@ -36,22 +37,99 @@ void jump_to_el1() {
   }
 }
 
+static bool do_syscall(Registers& registers) {
+  Task* current_task = Scheduler::get().get_current_task();
+  if (current_task == nullptr) {
+    LOG_ERROR("syscall emitted from user space without current task");
+    return true;  // Syscall "handled"
+  }
+
+  // The system call number is stored in w8 (lower 32-bits of x8).
+  const uint32_t syscall_id = registers.x8 & 0xFFFFFFFF;
+  current_task->call_syscall(syscall_id, registers);
+  return true;  // Syscall handled
+}
+
+static bool do_userspace_interrupt(Registers& registers) {
+  const uint32_t ec = (registers.esr >> 26) & 0x3F;
+
+  switch (ec) {
+      // Handle AArch64 syscall
+    case 0b010101:  // SVC instruction execution in AArch64 state.
+      return do_syscall(registers);
+    case 0b100000:
+      LOG_WARNING("Instruction Abort from user space at PC={:#x}.", registers.far);
+      break;
+    case 0b100100:
+      LOG_WARNING("Data Abort from user space at PC={:#x}.", registers.far);
+      break;
+    case 0b100010:
+      LOG_WARNING("PC alignment fault exception from user space at PC={:#x}.", registers.far);
+      break;
+    case 0b100110:
+      LOG_WARNING("SP alignment fault exception from user space at PC={:#x}.", registers.far);
+      break;
+    case 0b101100:
+      LOG_WARNING("Trapped floating-point exception from user space.");
+      break;
+    default:
+      LOG_WARNING("Exception with EC={:#b} from user space.", ec);
+      break;
+  }
+
+  return false;
+}
+
+static bool do_kernel_interrupt(Registers& registers) {
+  const uint32_t ec = (registers.esr >> 26) & 0x3F;
+
+  switch (ec) {
+    case 0b100001:
+      LOG_WARNING("Instruction Abort from kernel space at PC={:#x}.", registers.far);
+      break;
+    case 0b100101:
+      LOG_WARNING("Data Abort from kernel space at PC={:#x}.", registers.far);
+      break;
+    case 0b100010:
+      LOG_WARNING("PC alignment fault exception from kernel space at PC={:#x}.", registers.far);
+      break;
+    case 0b100110:
+      LOG_WARNING("SP alignment fault exception from kernel space at PC={:#x}.", registers.far);
+      break;
+    case 0b101100:
+      LOG_WARNING("Trapped floating-point exception from kernel space.");
+      break;
+    default:
+      LOG_WARNING("Exception with EC={:#b} from kernel space.", ec);
+      break;
+  }
+
+  return false;
+}
+
 extern "C" void exception_handler(InterruptSource source, InterruptKind kind, Registers& registers) {
   if (source == InterruptSource::LOWER_AARCH64 && kind == InterruptKind::SYNCHRONOUS) {
-    const uint32_t ec = (registers.esr >> 26) & 0x3F;
+    Task* current_task = Scheduler::get().get_current_task();
+    if (current_task != nullptr)
+      current_task->get_saved_state().regs = registers;
 
-    // Handle AArch64 syscall
-    if (ec == 0b010101) {  // SVC instruction execution in AArch64 state.
-      // The system call number is stored in w8 (lower 32-bits of x8).
-      const uint32_t syscall_id = registers.x8 & 0xFFFFFFFF;
-      SyscallManager::get().call_syscall(syscall_id, registers);
+    if (do_userspace_interrupt(registers)) {
+      current_task = Scheduler::get().get_current_task();
+      if (current_task != nullptr)
+        registers = current_task->get_saved_state().regs;
       return;
     }
   }
 
   if (source == InterruptSource::LOWER_AARCH32) {
     LOG_WARNING("interrupt/exception from userspace aarch32 code (not supported)");
+    // FIXME: Crash the userspace task.
     return;
+  }
+
+  if (source == InterruptSource::CURRENT_SP_ELX && kind == InterruptKind::SYNCHRONOUS) {
+    if (do_kernel_interrupt(registers))
+      return;
   }
 
   const char* source_name = nullptr;
@@ -70,7 +148,7 @@ extern "C" void exception_handler(InterruptSource source, InterruptKind kind, Re
       break;
   }
 
-  const char* kind_name = "";
+  const char* kind_name = nullptr;
   switch (kind) {
     case InterruptKind::SYNCHRONOUS:
       kind_name = "SYNCHRONOUS";
@@ -85,11 +163,6 @@ extern "C" void exception_handler(InterruptSource source, InterruptKind kind, Re
       kind_name = "SERROR";
       break;
   }
-
-  LOG_ERROR("");
-  LOG_ERROR("");
-  LOG_ERROR("Arrrgl");
-  LOG_ERROR("");
 
   dump_reg(ELR_EL1);
   dump_reg(ESR_EL1);

@@ -19,6 +19,8 @@ add_executable(kernel
         syscall.hpp
         syscall.cpp
 
+        task.hpp
+
         # Memory
         memory/mmu_table.hpp
         memory/mmu_table.cpp
@@ -75,6 +77,10 @@ add_executable(kernel
         memory/page_alloc_list.hpp
         memory/page_alloc_list.cpp
         memory/page_builder.cpp
+        scheduler.hpp
+        scheduler.cpp
+        task_manager.hpp
+        task_manager.cpp
 )
 
 target_include_directories(kernel PUBLIC .)

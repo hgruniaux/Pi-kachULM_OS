@@ -37,6 +37,10 @@ struct Registers {
   uint64_t x30;  // the link pointer (store the return address)
   uint64_t xzr;  // always zero
 
+  uint64_t elr;   // Exception Link Register
+  uint64_t spsr;  // Saved Program Status Register
+
+  // FIXME: These two registers should not be stored here but in a special interrupt registers struct.
   // The following two registers are only used in case of exceptions.
   // In other cases, they are set to zero.
   uint64_t esr;
@@ -45,22 +49,18 @@ struct Registers {
 
 using SyscallCallback = void (*)(Registers&);
 
-class SyscallManager {
+class SyscallTable {
  public:
-  SyscallManager(const SyscallManager&) = delete;
-  SyscallManager(SyscallManager&&) = delete;
-  SyscallManager& operator=(const SyscallManager&) = delete;
-  SyscallManager& operator=(SyscallManager&&) = delete;
+  SyscallTable() = default;
+  SyscallTable(const SyscallTable&) = delete;
+  SyscallTable(SyscallTable&&) = delete;
+  SyscallTable& operator=(const SyscallTable&) = delete;
+  SyscallTable& operator=(SyscallTable&&) = delete;
 
   /**
    * Max value (excluded) allowed for the syscall identifier.
    */
   static constexpr size_t MAX_ENTRIES = 512;
-
-  /**
-   * Returns the global syscall manager (singleton).
-   */
-  [[nodiscard]] static SyscallManager& get();
 
   void call_syscall(uint32_t id, Registers& registers);
   /**
@@ -83,13 +83,10 @@ class SyscallManager {
    */
   void unregister_syscall(uint32_t id);
 
- private:
-  SyscallManager() = default;
-
   struct Entry {
     SyscallCallback callback = nullptr;
     uint32_t id = UINT32_MAX;
   };  // struct Entry
 
   Entry m_entries[MAX_ENTRIES];
-};  // class SyscallManager
+};  // class SyscallTable

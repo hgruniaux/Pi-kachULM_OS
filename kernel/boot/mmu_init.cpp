@@ -25,7 +25,8 @@ static inline constexpr void enforce(bool res) {
 }
 
 static inline constexpr PagesAttributes kernel_code = {.sh = Shareability::InnerShareable,
-                                                       .exec = ExecutionPermission::PrivilegedExecute,
+                                                       // FIXME
+                                                       .exec = ExecutionPermission::AllExecute,
                                                        .rw = ReadWritePermission::ReadOnly,
                                                        .access = Accessibility::Privileged,
                                                        .type = MemoryType::Normal};
@@ -33,7 +34,8 @@ static inline constexpr PagesAttributes kernel_code = {.sh = Shareability::Inner
 static inline constexpr PagesAttributes rw_memory = {.sh = Shareability::InnerShareable,
                                                      .exec = ExecutionPermission::NeverExecute,
                                                      .rw = ReadWritePermission::ReadWrite,
-                                                     .access = Accessibility::Privileged,
+                                                     // FIXME
+                                                     .access = Accessibility::AllProcess,
                                                      .type = MemoryType::Normal};
 
 static inline constexpr PagesAttributes ro_memory = {.sh = Shareability::InnerShareable,

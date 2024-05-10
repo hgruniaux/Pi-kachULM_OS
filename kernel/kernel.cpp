@@ -1,12 +1,14 @@
-#include "kernel.hpp"
 #include "hardware/device.hpp"
 #include "hardware/interrupts.hpp"
+#include "hardware/timer.hpp"
 #include "hardware/uart.hpp"
+#include "memory/memory.hpp"
 
 #include <libk/log.hpp>
 #include "boot/kernel_dt.hpp"
 #include "dtb/node.hpp"
-#include "hardware/timer.hpp"
+#include "scheduler.hpp"
+#include "syscall.hpp"
 
 void print_property(const Property p) {
   if (p.is_string()) {
@@ -54,8 +56,38 @@ void dump_current_el() {
 
 extern "C" void init_interrupts_vector_table();
 
+#include "memory/mem_alloc.hpp"
+
+void user_space_init() {
+  asm volatile("mov w8, 3\n\tsvc #0");  // schedule
+}
+
+void sys_yield() {
+  asm volatile("mov w8, 3\n\tsvc #0" : : : "w8");
+}
+
+void sys_print(const char* str) {
+  asm volatile("mov w8, 1\n\tmov x0, %0\n\tsvc #0" : : "r"(str) : "w8", "x0");
+}
+
+void process1() {
+  sys_print("Foo");
+  sys_yield();
+  sys_print("Bar");
+  sys_yield();
+  libk::halt();
+}
+
+void process2() {
+  sys_print("Test 1");
+  sys_yield();
+  sys_print("Test 2");
+  sys_yield();
+  libk::halt();
+}
+
 [[noreturn]] void kmain() {
-  UART u0(UART::Id::UART0, 2000000);  // Set to a High Baud-rate, otherwise UART is THE bottleneck :/
+  UART u0(UART::Id::UART0, 2000000);  // Set to a High Baud rate, otherwise UART is THE bottleneck :/
 
   libk::register_logger(u0);
 
@@ -74,76 +106,47 @@ extern "C" void init_interrupts_vector_table();
     libk::halt();
   }
 
-  {
-    uint64_t tmp;
-    asm volatile("mov %x0, sp" : "=r"(tmp));
-    LOG_INFO("SP : {:#x}", tmp);
-  }
-
   LOG_INFO("Board model: {}", KernelDT::get_board_model());
   LOG_INFO("Board revision: {:#x}", KernelDT::get_board_revision());
   LOG_INFO("Board serial: {:#x}", KernelDT::get_board_serial());
   LOG_INFO("Temp: {} °C / {} °C", Device::get_current_temp() / 1000, Device::get_max_temp() / 1000);
   LOG_INFO("Uart address: {:#x}", KernelDT::get_device_mmio_address("uart0"));
 
-  LOG_INFO("Memory overhead: {:#x}", KernelMemory::get_memory_overhead());
+  Scheduler* scheduler = new Scheduler;
+  SyscallTable* table = new SyscallTable;
 
-  MemoryPage page;
-  LOG_INFO("Allocate Page: {}", KernelMemory::new_page(&page));
+  Task* task1 = new Task;
+  task1->m_id = 1;
+  task1->m_saved_state.regs.elr = (uint64_t)process1;
+  task1->m_syscall_table = table;
+  scheduler->add_task(task1);
 
-  const char* data = "Hello World!";
+  Task* task2 = new Task;
+  task2->m_id = 2;
+  task2->m_saved_state.regs.elr = (uint64_t)process2;
+  task2->m_syscall_table = table;
+  scheduler->add_task(task2);
 
-  LOG_INFO("Page Write: {}", page.write(4090, data, sizeof(data)));
+  table->register_syscall(1, [](Registers& regs) {
+    LOG_INFO("Print syscall");
+    // FIXME: check if msg memory is accessible by the process
+    const char* msg = (const char*)regs.x0;
+    libk::print(msg);
+    LOG_INFO("Current process {}", Scheduler::get().get_current_task()->get_id());
+  });
 
-  char buffer[1024];
-  const size_t nb_read = page.read(4090, buffer, sizeof(data));
+  table->register_syscall(2, [](Registers&) { LOG_INFO("Exit syscall"); });
 
-  LOG_INFO("Page Read: {}", nb_read);
-  LOG_INFO("Read: {:$}", libk::StringView(buffer, nb_read));
+  table->register_syscall(3, [](Registers&) {
+    if (Scheduler::get().get_current_task() != nullptr) {
+      LOG_INFO("yield from pid={}", Scheduler::get().get_current_task()->get_id());
+    }
+    Scheduler::get().schedule();
+  });
 
-  page.free();
-
-  LOG_INFO("Heap test start:");
-
-  char* heap_start = (char*)KernelMemory::get_heap_end();
-  LOG_INFO("Current kernel end: {:#x}", (uintptr_t)heap_start);
-
-  constexpr const char* m_data = "Hello Kernel Heap!";
-  constexpr size_t m_data_size = libk::strlen(m_data);
-  LOG_INFO("New kernel end: {:#x}", KernelMemory::change_heap_end(m_data_size));
-
-  libk::memcpy(heap_start, m_data, m_data_size);
-  LOG_INFO("Written: {:$}", heap_start);
-
-  //  SyscallManager::get().register_syscall(24, [](Registers& ) { LOG_INFO("Syscall 24"); });
-  //
-  //  //  Enter userspace
-  //  jump_to_el0();
-  //  asm volatile("mov w8, 24\n\tsvc #0");
-  //  libk::halt();
-
-  //  FrameBuffer& framebuffer = FrameBuffer::get();
-  //  if (!framebuffer.init(640, 480)) {
-  //    LOG_CRITICAL("failed to initialize framebuffer");
-  //  }
-  //
-  //  const uint32_t fb_width = framebuffer.get_width();
-  //  const uint32_t fb_height = framebuffer.get_height();
-  //
-  //  graphics::Painter painter;
-  //
-  //  const char* text = "Hello kernel World from Graphics!";
-  //  const PKFont font = painter.get_font();
-  //  const uint32_t text_width = font.get_horizontal_advance(text);
-  //  const uint32_t text_height = font.get_char_height();
-  //
-  //   Draw the text at the middle of screen
-  //  painter.clear(graphics::Color::WHITE);
-  //  painter.set_pen(graphics::Color::BLACK);
-  //  painter.draw_text((fb_width - text_width) / 2, (fb_height - text_height) / 2, text);
-  //
-  LOG_ERROR("END");
-  while (true) {
-    u0.write_one(u0.read_one());
-  }
+  //  Enter userspace
+  scheduler->schedule();
+  jump_to_el0(task1->get_saved_state().regs.elr);
+  LOG_CRITICAL("Not in user space");
+  libk::halt();
 }
