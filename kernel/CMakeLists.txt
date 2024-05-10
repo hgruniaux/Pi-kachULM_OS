@@ -13,13 +13,18 @@ add_executable(kernel
         boot/mmu_utils.cpp
 
         # C++ Body
-        kernel.hpp
         kernel.cpp
 
         syscall.hpp
         syscall.cpp
 
+        scheduler.hpp
+        scheduler.cpp
+
         task.hpp
+
+        task_manager.hpp
+        task_manager.cpp
 
         # Memory
         memory/mmu_table.hpp
@@ -77,10 +82,6 @@ add_executable(kernel
         memory/page_alloc_list.hpp
         memory/page_alloc_list.cpp
         memory/page_builder.cpp
-        scheduler.hpp
-        scheduler.cpp
-        task_manager.hpp
-        task_manager.cpp
 )
 
 target_include_directories(kernel PUBLIC .)
