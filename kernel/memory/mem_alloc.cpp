@@ -34,7 +34,7 @@ static void split_space(MetaPtr block, size_t size) {
 
 static MetaPtr extend_heap(MetaPtr last, size_t size, size_t alignment) {  // alignment is always at least 1
   auto* end = (MetaPtr)KernelMemory::get_heap_end();
-  const auto heap_offset = libk::div_round_up(size + META_BLOCK_SIZE + alignment, PAGESIZE);
+  const auto heap_offset = size + META_BLOCK_SIZE + alignment;
   auto* brk = (MetaPtr)KernelMemory::change_heap_end(heap_offset);
   if (brk == nullptr) {
     return nullptr;
@@ -55,28 +55,31 @@ static MetaPtr extend_heap(MetaPtr last, size_t size, size_t alignment) {  // al
 }
 
 static MetaPtr find_suitable_block(size_t memory, size_t alignment) {
-  MetaPtr base = g_malloc_meta_head;
-  MetaPtr end = (MetaPtr)KernelMemory::get_heap_end();
-  if (base != nullptr) {
-    while (base->ptr < end) {
-      const auto offset = (((((uintptr_t)(base->ptr) - 1) / alignment) + 1) * alignment) - (uintptr_t)base->ptr;
-      if (base->size >= memory + offset) {
-        base->ptr = (MetaPtr)(((((uintptr_t)base - 1) / alignment) + 1) * alignment);
-        return base;
+  MetaPtr block = g_malloc_meta_head;
+  if (block != nullptr) {
+    while (block != nullptr) {
+      const auto offset = (((((uintptr_t)(block->ptr) - 1) / alignment) + 1) * alignment) - (uintptr_t)block->ptr;
+      if (block->size >= memory + offset) {
+        block->ptr = (MetaPtr)(((((uintptr_t)(block->ptr) - 1) / alignment) + 1) * alignment);
+        return block;
       }
+      block = block->next;
     }
   }
 
-  return extend_heap(base, memory, alignment);
+  return extend_heap(block, memory, alignment);
 }
 
 static MetaPtr get_block_addr(VirtualPA addr) {
   if (addr < KernelMemory::get_heap_end()) {
     MetaPtr b = g_malloc_meta_head;
-    while (b->ptr <= (MetaPtr)addr) {
+    if (b->ptr == (MetaPtr)addr) {
+      return b;
+    }
+    while ((uintptr_t)b->ptr + (b->size) <= addr) {
       b = b->next;
     }
-    return b->previous;
+    return b;
   }
   return nullptr;
 }
@@ -101,11 +104,12 @@ static void merge_block(MetaPtr lhs, MetaPtr rhs) {
 void* kmalloc(size_t byte_count, size_t alignment) {
   if (alignment == 0)
     alignment++;
+
   if (byte_count == 0)
     byte_count++;  // ensure that we have a unique pointer address even when allocating 0 bytes
 
   MetaPtr block;
-  if (g_malloc_meta_head != nullptr) {
+  if (g_malloc_meta_head == nullptr) {
     block = extend_heap(nullptr, byte_count, alignment);
     if (block == nullptr) {
       return nullptr;
@@ -113,7 +117,7 @@ void* kmalloc(size_t byte_count, size_t alignment) {
 
     g_malloc_meta_head = block;
     block->is_free = false;
-    return block->data;
+    return block->ptr;
   }
 
   block = find_suitable_block(byte_count, alignment);
@@ -138,11 +142,11 @@ void kfree(void* ptr) {
     MetaPtr block = get_block_addr((VirtualPA)ptr);
     block->is_free = true;
 
-    if ((block->next)->is_free) {
+    if (block->next != nullptr && (block->next)->is_free) {
       merge_block(block, block->next);
     }
 
-    if ((block->previous)->is_free) {
+    if (block->previous != nullptr && (block->previous)->is_free) {
       merge_block(block->previous, block);
     }
   }
@@ -187,16 +191,3 @@ void operator delete[](void* ptr, size_t) {
 /*
         Test function
 */
-
-// void test_malloc() {
-//     VirtualPA addr_test = Malloc::malloc(64, 0);
-//     libk::print("Check 1");
-//     libk::print("L'addresse attribuée est {}", addr_test);
-//     libk::print("Les bornes du heap sont {} et {}", KernelMemory::get_heap_start(), KernelMemory::get_heap_end());
-//     VirtualPA addr2_test = Malloc::malloc(2048,64);
-//     libk::print("L'adresse 2 est {}", addr2_test);
-//     Malloc::free(addr_test);
-//     libk::print("check 2");
-//     VirtualPA addr3_test = Malloc::malloc(64, 0);
-//     libk::print("La nouvelle addresse est {}", );
-// }
