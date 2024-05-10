@@ -56,15 +56,16 @@ static MetaPtr extend_heap(MetaPtr last, size_t size, size_t alignment) {  // al
 
 static MetaPtr find_suitable_block(size_t memory, size_t alignment) {
   MetaPtr block = g_malloc_meta_head;
-  if (block != nullptr) {
-    while (block != nullptr) {
-      const auto offset = (((((uintptr_t)(block->ptr) - 1) / alignment) + 1) * alignment) - (uintptr_t)block->ptr;
-      if (block->size >= memory + offset) {
-        block->ptr = (MetaPtr)(((((uintptr_t)(block->ptr) - 1) / alignment) + 1) * alignment);
-        return block;
-      }
-      block = block->next;
+  while (true) {
+    const auto offset = (((((uintptr_t)(block->ptr) - 1) / alignment) + 1) * alignment) - (uintptr_t)block->ptr;
+    if (block->size >= memory + offset && block->is_free) {
+      block->ptr = (MetaPtr)(((((uintptr_t)(block->ptr) - 1) / alignment) + 1) * alignment);
+      return block;
     }
+
+    if (block->next == nullptr)
+      break;
+    block = block->next;
   }
 
   return extend_heap(block, memory, alignment);
@@ -76,9 +77,13 @@ static MetaPtr get_block_addr(VirtualPA addr) {
     if (b->ptr == (MetaPtr)addr) {
       return b;
     }
-    while ((uintptr_t)b->ptr + (b->size) <= addr) {
+
+    while (b != nullptr && (uintptr_t)b->ptr < addr) {
       b = b->next;
     }
+
+    if (b != nullptr && (uintptr_t)b->ptr + b->size <= addr)
+      return nullptr;
     return b;
   }
   return nullptr;
@@ -187,7 +192,3 @@ void operator delete[](void* ptr) {
 void operator delete[](void* ptr, size_t) {
   kfree(ptr);
 }
-
-/*
-        Test function
-*/
