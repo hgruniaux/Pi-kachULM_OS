@@ -44,3 +44,5 @@ _deps
 *.idb
 *.pdb
 /home_made/
+
+run.sh
