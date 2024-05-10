@@ -44,8 +44,9 @@ static MetaPtr extend_heap(MetaPtr last, size_t size, size_t alignment) {  // al
   end->is_free = true;
   end->next = nullptr;
   end->previous = last;
-  *(end->data) = (((((uintptr_t)(end->data) - 1) / alignment) * alignment) + alignment);
-  end->ptr = end->data;
+  // FIXME: Euh, sure? Verify this code.
+  // *(end->data) = (((((uintptr_t)(end->data) - 1) / alignment) * alignment) + alignment);
+  end->ptr = (void*)(((((uintptr_t)(end->data) - 1) / alignment) * alignment) + alignment);
 
   if (last != nullptr)
     last->next = end;
@@ -125,7 +126,8 @@ void* kmalloc(size_t byte_count, size_t alignment) {
     split_space(block, byte_count);
     kfree((block->next)->data);
   }
-  return block->data;
+
+  return block->ptr;
 }
 
 void kfree(void* ptr) {
