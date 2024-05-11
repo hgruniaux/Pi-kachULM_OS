@@ -1,6 +1,6 @@
 #pragma once
 
-#include "dtb/dtb.hpp"
+#include <dtb/dtb.hpp>
 
 namespace KernelDT {
 bool init(uintptr_t dtb);
@@ -19,6 +19,6 @@ bool init(uintptr_t dtb);
 [[nodiscard]] uint64_t get_board_serial();
 
 [[nodiscard]] Node get_device_node(libk::StringView device);
-[[nodiscard]] uintptr_t get_device_mmio_address(libk::StringView device);
+[[nodiscard]] uintptr_t get_device_address(libk::StringView device);
 
 };  // namespace KernelDT

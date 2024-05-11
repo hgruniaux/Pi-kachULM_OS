@@ -6,8 +6,8 @@ add_executable(kernel
         boot/startup.cpp
         boot/cxxabi.cpp
 
-        boot/kernel_dt.hpp
-        boot/kernel_dt.cpp
+        hardware/kernel_dt.hpp
+        hardware/kernel_dt.cpp
 
         boot/mmu_utils.hpp
         boot/mmu_utils.cpp
@@ -42,8 +42,6 @@ add_executable(kernel
 
         hardware/gpio.hpp
         hardware/gpio.cpp
-
-        hardware/utils.hpp
 
         hardware/miniuart.hpp
         hardware/miniuart.cpp

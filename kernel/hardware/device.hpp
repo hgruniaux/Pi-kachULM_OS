@@ -1,6 +1,7 @@
 #pragma once
 
 #include <libk/string_view.hpp>
+
 namespace Device {
 [[nodiscard]] bool init();
 
@@ -51,4 +52,23 @@ bool set_power_state(uint32_t device_id, bool on, bool wait = true);
  * @return True in case of success.
  */
 bool set_turbo(bool on);
+
+enum ClockId {
+  EMMC = 0x000000001,
+  UART = 0x000000002,
+  ARM = 0x000000003,
+  CORE = 0x000000004,
+  V3D = 0x000000005,
+  H264 = 0x000000006,
+  ISP = 0x000000007,
+  SDRAM = 0x000000008,
+  PIXEL = 0x000000009,
+  PWM = 0x00000000a,
+  HEVC = 0x00000000b,
+  EMMC2 = 0x00000000c,
+  M2MC = 0x00000000d,
+  PIXEL_BVB = 0x00000000e,
+};
+
+uint32_t get_clock_rate(ClockId id);
 };  // namespace Device

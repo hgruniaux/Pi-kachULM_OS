@@ -1,7 +1,7 @@
 #include "page_alloc_list.hpp"
-#include "boot/kernel_dt.hpp"
-#include "libk/log.hpp"
-#include "libk/utils.hpp"
+#include "hardware/kernel_dt.hpp"
+#include "boot/mmu_utils.hpp"
+#include <libk/utils.hpp>
 
 void parse_memory_reg(Property prop, PageAllocList* list) {
   size_t index = 0;

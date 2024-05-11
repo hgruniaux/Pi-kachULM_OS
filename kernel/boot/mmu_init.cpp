@@ -1,8 +1,10 @@
-#include "memory/mmu_table.hpp"
+#include <limits>
 
 #include <dtb/dtb.hpp>
 #include <libk/utils.hpp>
-#include <limits>
+
+#include "boot/mmu_utils.hpp"
+#include "memory/mmu_table.hpp"
 
 #define resolve_symbol_pa(symbol)                     \
   ({                                                  \

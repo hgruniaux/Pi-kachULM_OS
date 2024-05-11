@@ -1,4 +1,4 @@
-#include "mmu_utils.hpp"
+#include "boot/mmu_utils.hpp"
 
 // Force init_data to be in the .data segment (and not .bss)
 MMUInitData _init_data = {0x1, {}, {}, 0x2, 0x3, 0x4, 0x5};

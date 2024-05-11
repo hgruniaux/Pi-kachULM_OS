@@ -3,8 +3,8 @@
 #include <cstdint>
 
 #include <libk/assert.hpp>
-#include "../boot/mmu_utils.hpp"
-#include "libk/log.hpp"
+#include <libk/log.hpp>
+#include "memory/memory.hpp"
 
 namespace MailBox {
 /** The different supported mailbox channels by our kernel. */
@@ -14,6 +14,9 @@ enum class Channel : uint8_t {
   /** Property channel VideoCore to ARM CPU. */
   TagVCToArm = 9,
 };
+
+/** Set up the MailBox. */
+void init();
 
 /** Receives a 28-bit raw message from mailbox in the requested @a channel. */
 uint32_t receive(Channel channel);
@@ -45,7 +48,7 @@ template <class Message>
 bool send_property(Message& message) {
   static_assert(alignof(Message) >= 16, "property messages must be 16-bytes aligned");
 
-  const uint32_t addr = (uint32_t)((uintptr_t)&message >> 4);  // TODO: Convert Address Here
+  const uint32_t addr = (uint32_t)((uintptr_t)&message >> 4);
   MailBox::send(MailBox::Channel::TagArmToVC, addr);
   const uint32_t response = MailBox::receive(MailBox::Channel::TagArmToVC);
   KASSERT(response == addr);

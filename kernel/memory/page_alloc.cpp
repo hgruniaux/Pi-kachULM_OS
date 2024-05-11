@@ -1,7 +1,7 @@
 #include "page_alloc.hpp"
 #include <climits>
 #include "boot/mmu_utils.hpp"
-#include "libk/log.hpp"
+#include <libk/log.hpp>
 
 uint64_t PageAlloc::memory_needed(uintptr_t nb_pages) {
   return libk::div_round_up(nb_pages * 2, CHAR_BIT);

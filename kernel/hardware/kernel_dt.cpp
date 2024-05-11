@@ -1,12 +1,14 @@
-#include "kernel_dt.hpp"
+#include "hardware/kernel_dt.hpp"
+
 #include <libk/log.hpp>
-#include "mmu_utils.hpp"
+#include "boot/mmu_utils.hpp"
 
 DeviceTree _dt;
 libk::StringView _board_model = "";
 uint32_t _board_revision = 0;
 uint64_t _board_serial = 0;
 Node _alias;
+Property _soc_ranges;
 
 bool KernelDT::init(uintptr_t dtb) {
   _dt = DeviceTree(dtb);
@@ -52,6 +54,11 @@ bool KernelDT::init(uintptr_t dtb) {
 
   // Fill _alias
   if (!_dt.find_node("/aliases", &_alias)) {
+    return false;
+  }
+
+  // Fill _soc_ranges
+  if (!KernelDT::find_property("/soc/ranges", &_soc_ranges)) {
     return false;
   }
 
@@ -122,7 +129,7 @@ Node KernelDT::get_device_node(libk::StringView device) {
   return device_node;
 }
 
-uintptr_t KernelDT::get_device_mmio_address(libk::StringView device) {
+uintptr_t KernelDT::get_device_address(libk::StringView device) {
   Node dev_node = get_device_node(device);
 
   Property prop;
@@ -132,11 +139,36 @@ uintptr_t KernelDT::get_device_mmio_address(libk::StringView device) {
   }
 
   size_t index = 0;
-  uintptr_t address = 0;
+  uintptr_t dev_soc_addr = 0;
 
-  if (!prop.get_variable_int(&index, &address, _mem_prop->is_soc_mem_address_u64)) {
+  if (!prop.get_variable_int(&index, &dev_soc_addr, _mem_prop->is_soc_mem_address_u64)) {
     libk::panic("[DeviceTree] Unable to parse device address.");
   }
 
-  return address;
+  index = 0;
+  size_t offset = 0;
+  while (index < _soc_ranges.length) {
+    uint64_t soc_start = 0;
+    uint64_t chunk_size = 0;
+
+    if (!_soc_ranges.get_variable_int(&index, &soc_start, _mem_prop->is_soc_mem_address_u64)) {
+      libk::panic("Unable to parse '/soc/ranges'.");
+    }
+    if (!_soc_ranges.get_variable_int(&index, nullptr, _mem_prop->is_arm_mem_address_u64)) {
+      libk::panic("Unable to parse '/soc/ranges'.");
+    }
+    if (!_soc_ranges.get_variable_int(&index, &chunk_size, _mem_prop->is_soc_mem_size_u64)) {
+      libk::panic("Unable to parse '/soc/ranges'.");
+    }
+
+    if (soc_start <= dev_soc_addr && dev_soc_addr < soc_start + chunk_size) {
+      const size_t dev_offset = dev_soc_addr - soc_start;
+      return DEVICE_MEMORY + offset + dev_offset;
+    }
+
+    offset += chunk_size;
+  }
+
+  LOG_ERROR("Unable to find corresponding virtual address of {}.", device);
+  libk::panic("Unable to find virtual address.");
 }

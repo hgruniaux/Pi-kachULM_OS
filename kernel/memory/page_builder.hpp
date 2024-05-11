@@ -2,8 +2,9 @@
 
 #include <cstddef>
 #include <cstdint>
-#include "memory.hpp"
-#include "page_alloc_list.hpp"
+#include "memory/memory.hpp"
+#include "memory/memory_page.hpp"
+#include "memory/page_alloc_list.hpp"
 
 class MemoryPageBuilder {
  public:
@@ -18,9 +19,11 @@ class MemoryPageBuilder {
   /* Kernel Heap */
   VirtualPA change_heap_end(long byte_offset);
 
-  VirtualPA get_heap_end() const { return HEAP_MEMORY + _heap_size; }
+  VirtualPA get_heap_end() const;
 
-  size_t get_heap_size() const { return _heap_size; }
+  size_t get_heap_size() const;
+
+  static PhysicalAddress mmu_resolve_va(VirtualAddress va);
 
  private:
   size_t _custom_index = 0;
@@ -28,6 +31,4 @@ class MemoryPageBuilder {
 
   PageAllocList _alloc;
   MMUTable* _tbl = nullptr;
-
-  static PhysicalPA mmu_resolve_va(VirtualPA va);
 };

@@ -1,5 +1,6 @@
 #include "memory/page_builder.hpp"
-#include "libk/log.hpp"
+#include <libk/log.hpp>
+#include "boot/mmu_utils.hpp"
 
 static inline constexpr PagesAttributes kernel_rw_memory = {.sh = Shareability::InnerShareable,
                                                             .exec = ExecutionPermission::NeverExecute,
@@ -75,7 +76,7 @@ VirtualPA MemoryPageBuilder::change_heap_end(long byte_offset) {
   return get_heap_end();
 }
 
-PhysicalPA MemoryPageBuilder::mmu_resolve_va(VirtualPA va) {
+PhysicalPA MemoryPageBuilder::mmu_resolve_va(VirtualAddress va) {
   asm volatile("at s1e1w, %x0" ::"r"(va));
 
   uint64_t par_el1;
@@ -86,4 +87,12 @@ PhysicalPA MemoryPageBuilder::mmu_resolve_va(VirtualPA va) {
   }
 
   return par_el1 & libk::mask_bits(12, 47);
+}
+
+VirtualPA MemoryPageBuilder::get_heap_end() const {
+  return HEAP_MEMORY + get_heap_size();
+}
+
+size_t MemoryPageBuilder::get_heap_size() const {
+  return _heap_size;
 }

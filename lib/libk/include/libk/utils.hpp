@@ -95,6 +95,11 @@ template <unsigned_or_pointer T>
   return (T)((uintptr_t)value & ~(mask));
 }
 
+/** @brief Wait the specified amount of cycles. */
+static inline void wait_cycles(uint64_t count) {
+  asm volatile("__delay_%=: subs %[count], %[count], #1; bne __delay_%=\n" : "=r"(count) : [count] "0"(count) : "cc");
+}
+
 /** @brief Reverses the bytes in @a value. */
 [[gnu::always_inline]] static inline uint8_t bswap(uint8_t value) {
   // No bytes to reverse, but provided for the sake of completeness.

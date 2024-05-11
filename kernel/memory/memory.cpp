@@ -1,7 +1,7 @@
 #include "memory.hpp"
 #include <libk/log.hpp>
 
-#include "boot/kernel_dt.hpp"
+#include "boot/mmu_utils.hpp"
 #include "memory/page_alloc_list.hpp"
 #include "memory/page_builder.hpp"
 
@@ -77,6 +77,14 @@ size_t KernelMemory::get_memory_overhead() {
   return _lin_alloc->nb_allocated * PAGE_SIZE;
 }
 
-bool KernelMemory::new_page(MemoryPage* page) {
-  return _p_builder.create_custom_page(page);
+PhysicalAddress KernelMemory::get_physical_vc_address(VirtualAddress vc_addr) {
+  return vc_addr - VC_MEMORY;
+}
+
+VirtualAddress KernelMemory::get_virtual_vc_address(PhysicalAddress vc_addr) {
+  return vc_addr + VC_MEMORY;
+}
+
+PhysicalAddress KernelMemory::resolve_physical_address(VirtualAddress va) {
+  return MemoryPageBuilder::mmu_resolve_va(va);
 }

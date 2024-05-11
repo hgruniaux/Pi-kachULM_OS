@@ -1,4 +1,5 @@
-#include "interrupts.hpp"
+#include "hardware/interrupts.hpp"
+
 #include <libk/log.hpp>
 #include "syscall.hpp"
 
@@ -6,7 +7,7 @@
   {                                             \
     uint64_t tmp;                               \
     asm volatile("mrs %x0, " #reg : "=r"(tmp)); \
-    LOG_ERROR("Register " #reg ": {:#x}", tmp);  \
+    LOG_ERROR("Register " #reg ": {:#x}", tmp); \
   }
 
 ExceptionLevel get_current_exception_level() {

@@ -25,9 +25,7 @@
 #ifndef __ASSEMBLER__
 #include <cstddef>
 #include <cstdint>
-
-using PhysicalPA = uintptr_t;
-using VirtualPA = uintptr_t;
+#include "memory/memory.hpp"
 
 struct LinearPageAllocator {
   PhysicalPA first_page;
