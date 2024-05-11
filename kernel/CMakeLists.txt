@@ -6,14 +6,10 @@ add_executable(kernel
         boot/startup.cpp
         boot/cxxabi.cpp
 
-        hardware/kernel_dt.hpp
-        hardware/kernel_dt.cpp
-
         boot/mmu_utils.hpp
         boot/mmu_utils.cpp
 
         # C++ Body
-        kernel.hpp
         kernel.cpp
 
         syscall.hpp
@@ -32,13 +28,19 @@ add_executable(kernel
         memory/mem_alloc.hpp
         memory/mem_alloc.cpp
 
-        memory/memory_page.hpp
-        memory/memory_page.cpp
+        memory/page_alloc_list.hpp
+        memory/page_alloc_list.cpp
+
+        memory/page_builder.hpp
+        memory/page_builder.cpp
 
         # Hardware
         hardware/interrupts.hpp
         hardware/interrupts.cpp
         hardware/interrupts.S
+
+        hardware/kernel_dt.hpp
+        hardware/kernel_dt.cpp
 
         hardware/gpio.hpp
         hardware/gpio.cpp
@@ -68,11 +70,6 @@ add_executable(kernel
 
         graphics/graphics.hpp
         graphics/graphics.cpp
-        memory/process_memory.hpp
-        memory/page_builder.hpp
-        memory/page_alloc_list.hpp
-        memory/page_alloc_list.cpp
-        memory/page_builder.cpp
 )
 
 target_include_directories(kernel PUBLIC .)

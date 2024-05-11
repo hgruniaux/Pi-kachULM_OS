@@ -10,35 +10,6 @@ static inline constexpr PagesAttributes kernel_rw_memory = {.sh = Shareability::
 
 MemoryPageBuilder::MemoryPageBuilder(PageAllocList page_alloc, MMUTable* table) : _alloc(page_alloc), _tbl(table) {}
 
-bool MemoryPageBuilder::create_custom_page(MemoryPage* page) {
-  PhysicalPA new_page = -1;
-
-  if (!_alloc.fresh_page(&new_page)) {
-    return false;
-  }
-
-  VirtualPA kernel_address = CUSTOM_PAGES_MEMORY + _custom_index++ * PAGE_SIZE * 2;
-
-  if (!map_range(_tbl, kernel_address, kernel_address, new_page, kernel_rw_memory)) {
-    return false;
-  }
-
-  if (page != nullptr) {
-    *page = MemoryPage(new_page, kernel_address, this);
-  }
-
-  return true;
-}
-
-void MemoryPageBuilder::unregister_page(MemoryPage page) {
-  if (!unmap_range(_tbl, page._kernel_va, page._kernel_va)) {
-    LOG_ERROR("[KernelMemory] Unable to unmap custom page at address {:#x}", page._kernel_va);
-    libk::panic("[KernelMemory] Error freeing page.");
-  }
-
-  _alloc.free_page(page._pa);
-}
-
 VirtualPA MemoryPageBuilder::change_heap_end(long byte_offset) {
   const uintptr_t target_heap_size = get_heap_end() + byte_offset;
 
