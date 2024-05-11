@@ -28,6 +28,27 @@ static inline constexpr T clamp(T val, T min_val, T max_val) {
   return min(max_val, max(min_val, val));
 }
 
+/** Returns a mask that covers bit from @a start to @a end *INCLUDED* */
+static inline constexpr uint64_t mask_bits(size_t start, size_t end) {
+  if (end < start) {
+    return 0;
+  } else {
+    return ((((uint64_t)1) << (end - start + 1)) - 1) << start;
+  }
+}
+
+/** Return a / b rounded up */
+template <class U, class V>
+static inline constexpr U div_round_up(U a, V b) {
+  return (a + b - 1) / b;
+}
+
+/** Return a / b rounded down */
+template <class U, class V>
+static inline constexpr U div_round_down(U a, V b) {
+  return a / b;
+}
+
 /** @brief The NOP instruction. */
 [[gnu::always_inline]] static inline void nop() {
   asm volatile("nop");
@@ -56,16 +77,27 @@ template <std::unsigned_integral T>
 template <class T>
 concept unsigned_or_pointer = std::is_unsigned_v<T> || std::is_pointer_v<T>;
 
-/** @brief Aligns @a value to the requested @a alignment (is a power of two). */
+/** @brief Aligns @a value to the requested @a alignment (is a power of two) by adding. */
 template <unsigned_or_pointer T>
-[[nodiscard]] static inline constexpr T align(T value, size_t alignment) {
+[[nodiscard]] static inline constexpr T align_to_next(T value, size_t alignment) {
   KASSERT(is_power_of_two(alignment));
-  const auto addr = (uintptr_t)value;
-  const uintptr_t new_addr = addr ^ (addr & (alignment - 1));
-  if (new_addr < addr) {
-    return (T)(new_addr + alignment);
-  }
-  return (T)new_addr;
+  // Expression used by LD for ALIGN(xxx)
+  const size_t mask = alignment - 1;
+  return (T)(((uintptr_t)value + mask) & ~(mask));
+}
+
+/** @brief Aligns @a value to the requested @a alignment (is a power of two) by subtracting. */
+template <unsigned_or_pointer T>
+[[nodiscard]] static inline constexpr T align_to_previous(T value, size_t alignment) {
+  KASSERT(is_power_of_two(alignment));
+  // Expression used by LD for ALIGN(xxx)
+  const size_t mask = alignment - 1;
+  return (T)((uintptr_t)value & ~(mask));
+}
+
+/** @brief Wait the specified amount of cycles. */
+static inline void wait_cycles(uint64_t count) {
+  asm volatile("__delay_%=: subs %[count], %[count], #1; bne __delay_%=\n" : "=r"(count) : [count] "0"(count) : "cc");
 }
 
 /** @brief Reverses the bytes in @a value. */

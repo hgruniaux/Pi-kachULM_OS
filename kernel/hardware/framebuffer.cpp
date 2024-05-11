@@ -1,7 +1,8 @@
-#include "framebuffer.hpp"
+#include "hardware/framebuffer.hpp"
+
 #include <libk/assert.hpp>
 #include <libk/log.hpp>
-#include "mailbox.hpp"
+#include "hardware/mailbox.hpp"
 
 FrameBuffer& FrameBuffer::get() {
   static FrameBuffer framebuffer;

@@ -1,19 +1,19 @@
-#include "mailbox.hpp"
-#include "mmio.hpp"
+#include "hardware/mailbox.hpp"
+
+#include <libk/utils.hpp>
+#include "hardware/kernel_dt.hpp"
 
 namespace MailBox {
-/** Base address for mailbox MMIO registers. */
-static constexpr uint32_t BASE = 0xB880;
 
 /** Base address for mailbox 0 registers. */
-static constexpr uint32_t BASE0 = BASE + 0x00;
+static constexpr uint32_t BASE0 = 0x00;
 /** The read/write register address for the mailbox 0. */
 static constexpr uint32_t MBOX0_RW = BASE0 + 0x00;
 /** The status register address for the mailbox 0. */
 static constexpr uint32_t MBOX0_STATUS = BASE0 + 0x18;
 
 /** Base address for mailbox 1 registers. */
-static constexpr uint32_t BASE1 = BASE + 0x20;
+static constexpr uint32_t BASE1 = 0x20;
 /** The read/write register address for the mailbox 0. */
 static constexpr uint32_t MBOX1_RW = BASE1 + 0x00;
 /** The status register address for the mailbox 0. */
@@ -34,6 +34,12 @@ static constexpr uint32_t CHANNEL_MASK = (1 << CHANNEL_WIDTH) - 1;
   return (status & STATUS_FULL_MASK) != 0;
 }
 
+uintptr_t mailbox_base;
+
+void init() {
+  mailbox_base = KernelDT::get_device_address("mailbox");
+}
+
 uint32_t receive(Channel channel) {
   uint32_t status;
   uint32_t response;
@@ -42,11 +48,11 @@ uint32_t receive(Channel channel) {
   do {
     // Wait until there is a mail to receive.
     do {
-      status = MMIO::read(MBOX0_STATUS);
+      status = libk::read32(mailbox_base + MBOX0_STATUS);
     } while (is_status_empty(status));
 
     // Get the message.
-    response = MMIO::read(MBOX0_RW);
+    response = libk::read32(mailbox_base + MBOX0_RW);
   } while (static_cast<Channel>(response & CHANNEL_MASK) != channel);
 
   return response >> CHANNEL_WIDTH;
@@ -57,12 +63,12 @@ void send(Channel channel, uint32_t message) {
 
   // Wait until we can send a mail.
   do {
-    status = MMIO::read(MBOX0_STATUS);
+    status = libk::read32(mailbox_base + MBOX0_STATUS);
   } while (is_status_full(status));
 
   // Send the message. The protocol requires that we read from mailbox0
   // but that we write to mailbox1.
   message = (static_cast<uint32_t>(channel) & CHANNEL_MASK) | (message << CHANNEL_WIDTH);
-  MMIO::write(MBOX1_RW, message);
+  libk::write32(mailbox_base + MBOX1_RW, message);
 }
 }  // namespace MailBox

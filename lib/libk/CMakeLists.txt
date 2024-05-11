@@ -7,19 +7,23 @@ add_library(libk STATIC
         src/string.cpp
         src/log.cpp
         src/assert.cpp
+        src/bit_array.cpp
+        src/linear_allocator.cpp
 
         include/libk/assert.hpp
         include/libk/format.hpp
         include/libk/spinlock.hpp
         include/libk/string.hpp
         include/libk/utils.hpp
+        include/libk/bit_array.hpp
+        include/libk/option.hpp
+        include/libk/string_view.hpp
         include/libk/log.hpp
+        include/libk/linear_allocator.hpp
         include/libk/hash.hpp
 )
 
 target_include_directories(libk PUBLIC include/)
-
-#target_link_libraries(libk PRIVATE ryu-algorithm)
 
 # Use re2c to generate the format lexer. This is only required if
 # the lexer specification (in format.re2c) change. So, it is a soft
