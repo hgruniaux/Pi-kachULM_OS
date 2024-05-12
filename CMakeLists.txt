@@ -47,5 +47,9 @@ if (${ENABLE_CHECKS})
     endif ()
 endif ()
 
-add_subdirectory(lib)
+add_compile_definitions(-DBUILD_TESTS)
+add_compile_definitions(-DTARGET_QEMU)
+
+add_subdirectory(lib/libk)
+add_subdirectory(lib/device-tree)
 add_subdirectory(kernel)

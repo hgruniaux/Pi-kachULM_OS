@@ -1,5 +1,3 @@
-#add_subdirectory(src/ryu)
-
 add_library(libk STATIC
         src/format.cpp
         src/format_impl.cpp
@@ -7,6 +5,7 @@ add_library(libk STATIC
         src/string.cpp
         src/log.cpp
         src/assert.cpp
+        src/test.cpp
         src/bit_array.cpp
         src/linear_allocator.cpp
 
@@ -21,7 +20,9 @@ add_library(libk STATIC
         include/libk/log.hpp
         include/libk/linear_allocator.hpp
         include/libk/hash.hpp
+        include/libk/test.hpp
         include/libk/linked_list.hpp
+        include/libk/qemu.hpp
 )
 
 target_include_directories(libk PUBLIC include/)

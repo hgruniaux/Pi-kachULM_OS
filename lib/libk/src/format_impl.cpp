@@ -4,8 +4,6 @@
 #include <libk/string.hpp>
 #include <libk/utils.hpp>
 
-#include "ryu/ryu.h"
-
 namespace libk::detail {
 static constexpr const char LOWER_DIGIT_ALPHABET[] = "0123456789abcdefghijklmnopqrstuvwxyz";
 static constexpr const char UPPER_DIGIT_ALPHABET[] = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -206,101 +204,7 @@ static char* format_bool_to(char* out, bool value, const char* spec) {
   strcpy(out, "false");
   return out + 5;
 }
-/* // FIXME : Activate when floating point is activated
 
-enum class FloatFormat : uint8_t { GENERAL, FIXED, EXP };
-
-struct FloatSpec {
-  FloatFormat format = FloatFormat::GENERAL;
-  SignFormat sign_format = SignFormat::ONLY_MINUS;
-  uint32_t precision = 3;
-};  // struct FloatSpec
-
-static FloatSpec parse_float_spec(const char* spec) {
-  FloatSpec parsed_spec = {};
-  if (spec == nullptr)
-    return parsed_spec;
-
-  spec = parse_sign_format(spec, parsed_spec.sign_format);
-
-  if (*spec == '#') {
-    // Ignore the special form. In the fmt library, the alternate form causes
-    // the result of the conversion to always contain a decimal-point character,
-    // even if no digits follow it.
-    ++spec;
-  }
-
-  // Parse precision specifier
-  if (*spec == '.') {
-    ++spec;
-
-    uint32_t precision = 0;
-    while (*spec >= '0' && *spec <= '9') {
-      precision *= 10;
-      precision += *spec - '0';
-      spec++;
-    }
-
-    if (precision == 0)
-      precision = 1;
-
-    parsed_spec.precision = precision;
-  }
-
-  switch (*spec++) {
-    case 'f':
-    case 'F':
-      parsed_spec.format = FloatFormat::FIXED;
-      break;
-    case 'e':
-    case 'E':
-      parsed_spec.format = FloatFormat::EXP;
-      break;
-    case 'g':
-    case 'G':
-      parsed_spec.format = FloatFormat::GENERAL;
-      break;
-    default:
-      --spec;
-      break;
-  }
-
-  KASSERT(*spec == '}' && "unknown floating-point format specifier");
-  return parsed_spec;
-}
-
-static char* format_float_to(char* out, float value, const char* spec) {
-  const FloatSpec parsed_spec = parse_float_spec(spec);
-  out = output_sign(out, value > 0.f, parsed_spec.sign_format);
-  value = (value > 0.f) ? value : -value;
-  switch (parsed_spec.format) {
-    case FloatFormat::GENERAL:
-      return out + f2s_buffered_n(value, out);
-    case FloatFormat::FIXED:
-      return out + d2fixed_buffered_n(value, parsed_spec.precision, out);
-    case FloatFormat::EXP:
-      return out + d2exp_buffered_n(value, parsed_spec.precision, out);
-  }
-
-  KASSERT(false && "unsupported floating point format type");
-}
-
-static char* format_double_to(char* out, double value, const char* spec) {
-  const FloatSpec parsed_spec = parse_float_spec(spec);
-  out = output_sign(out, value > 0., parsed_spec.sign_format);
-  value = (value > 0.) ? value : -value;
-  switch (parsed_spec.format) {
-    case FloatFormat::GENERAL:
-      return out + d2s_buffered_n(value, out);
-    case FloatFormat::FIXED:
-      return out + d2fixed_buffered_n(value, parsed_spec.precision, out);
-    case FloatFormat::EXP:
-      return out + d2exp_buffered_n(value, parsed_spec.precision, out);
-  }
-
-  KASSERT(false && "unsupported floating point format type");
-}
-*/
 struct StringSpec {
   bool debug = false;
 };  // struct StringSpec
@@ -402,12 +306,6 @@ char* format_argument_to(char* out, const Argument& argument, const char* spec) 
       return format_int_to(out, argument.data.intmax_value, spec);
     case Argument::Type::UINTMAX:
       return format_uint_to(out, argument.data.uintmax_value, spec);
-    /* FIXME : Activate when floating point is activated
-    case Argument::Type::FLOAT:
-      return format_float_to(out, argument.data.float_value, spec);
-    case Argument::Type::DOUBLE:
-      return format_double_to(out, argument.data.double_value, spec);
-      */
     case Argument::Type::POINTER:
       return format_pointer_to(out, argument.data.pointer_value, spec);
     case Argument::Type::STRING:
@@ -415,6 +313,5 @@ char* format_argument_to(char* out, const Argument& argument, const char* spec) 
   }
 
   KASSERT(false && "argument kind not implemented");
-  return nullptr;
 }
 }  // namespace libk::detail

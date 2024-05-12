@@ -4,6 +4,7 @@
 
 #include "hardware/kernel_dt.hpp"
 #include "hardware/timer.hpp"
+#include "libk/test.hpp"
 #include "memory/memory.hpp"
 
 [[noreturn]] void kmain() {
@@ -13,6 +14,9 @@
   libk::set_log_timer([]() { return GenericTimer::get_elapsed_time_in_ms(); });
 
   LOG_INFO("Kernel built at " __TIME__ " on " __DATE__);
+
+  ktest::run_tests();
+
   LOG_INFO("Board model: {}", KernelDT::get_board_model());
   LOG_INFO("Board revision: {:#x}", KernelDT::get_board_revision());
   LOG_INFO("Board serial: {:#x}", KernelDT::get_board_serial());
