@@ -3,12 +3,12 @@
 #include <libk/log.hpp>
 #include "boot/mmu_utils.hpp"
 
-DeviceTree _dt;
-libk::StringView _board_model = "";
-uint32_t _board_revision = 0;
-uint64_t _board_serial = 0;
-Node _alias;
-Property _soc_ranges;
+static DeviceTree _dt;
+static libk::StringView _board_model = "";
+static uint32_t _board_revision = 0;
+static uint64_t _board_serial = 0;
+static Node _alias;
+static Property _soc_ranges;
 
 bool KernelDT::init(uintptr_t dtb) {
   _dt = DeviceTree(dtb);

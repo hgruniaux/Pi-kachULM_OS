@@ -270,6 +270,7 @@ void inline setup_sctlr() {
   asm volatile("msr sctlr_el1, %0" : : "r"(r));
   asm volatile("isb");
 }
+
 extern "C" VirtualPA mmu_resolve_pa(void*, PhysicalPA page_address) {
   return page_address;  // 1:1 mapping here so PhysicalPA == VirtualPA
 }

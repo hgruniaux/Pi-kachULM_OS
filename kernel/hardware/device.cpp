@@ -1,7 +1,7 @@
 #include "hardware/device.hpp"
 #include "hardware/mailbox.hpp"
 
-uint32_t _max_temp = 0;
+static uint32_t _max_temp = 0;
 
 bool Device::init() {
   struct GetMaxTemperatureTagBuffer {

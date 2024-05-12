@@ -9,7 +9,8 @@ TaskManager::TaskManager() {
   KASSERT(g_instance == nullptr && "multiple task manager created");
   g_instance = this;
 
-  m_scheduler = new Scheduler();
+  // FIXME Here :
+  //  m_scheduler = new Scheduler();
 }
 
 Task* TaskManager::create_task() {
