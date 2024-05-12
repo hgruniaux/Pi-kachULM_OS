@@ -1,4 +1,4 @@
-#include "syscall.h"
+#include <syscall/syscall.h>
 
 // Defined in syscall.S.
 sys_error_t __syscall0(uint32_t __id);
@@ -28,4 +28,8 @@ sys_error_t sys_spawn(void (*__f)()) {
 
 sys_error_t sys_yield() {
   return __syscall0(SYS_YIELD);
+}
+
+sys_error_t sys_debug() {
+  return __syscall0(SYS_DEBUG);
 }

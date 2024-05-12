@@ -9,27 +9,53 @@ TaskManager::TaskManager() {
   KASSERT(g_instance == nullptr && "multiple task manager created");
   g_instance = this;
 
-  m_scheduler = new Scheduler();
+  m_scheduler = libk::make_scoped<Scheduler>();
 }
 
-Task* TaskManager::create_task() {
+Task* TaskManager::create_task(const elf::Header* program_image) {
   Task* task = new Task;
   if (task == nullptr)
     return nullptr;
 
-  libk::bzero(&task->m_saved_state, sizeof(task->m_saved_state));
+  // Create a process virtual memory view and allocate its stack.
+  auto memory = libk::make_shared<ProcessMemory>();
+  task->m_saved_state.memory = memory;
+  task->m_saved_state.sp = (void*)task->m_saved_state.memory->get_stack_top();
 
-  // Allocate a new stack of the task.
-  constexpr size_t STACK_SIZE = 4096 * 2;
-  task->m_stack = kmalloc(STACK_SIZE, 16);
-  task->m_saved_state.sp = (void*)((uintptr_t)task->m_stack + STACK_SIZE);
-  if (task->m_stack == nullptr) {
-    // Failed to allocate a new stack, something bad is happening...
-    delete task;
-    return nullptr;
+  // Load the program segments in memory.
+  for (uint64_t i = 0; i < program_image->program_header_entry_count; ++i) {
+    const elf::ProgramHeader* segment = elf::get_program_header(program_image, i);
+    if (segment == nullptr)
+      return nullptr;
+
+    if (segment->is_load()) {
+      // FIXME: use page size constant
+      constexpr size_t PAGE_SIZE = 4096;
+
+      // va_start is required to be on a page boundary (aligned to page size).
+      const auto va_start = libk::align_to_previous(segment->virtual_addr, PAGE_SIZE);
+      const auto nb_pages = libk::div_round_up((segment->virtual_addr - va_start) + segment->mem_size, PAGE_SIZE);
+
+      // The mapped segment attributes.
+      const bool is_executable = (segment->flags & elf::ProgramFlag::EXECUTABLE) != 0;
+      const bool is_writable = (segment->flags & elf::ProgramFlag::WRITABLE) != 0;
+
+      MemoryChunk& chunk = task->m_mapped_chunks.emplace_back(nb_pages);
+      const bool is_mapped = memory->map_chunk(chunk, va_start, !is_writable, is_executable);
+      if (!is_mapped)
+        return nullptr;
+
+      if (segment->file_size > 0) {
+        const char* segment_data = (const char*)(program_image) + segment->offset;
+        const size_t written_bytes = chunk.write(0, segment_data, segment->file_size);
+        KASSERT(written_bytes == segment->file_size);
+      }
+    }
   }
 
-  libk::bzero(task->m_stack, STACK_SIZE);
+  // Set the entry point of the process.
+  const auto entry_addr = program_image->entry_addr;
+  task->m_saved_state.regs.elr = entry_addr;
 
   task->m_id = m_next_available_pid++;
   // FIXME: register id mapping
@@ -73,7 +99,6 @@ void TaskManager::kill_task(Task* task, int exit_code) {
   task->m_state = Task::State::UNINTERRUPTIBLE;
   m_scheduler->remove_task(task);
 
-  kfree(task->m_stack);
   delete task;
 }
 

@@ -26,6 +26,15 @@ class LinkedList {
     node->next = new_node;
   }
 
+  void insert_back(Node* node) {
+    if (m_tail == nullptr) {
+      m_head = node;
+      m_tail = node;
+    } else {
+      insert_after(m_tail, node);
+    }
+  }
+
   void insert_before(Node* node, Node* new_node) {
     new_node->next = node;
 
@@ -37,6 +46,15 @@ class LinkedList {
     }
 
     node->previous = new_node;
+  }
+
+  void insert_front(Node* node) {
+    if (m_tail == nullptr) {
+      m_head = node;
+      m_tail = node;
+    } else {
+      insert_before(m_head, node);
+    }
   }
 
   void remove_node(Node* node) {
@@ -78,23 +96,21 @@ class LinkedList {
   void push_front(const T& data) {
     Node* node = new Node{data};
     KASSERT(node != nullptr);
-    if (m_tail == nullptr) {
-      m_head = node;
-      m_tail = node;
-    } else {
-      insert_before(m_head, node);
-    }
+    insert_front(node);
   }
 
   void push_back(const T& data) {
     Node* node = new Node{data};
     KASSERT(node != nullptr);
-    if (m_tail == nullptr) {
-      m_head = node;
-      m_tail = node;
-    } else {
-      insert_after(m_tail, node);
-    }
+    insert_back(node);
+  }
+
+  template <class... Args>
+  T& emplace_back(Args&&... args) {
+    Node* node = new Node{T(std::forward<Args>(args)...)};
+    KASSERT(node != nullptr);
+    insert_back(node);
+    return node->data;
   }
 
   class Iterator {

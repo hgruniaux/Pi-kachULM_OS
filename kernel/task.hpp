@@ -1,11 +1,17 @@
 #pragma once
 
 #include <cstdint>
+#include <libk/memory.hpp>
+#include "memory/process_memory.hpp"
 #include "syscall.hpp"
 
 struct TaskSavedState {
   Registers regs;
+  libk::SharedPointer<ProcessMemory> memory;
   void* sp;  // stack pointer
+
+  void save(const Registers& current_regs);
+  void restore(Registers& current_regs);
 };  // struct TaskSavedState
 
 /**
@@ -66,5 +72,5 @@ class Task {
   TaskSavedState m_saved_state;
   const char* m_name = nullptr;
   SyscallTable* m_syscall_table = nullptr;
-  void* m_stack = nullptr;
+  libk::LinkedList<MemoryChunk> m_mapped_chunks;
 };  // class Task

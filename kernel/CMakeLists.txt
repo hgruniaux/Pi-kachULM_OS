@@ -86,14 +86,24 @@ add_executable(kernel
 
         syscall.hpp
         syscall.cpp
-        syscall.c
-        syscall.S
+        task.cpp
+
+        ${CMAKE_CURRENT_BINARY_DIR}/init_elf.c
 )
 
 target_include_directories(kernel PUBLIC .)
 set_target_properties(kernel PROPERTIES OUTPUT_NAME "kernel8.elf")
 
-target_link_libraries(kernel PRIVATE libk device-tree)
+target_link_libraries(kernel PRIVATE libk libsyscall libelf device-tree)
+
+add_executable(init init.c)
+target_link_libraries(init PRIVATE libsyscall)
+target_compile_options(init PRIVATE -no-pie)
+add_custom_command(
+        OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/init_elf.c
+        COMMAND xxd -i init > ${CMAKE_CURRENT_BINARY_DIR}/init_elf.c
+        DEPENDS init
+        COMMENT "Embedding ELF init in kernel")
 
 # Use the linker script.
 set(LINKER_SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/boot/link.ld)

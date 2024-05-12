@@ -57,7 +57,13 @@ const ProgramHeader* get_program_header(const Header* header, uint64_t idx) {
     return nullptr;
 
   const ProgramHeader* program_headers = (const ProgramHeader*)((const uint8_t*)header + header->program_header_offset);
-  return &program_headers[idx];
+  const ProgramHeader* program_header = &program_headers[idx];
+
+  // Some sanity checks
+  if (program_header->mem_size < program_header->file_size)
+    return nullptr;
+
+  return program_header;
 }
 
 const SectionHeader* get_section_header(const Header* header, uint64_t idx) {

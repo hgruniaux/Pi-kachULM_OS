@@ -2,6 +2,7 @@
 
 #include <atomic>
 #include <cstddef>
+#include <utility>
 
 #include "assert.hpp"
 
@@ -48,6 +49,12 @@ class ScopedPointer {
  private:
   T* m_data;
 };  // class ScopedPointer
+
+template <class T, class... Args>
+[[nodiscard]] ScopedPointer<T> make_scoped(Args&&... args) {
+  T* ptr = new T(std::forward<Args>(args)...);
+  return ScopedPointer<T>(ptr);
+}
 
 template <class T>
 class SharedPointer {
@@ -116,4 +123,10 @@ class SharedPointer {
 
   Block* m_block;
 };  // class SharedPointer
+
+template <class T, class... Args>
+[[nodiscard]] SharedPointer<T> make_shared(Args&&... args) {
+  T* ptr = new T(std::forward<Args>(args)...);
+  return SharedPointer<T>(ptr);
+}
 }  // namespace libk

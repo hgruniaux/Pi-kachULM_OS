@@ -2,19 +2,17 @@
 #include "hardware/device.hpp"
 #include "hardware/uart.hpp"
 
+#include "hardware/interrupts.hpp"
 #include "hardware/kernel_dt.hpp"
 #include "hardware/timer.hpp"
 #include "libk/test.hpp"
-#include "memory/memory.hpp"
 #include "scheduler.hpp"
 #include "syscall.hpp"
 #include "task_manager.hpp"
-#include "syscall.h"
-#include "hardware/interrupts.hpp"
 
-extern "C" void process1();
-extern "C" void process2();
-extern "C" void process3();
+#include <syscall/syscall.h>
+
+extern "C" const char init[];
 
 [[noreturn]] void kmain() {
   UART log(1000000);  // Set to a High Baud-rate, otherwise UART is THE bottleneck :/
@@ -33,10 +31,7 @@ extern "C" void process3();
   TaskManager* task_manager = new TaskManager;
   task_manager->set_default_syscall_table(table);
 
-  Task* task1 = task_manager->create_task();
-  task1->m_saved_state.regs.elr = (uint64_t)process1;
-  task1->m_saved_state.regs.x30 = task1->m_saved_state.regs.elr;
-
+  Task* task1 = task_manager->create_task((const elf::Header*)&init);
   task_manager->wake_task(task1);
 
   table->register_syscall(SYS_PRINT, [](Registers& regs) {
@@ -63,6 +58,8 @@ extern "C" void process3();
   });
 
   table->register_syscall(SYS_SPAWN, [](Registers& regs) {
+    regs.x0 = SYS_ERR_INTERNAL;
+#if 0
     TaskManager& task_manager = TaskManager::get();
     Task* new_task = task_manager.create_task();
     if (new_task == nullptr) {
@@ -73,11 +70,12 @@ extern "C" void process3();
     new_task->m_saved_state.regs.elr = regs.x0;
     task_manager.wake_task(new_task);
     regs.x0 = SYS_ERR_OK;
+#endif
   });
 
   //  Enter userspace
   task_manager->schedule();
-  asm volatile("mov x28, %0" : : "r"(task_manager->get_current_task()->get_saved_state().regs.x28));
+  task_manager->get_current_task()->get_saved_state().memory->activate();
   jump_to_el0(task1->get_saved_state().regs.elr, (uintptr_t)task_manager->get_current_task()->get_saved_state().sp);
   LOG_CRITICAL("Not in user space");
   libk::halt();

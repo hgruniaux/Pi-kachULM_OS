@@ -1,5 +1,6 @@
 #pragma once
 
+#include <elf/elf.hpp>
 #include <libk/hash_table.hpp>
 #include <libk/linked_list.hpp>
 #include <libk/memory.hpp>
@@ -18,7 +19,7 @@ class TaskManager {
   [[nodiscard]] Task* find_by_id(Task::id_t id);
   [[nodiscard]] const Task* find_by_id(Task::id_t id) const;
 
-  Task* create_task();
+  Task* create_task(const elf::Header* program_image);
 
   /**
    * Put the given task to sleep for a minimum duration given by @a sleep_in_ns (in nanoseconds).

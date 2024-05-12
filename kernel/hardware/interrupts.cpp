@@ -82,8 +82,7 @@ static bool do_userspace_interrupt(Registers& registers) {
   Task* current_task = task_manager.get_current_task();
   KASSERT(current_task != nullptr);
 
-  current_task->get_saved_state().regs = registers;
-  asm volatile("mrs %0, SP_EL0" : "=r"(current_task->get_saved_state().sp));  // save the stack pointer
+  current_task->get_saved_state().save(registers);
 
   if (!do_dispatch_userspace_interrupt(registers)) {
     // Failed to handle the interrupt: probably a fatal error, kill the current task.
@@ -95,8 +94,7 @@ static bool do_userspace_interrupt(Registers& registers) {
   current_task = task_manager.get_current_task();
   if (current_task != nullptr) {
     // Do context switch.
-    registers = current_task->get_saved_state().regs;
-    asm volatile("msr SP_EL0, %0" : : "r"(current_task->get_saved_state().sp));  // restore the stack pointer
+    current_task->get_saved_state().restore(registers);
   } else {
     LOG_WARNING("No more available tasks... the kernel will enter an infinite loop.");
     libk::halt();
