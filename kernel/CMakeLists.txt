@@ -98,7 +98,7 @@ target_link_libraries(kernel PRIVATE libk libsyscall libelf device-tree)
 
 add_executable(init init.c)
 target_link_libraries(init PRIVATE libsyscall)
-target_compile_options(init PRIVATE -no-pie)
+target_compile_options(init PRIVATE -no-pie -Wl,-e_startup)
 add_custom_command(
         OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/init_elf.c
         COMMAND xxd -i init > ${CMAKE_CURRENT_BINARY_DIR}/init_elf.c

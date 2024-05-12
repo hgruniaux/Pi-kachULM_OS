@@ -30,11 +30,11 @@ Task* TaskManager::create_task(const elf::Header* program_image) {
 
     if (segment->is_load()) {
       // FIXME: use page size constant
-      constexpr size_t PAGE_SIZE = 4096;
+      const auto page_size = MemoryChunk::page_byte_size();
 
       // va_start is required to be on a page boundary (aligned to page size).
-      const auto va_start = libk::align_to_previous(segment->virtual_addr, PAGE_SIZE);
-      const auto nb_pages = libk::div_round_up((segment->virtual_addr - va_start) + segment->mem_size, PAGE_SIZE);
+      const auto va_start = libk::align_to_previous(segment->virtual_addr, page_size);
+      const auto nb_pages = libk::div_round_up((segment->virtual_addr - va_start) + segment->mem_size, page_size);
 
       // The mapped segment attributes.
       const bool is_executable = (segment->flags & elf::ProgramFlag::EXECUTABLE) != 0;
