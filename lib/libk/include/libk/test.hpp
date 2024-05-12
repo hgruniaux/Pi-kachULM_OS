@@ -50,8 +50,8 @@ static inline void run_tests() {}
 }  // namespace ktest
 
 #define TEST(name) void _KUNIQUEID(__ktest_unused_)()
-#define _KTEST_EXPECT_IMPL(cond)
-#define _KTEST_ASSERT_IMPL(macro)
+#define _KTEST_EXPECT_IMPL(cond) (void)(cond)
+#define _KTEST_ASSERT_IMPL(macro) (void)(macro)
 #endif  // BUILD_TESTS
 
 #define EXPECT_TRUE(a) _KTEST_EXPECT_IMPL((a))
