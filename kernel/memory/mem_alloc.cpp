@@ -102,7 +102,8 @@ static void merge_block(MetaPtr lhs, MetaPtr rhs) {
     lhs->is_free = lhs->is_free && rhs->is_free;
     lhs->size += rhs->size + META_BLOCK_SIZE;
     lhs->next = rhs->next;
-    (rhs->next)->previous = lhs;
+    if (rhs->next != nullptr)
+      (rhs->next)->previous = lhs;
   }
 }
 

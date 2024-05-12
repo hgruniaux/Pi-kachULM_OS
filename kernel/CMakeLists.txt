@@ -15,6 +15,8 @@ add_executable(kernel
         # C++ Body
         kernel.cpp
 
+        syscall.S
+        syscall.h
         syscall.hpp
         syscall.cpp
 
@@ -82,6 +84,7 @@ add_executable(kernel
         memory/page_alloc_list.hpp
         memory/page_alloc_list.cpp
         memory/page_builder.cpp
+        syscall.c
 )
 
 target_include_directories(kernel PUBLIC .)

@@ -9,6 +9,7 @@
 #include "dtb/node.hpp"
 #include "scheduler.hpp"
 #include "syscall.hpp"
+#include "task_manager.hpp"
 
 void print_property(const Property p) {
   if (p.is_string()) {
@@ -57,26 +58,7 @@ void dump_current_el() {
 extern "C" void init_interrupts_vector_table();
 
 #include "memory/mem_alloc.hpp"
-
-void user_space_init() {
-  asm volatile("mov w8, 3\n\tsvc #0");  // schedule
-}
-
-void sys_yield() {
-  asm volatile("mov w8, 3\n\tsvc #0" : : : "w8");
-}
-
-void sys_print(const char* str) {
-  asm volatile("mov w8, 1\n\tmov x0, %0\n\tsvc #0" : : "r"(str) : "w8", "x0");
-}
-
-void process1() {
-  sys_print("Foo");
-  sys_yield();
-  sys_print("Bar");
-  sys_yield();
-  libk::halt();
-}
+#include "syscall.h"
 
 void process2() {
   sys_print("Test 1");
@@ -85,6 +67,19 @@ void process2() {
   sys_yield();
   libk::halt();
 }
+
+#if 0
+void process1() {
+  sys_print("Foo");
+  sys_spawn(process2);
+  sys_yield();
+  sys_print("Bar");
+  sys_yield();
+  libk::halt();
+}
+#else
+extern "C" void process1();
+#endif
 
 [[noreturn]] void kmain() {
   UART u0(UART::Id::UART0, 2000000);  // Set to a High Baud rate, otherwise UART is THE bottleneck :/
@@ -112,41 +107,57 @@ void process2() {
   LOG_INFO("Temp: {} °C / {} °C", Device::get_current_temp() / 1000, Device::get_max_temp() / 1000);
   LOG_INFO("Uart address: {:#x}", KernelDT::get_device_mmio_address("uart0"));
 
-  Scheduler* scheduler = new Scheduler;
   SyscallTable* table = new SyscallTable;
+  TaskManager* task_manager = new TaskManager;
+  task_manager->set_default_syscall_table(table);
 
-  Task* task1 = new Task;
-  task1->m_id = 1;
+  Task* task1 = task_manager->create_task();
   task1->m_saved_state.regs.elr = (uint64_t)process1;
-  task1->m_syscall_table = table;
-  scheduler->add_task(task1);
+  task1->m_saved_state.regs.x30 = task1->m_saved_state.regs.elr;
+  //*(char*)task1->m_saved_state.sp = 0;
 
-  Task* task2 = new Task;
-  task2->m_id = 2;
-  task2->m_saved_state.regs.elr = (uint64_t)process2;
-  task2->m_syscall_table = table;
-  scheduler->add_task(task2);
+  task_manager->wake_task(task1);
 
-  table->register_syscall(1, [](Registers& regs) {
-    LOG_INFO("Print syscall");
+  table->register_syscall(SYS_PRINT, [](Registers& regs) {
     // FIXME: check if msg memory is accessible by the process
     const char* msg = (const char*)regs.x0;
     libk::print(msg);
-    LOG_INFO("Current process {}", Scheduler::get().get_current_task()->get_id());
+    regs.x0 = SYS_ERR_OK;
   });
 
-  table->register_syscall(2, [](Registers&) { LOG_INFO("Exit syscall"); });
+  table->register_syscall(SYS_DEBUG, [](Registers& regs) {
+    Task* task = TaskManager::get().get_current_task();
+    LOG_INFO("Debug syscall from pid={}", task->get_id());
+    regs.x0 = SYS_ERR_OK;
+  });
 
-  table->register_syscall(3, [](Registers&) {
-    if (Scheduler::get().get_current_task() != nullptr) {
-      LOG_INFO("yield from pid={}", Scheduler::get().get_current_task()->get_id());
+  table->register_syscall(SYS_EXIT, [](Registers& regs) {
+    TaskManager::get().kill_current_task((int)regs.x0);
+    regs.x0 = SYS_ERR_OK;
+  });
+
+  table->register_syscall(SYS_YIELD, [](Registers& regs) {
+    TaskManager::get().schedule();
+    regs.x0 = SYS_ERR_OK;
+  });
+
+  table->register_syscall(SYS_SPAWN, [](Registers& regs) {
+    TaskManager& task_manager = TaskManager::get();
+    Task* new_task = task_manager.create_task();
+    if (new_task == nullptr) {
+      regs.x0 = SYS_ERR_INTERNAL;
+      return;
     }
-    Scheduler::get().schedule();
+
+    new_task->m_saved_state.regs.elr = regs.x0;
+    task_manager.wake_task(new_task);
+    regs.x0 = SYS_ERR_OK;
   });
 
   //  Enter userspace
-  scheduler->schedule();
-  jump_to_el0(task1->get_saved_state().regs.elr);
+  task_manager->schedule();
+  asm volatile("mov x28, %0" : : "r"(task_manager->get_current_task()->get_saved_state().regs.x28));
+  jump_to_el0(task1->get_saved_state().regs.elr, (uintptr_t)task_manager->get_current_task()->get_saved_state().sp);
   LOG_CRITICAL("Not in user space");
   libk::halt();
 }

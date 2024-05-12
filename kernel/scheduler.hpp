@@ -18,6 +18,7 @@ class Scheduler {
   [[nodiscard]] const Task* get_current_task() const { return m_current_task; }
 
   void add_task(Task* task);
+  bool remove_task(Task* task);
 
   void schedule();
 

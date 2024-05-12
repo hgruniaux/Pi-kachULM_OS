@@ -5,7 +5,7 @@
 
 struct TaskSavedState {
   Registers regs;
-  uint64_t pc;
+  void* sp;  // stack pointer
 };  // struct TaskSavedState
 
 /**
@@ -16,16 +16,32 @@ class Task {
   using id_t = uint32_t;
 
   enum class State : uint8_t {
-    /** The task is running or in a run-queue about to be running. */
+    /** The process is either executing on a CPU or waiting to be executed. */
     RUNNING,
-    /** The task is sleeping. */
+    /** The process is suspended (sleeping) until some condition becomes true. Raising a
+     * hardware interrupt, releasing a system resource the process is waiting for, or
+     * delivering a signal are examples of conditions that might wake up the process (put
+     * its state back to TASK_RUNNING). */
     INTERRUPTIBLE,
-    /** The task is sleeping, and cannot be waken by the scheduler automatically. */
+    /** Like TASK_INTERRUPTIBLE, except that delivering a signal to the sleeping
+     * process leaves its state unchanged. This process state is seldom used. It is
+     * valuable, however, under certain specific conditions in which a process must wait
+     * until a given event occurs without being interrupted. For instance, this state may
+     * be used when a process opens a device file and the corresponding device driver
+     * starts probing for a corresponding hardware device. The device driver must not be
+     * interrupted until the probing is complete, or the hardware device could be left in
+     * an unpredictable state. */
     UNINTERRUPTIBLE,
+    /** Process execution has been stopped. */
+    STOPPED
   };  // enum class State
 
   /** Gets the task identifier (process id). */
   [[nodiscard]] id_t get_id() const { return m_id; }
+
+  /** Gets the task name. Names are not necessarily unique nor mandatory (may be null). */
+  [[nodiscard]] const char* get_name() const { return m_name; }
+  void set_name(const char* name) { m_name = name; }
 
   [[nodiscard]] bool is_running() const { return m_state == State::RUNNING; }
   [[nodiscard]] bool is_interruptible() const { return m_state == State::INTERRUPTIBLE; }
@@ -41,10 +57,14 @@ class Task {
   /** Gets the task syscall table. */
   [[nodiscard]] SyscallTable* get_syscall_table() { return m_syscall_table; }
   [[nodiscard]] const SyscallTable* get_syscall_table() const { return m_syscall_table; }
+  void set_syscall_table(SyscallTable* table) { m_syscall_table = table; }
 
  public:  // FIXME
+  friend class TaskManager;
   id_t m_id;
-  State m_state;
+  State m_state = State::INTERRUPTIBLE;
   TaskSavedState m_saved_state;
-  SyscallTable* m_syscall_table;
+  const char* m_name = nullptr;
+  SyscallTable* m_syscall_table = nullptr;
+  void* m_stack = nullptr;
 };  // class Task

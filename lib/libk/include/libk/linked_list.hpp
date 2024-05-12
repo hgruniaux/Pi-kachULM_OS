@@ -44,6 +44,24 @@ class LinkedList {
     }
   }
 
+  /**
+   * Removes the first item in the list with the given @a data.
+   * Returns true if one item was removed, false otherwise.
+   */
+  bool remove(const T& data) {
+    Node* node = m_head;
+    while (node != nullptr) {
+      if (node->data == data) {
+        remove_node(node);
+        return true;
+      }
+
+      node = node->next;
+    }
+
+    return false;
+  }
+
  private:
   struct Node {
     T data;

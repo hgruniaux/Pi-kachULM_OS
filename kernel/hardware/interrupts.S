@@ -67,13 +67,13 @@ el1_entry: // EL1 entry point
 
 // Jumps from EL1 level to EL0 (Non-secure) level.
 // It is expected that the CPU is in EL1.
-// Signature: void jump_to_el0(uintptr_t elr);
-.global jump_to_el0
+                     // Signature: void jump_to_el0(uintptr_t elr, uintptr_t stack);
+                     .global jump_to_el0
 jump_to_el0:
     msr SPSR_EL1, xzr
 
     // Set EL0 stack pointer.
-    mov x1, sp
+    // mov x1, sp
     msr SP_EL0, x1
 
     // Set EL0 entry point.
@@ -151,10 +151,12 @@ exception_entry:
     mrs x2, ELR_EL1
     mrs x3, SPSR_EL1
     stp x2, x3, [sp, #16 * 16]
+
     mrs x2, ESR_EL1
     mrs x3, FAR_EL1
     stp x2, x3, [sp, #16 * 17]
 
+    // Call the generic exception handler
     mov x2, sp
     // Signature: void exception_handler(InterruptSource, InterruptKind, Registers&)
     bl exception_handler
@@ -164,6 +166,7 @@ exception_entry:
     msr ELR_EL1, x0
     msr SPSR_EL1, x1
 
+    // Restore the GPRs
     ldp x0, x1, [sp, #16 * 0]
     ldp x2, x3, [sp, #16 * 1]
     ldp x4, x5, [sp, #16 * 2]
