@@ -137,7 +137,7 @@ static inline constexpr PhysicalPA decode_entry(const uint64_t entry, PagesAttri
   return entry & libk::mask_bits(12, 47);
 }
 
-inline void reload_tlb(MMUTable* table) {
+void reload_tlb(const MMUTable* table) {
   switch (table->kind) {
     case MMUTable::Kind::Kernel: {
       // Encoding from page D8-6757

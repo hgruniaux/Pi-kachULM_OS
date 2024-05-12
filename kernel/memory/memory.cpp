@@ -1,60 +1,16 @@
 #include "memory.hpp"
-#include <libk/log.hpp>
 
 #include "boot/mmu_utils.hpp"
-#include "memory/page_alloc_list.hpp"
-#include "memory/page_builder.hpp"
+#include "memory/heap_manager.hpp"
+#include "memory/kernel_internal_memory.hpp"
 
-MMUTable _tbl;
-PageAllocList _page_alloc;
-MemoryPageBuilder _p_builder;
-
-VirtualPA mmu_resolve_pa(void*, PhysicalPA page_address) {
-  return page_address + KERNEL_BASE;
-}
-
-PhysicalPA mmu_resolve_va(void*, VirtualPA page_address) {
-  return page_address - KERNEL_BASE;
-}
-
-VirtualPA mmu_alloc_page(void*) {
-  PhysicalPA addr = -1;
-
-  if (!_page_alloc.fresh_page(&addr)) {
-    libk::panic("[KernelMemory] Unable to allocate a page for the KERNEL MMU.");
-  }
-
-  const VirtualPA va = mmu_resolve_pa(nullptr, addr);
-  zero_pages(va, 1);
-
-  return va;
-}
-
-void mmu_free_page(void*, VirtualPA page_address) {
-  const PhysicalPA addr = mmu_resolve_va(nullptr, page_address);
-
-  _page_alloc.free_page(addr);
-}
+HeapManager _p_builder;
 
 void KernelMemory::init() {
-  /* Set up the PageAllocList */
-  constexpr size_t linear_allocator_size = 1;  //<! Number of page reserved by the internal Linear Memory Allocator
-  _page_alloc = PageAllocList(linear_allocator_size);
-
-  /* Set up the MMUTable */
-  _tbl = {
-      .kind = MMUTable::Kind::Kernel,
-      .pgd = _init_data.pgd,
-      .asid = 0,
-      .handle = nullptr,
-      .alloc = &mmu_alloc_page,
-      .free = &mmu_free_page,
-      .resolve_pa = &mmu_resolve_pa,
-      .resolve_va = &mmu_resolve_va,
-  };
+  memory_impl::init();
 
   /* Set up the page builder */
-  _p_builder = MemoryPageBuilder(_page_alloc, &_tbl);
+  _p_builder = HeapManager(HeapManager::Kind::Kernel, memory_impl::get_kernel_tbl());
 }
 
 VirtualPA KernelMemory::get_heap_start() {
@@ -83,8 +39,4 @@ PhysicalAddress KernelMemory::get_physical_vc_address(VirtualAddress vc_addr) {
 
 VirtualAddress KernelMemory::get_virtual_vc_address(PhysicalAddress vc_addr) {
   return vc_addr + VC_MEMORY;
-}
-
-PhysicalAddress KernelMemory::resolve_physical_address(VirtualAddress va) {
-  return MemoryPageBuilder::mmu_resolve_va(va);
 }

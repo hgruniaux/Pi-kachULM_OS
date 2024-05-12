@@ -4,6 +4,7 @@
 
 #include "hardware/kernel_dt.hpp"
 #include "hardware/timer.hpp"
+#include "memory/memory.hpp"
 
 [[noreturn]] void kmain() {
   UART log(1000000);  // Set to a High Baud-rate, otherwise UART is THE bottleneck :/
@@ -16,6 +17,18 @@
   LOG_INFO("Board revision: {:#x}", KernelDT::get_board_revision());
   LOG_INFO("Board serial: {:#x}", KernelDT::get_board_serial());
   LOG_INFO("Temp: {} °C / {} °C", Device::get_current_temp() / 1000, Device::get_max_temp() / 1000);
+
+  LOG_INFO("Heap test start:");
+
+  char* heap_start = (char*)KernelMemory::get_heap_end();
+  LOG_INFO("Current kernel end: {:#x}", (uintptr_t)heap_start);
+
+  constexpr const char* m_data = "Hello Kernel Heap!";
+  constexpr size_t m_data_size = libk::strlen(m_data);
+  LOG_INFO("New kernel end: {:#x}", KernelMemory::change_heap_end(m_data_size));
+
+  libk::memcpy(heap_start, m_data, m_data_size);
+  LOG_INFO("Written: {:$}", heap_start);
 
   //  SyscallManager::get().register_syscall(24, [](Registers& ) { LOG_INFO("Syscall 24"); });
   //

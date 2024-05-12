@@ -114,3 +114,6 @@ struct MMUTable {
 
 /** Clear the whole table, deallocating all used pages and unmapping everything. */
 void clear_all(MMUTable* table);
+
+/** Refresh the TLB for this page mapping. */
+void reload_tlb(const MMUTable* table);

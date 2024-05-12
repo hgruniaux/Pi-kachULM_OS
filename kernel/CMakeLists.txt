@@ -19,6 +19,9 @@ add_executable(kernel
         memory/mmu_table.hpp
         memory/mmu_table.cpp
 
+        memory/kernel_internal_memory.hpp
+        memory/kernel_internal_memory.cpp
+
         memory/memory.hpp
         memory/memory.cpp
 
@@ -31,8 +34,14 @@ add_executable(kernel
         memory/page_alloc_list.hpp
         memory/page_alloc_list.cpp
 
-        memory/page_builder.hpp
-        memory/page_builder.cpp
+        memory/heap_manager.hpp
+        memory/heap_manager.cpp
+
+        memory/memory_chunk.hpp
+        memory/memory_chunk.cpp
+
+        memory/process_memory.hpp
+        memory/process_memory.cpp
 
         # Hardware
         hardware/interrupts.hpp
