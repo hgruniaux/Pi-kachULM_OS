@@ -6,6 +6,7 @@
 #include <type_traits>
 
 #include "assert.hpp"
+#include "qemu.hpp"
 
 #define KUNUSED(var) ((void)(var))
 
@@ -64,8 +65,13 @@ static inline constexpr U div_round_down(U a, V b) {
   // The `asm volatile` is required here to avoid Clang to optimize away the infinite loop.
   // Another possibility is to call nop() inside the loop, but it adds the NOP instruction
   // whereas using an empty asm statement adds nothing (it just avoids the optimization).
-  while (true)
+#ifdef TARGET_QEMU
+  qemu_exit(1);
+#else
+  while (true) {
     asm volatile("");
+  }
+#endif
 }
 
 /** @brief Checks if @a n is a power of two. */

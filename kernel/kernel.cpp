@@ -4,6 +4,7 @@
 
 #include "hardware/kernel_dt.hpp"
 #include "hardware/timer.hpp"
+#include "libk/test.hpp"
 #include "memory/memory.hpp"
 
 [[noreturn]] void kmain() {
@@ -16,13 +17,6 @@
 
   ktest::run_tests();
 
-#if 0
-  LOG_INFO("DeviceTree initialization: {}", dt.is_status_okay());
-  LOG_INFO("DeviceTree Version: {}", dt.get_version());
-  print_property(dt, "/model");
-  print_property(dt, "/compatible");
-  print_property(dt, "/serial-number");
-#endif
   LOG_INFO("Board model: {}", KernelDT::get_board_model());
   LOG_INFO("Board revision: {:#x}", KernelDT::get_board_revision());
   LOG_INFO("Board serial: {:#x}", KernelDT::get_board_serial());

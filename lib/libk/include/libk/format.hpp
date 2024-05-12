@@ -17,10 +17,6 @@ struct Argument {
     INTMAX,
     /** @brief The `uintmax_t` type. */
     UINTMAX,
-    /** @brief The `float` type. */
-    // FLOAT, // FIXME : Activate when floating point is activated
-    /** @brief The `double` type. */
-    // DOUBLE, // FIXME : Activate when floating point is activated
     /** @brief A pointer. */
     POINTER,
     /** @brief A UTF-8 string (may not be NUL terminated). */
@@ -52,9 +48,6 @@ struct Argument {
   Argument(uint16_t value) : type(Type::UINTMAX) { data.uintmax_value = value; }
   Argument(uint32_t value) : type(Type::UINTMAX) { data.uintmax_value = value; }
   Argument(uint64_t value) : type(Type::UINTMAX) { data.uintmax_value = value; }
-  // FIXME : Activate when floating point is activated
-  // Argument(float value) : type(Type::FLOAT) { data.float_value = value; }
-  // Argument(double value) : type(Type::DOUBLE) { data.double_value = value; }
   Argument(const void* value) : type(Type::POINTER) { data.pointer_value = value; }
   Argument(const char* value) : type(Type::STRING) {
     data.string_value.value = value;
