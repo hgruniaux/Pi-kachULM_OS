@@ -1,6 +1,7 @@
 #include "scheduler.hpp"
 
 #include <libk/log.hpp>
+#include <algorithm>
 
 Scheduler* Scheduler::g_instance = nullptr;
 
@@ -28,7 +29,12 @@ bool Scheduler::remove_task(Task* task) {
     return true;
   }
 
-  return m_run_queue.remove(task);
+  auto it = std::find(m_run_queue.begin(), m_run_queue.end(), task);
+  if (it == m_run_queue.end())
+    return false;
+
+  m_run_queue.remove(it);
+  return true;
 }
 
 void Scheduler::schedule() {

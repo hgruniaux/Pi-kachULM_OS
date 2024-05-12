@@ -12,9 +12,6 @@ add_executable(kernel
         # C++ Body
         kernel.cpp
 
-        syscall.hpp
-        syscall.cpp
-
         # Memory
         memory/mmu_table.hpp
         memory/mmu_table.cpp
@@ -79,6 +76,18 @@ add_executable(kernel
 
         graphics/graphics.hpp
         graphics/graphics.cpp
+
+        # Process
+        task_manager.hpp
+        task_manager.cpp
+
+        scheduler.hpp
+        scheduler.cpp
+
+        syscall.hpp
+        syscall.cpp
+        syscall.c
+        syscall.S
 )
 
 target_include_directories(kernel PUBLIC .)

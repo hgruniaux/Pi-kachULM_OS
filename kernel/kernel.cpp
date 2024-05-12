@@ -9,6 +9,12 @@
 #include "scheduler.hpp"
 #include "syscall.hpp"
 #include "task_manager.hpp"
+#include "syscall.h"
+#include "hardware/interrupts.hpp"
+
+extern "C" void process1();
+extern "C" void process2();
+extern "C" void process3();
 
 [[noreturn]] void kmain() {
   UART log(1000000);  // Set to a High Baud-rate, otherwise UART is THE bottleneck :/

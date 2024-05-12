@@ -8,6 +8,7 @@ add_library(libk STATIC
         src/test.cpp
         src/bit_array.cpp
         src/linear_allocator.cpp
+        src/qemu.cpp
 
         include/libk/assert.hpp
         include/libk/format.hpp
