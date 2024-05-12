@@ -20,17 +20,18 @@ PageAllocList* _alloc = nullptr;
 HeapManager::HeapManager(HeapManager::Kind kind, MMUTable* table)
     : _heap_kind(kind),
       _heap_start(kind == Kind::Kernel ? HEAP_MEMORY : PROCESS_HEAP_BASE),
-      _heap_size(0),
+      _heap_va_end(_heap_start),
+      _heap_byte_size(0),
       _tbl(table) {
   if (_alloc == nullptr) {
     _alloc = memory_impl::get_kernel_alloc();
   }
 }
 
-VirtualPA HeapManager::change_heap_end(long byte_offset) {
-  const uintptr_t target_heap_size = get_heap_end() + byte_offset;
+VirtualAddress HeapManager::change_heap_end(long byte_offset) {
+  _heap_byte_size += byte_offset;
 
-  while (get_heap_end() < target_heap_size) {
+  while (_heap_va_end < get_heap_end()) {
     // Increase heap here.
     PhysicalPA new_heap_pa_page = -1;
 
@@ -40,7 +41,7 @@ VirtualPA HeapManager::change_heap_end(long byte_offset) {
 
     switch (_heap_kind) {
       case Kind::Process: {
-        if (!map_range(_tbl, get_heap_end(), get_heap_end(), new_heap_pa_page, process_rw_memory)) {
+        if (!map_range(_tbl, _heap_va_end, _heap_va_end, new_heap_pa_page, process_rw_memory)) {
           return 0;
         }
 
@@ -48,20 +49,20 @@ VirtualPA HeapManager::change_heap_end(long byte_offset) {
         break;
       }
       case Kind::Kernel: {
-        if (!map_range(_tbl, get_heap_end(), get_heap_end(), new_heap_pa_page, kernel_rw_memory)) {
+        if (!map_range(_tbl, _heap_va_end, _heap_va_end, new_heap_pa_page, kernel_rw_memory)) {
           return 0;
         }
         break;
       }
     }
 
-    _heap_size += PAGE_SIZE;
+    _heap_va_end += PAGE_SIZE;
   }
 
-  while (get_heap_end() - PAGE_SIZE > target_heap_size) {
+  while (_heap_va_end - PAGE_SIZE >= get_heap_end()) {
     // Decrease heap here.
 
-    const VirtualPA va_to_del = get_heap_end() - PAGE_SIZE;
+    const VirtualPA va_to_del = _heap_va_end - PAGE_SIZE;
     PhysicalPA pa_to_del;
 
     switch (_heap_kind) {
@@ -81,18 +82,18 @@ VirtualPA HeapManager::change_heap_end(long byte_offset) {
 
     _alloc->free_page(pa_to_del);
 
-    _heap_size -= PAGE_SIZE;
+    _heap_va_end -= PAGE_SIZE;
   }
 
   return get_heap_end();
 }
 
-VirtualPA HeapManager::get_heap_end() const {
-  return _heap_start + get_heap_size();
+VirtualAddress HeapManager::get_heap_end() const {
+  return _heap_start + get_heap_byte_size();
 }
 
-size_t HeapManager::get_heap_size() const {
-  return _heap_size;
+size_t HeapManager::get_heap_byte_size() const {
+  return _heap_byte_size;
 }
 
 PhysicalPA HeapManager::resolve_kernel_va(VirtualAddress va) {
@@ -109,7 +110,7 @@ PhysicalPA HeapManager::resolve_kernel_va(VirtualAddress va) {
 }
 
 void HeapManager::free() {
-  while (_heap_size > 0) {
+  while (_heap_byte_size > 0) {
     const VirtualPA va_to_del = get_heap_end() - PAGE_SIZE;
     PhysicalPA pa_to_del;
 
@@ -130,6 +131,10 @@ void HeapManager::free() {
 
     _alloc->free_page(pa_to_del);
 
-    _heap_size -= PAGE_SIZE;
+    _heap_byte_size -= PAGE_SIZE;
   }
+}
+
+VirtualAddress HeapManager::get_heap_start() const {
+  return _heap_start;
 }

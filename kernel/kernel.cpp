@@ -29,6 +29,7 @@
 
   libk::memcpy(heap_start, m_data, m_data_size);
   LOG_INFO("Written: {:$}", heap_start);
+  LOG_INFO("Truc: {}", m_data_size);
 
   //  SyscallManager::get().register_syscall(24, [](Registers& ) { LOG_INFO("Syscall 24"); });
   //

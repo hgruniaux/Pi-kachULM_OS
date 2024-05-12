@@ -22,7 +22,7 @@ VirtualPA KernelMemory::get_heap_end() {
 }
 
 size_t KernelMemory::get_heap_byte_size() {
-  return _p_builder.get_heap_size();
+  return _p_builder.get_heap_byte_size();
 }
 
 VirtualPA KernelMemory::change_heap_end(long byte_offset) {

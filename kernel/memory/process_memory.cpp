@@ -51,8 +51,8 @@ VirtualPA ProcessMemory::get_heap_end() const {
   return _heap.get_heap_end();
 }
 
-size_t ProcessMemory::get_heap_size() const {
-  return _heap.get_heap_size();
+size_t ProcessMemory::get_heap_byte_size() const {
+  return _heap.get_heap_byte_size();
 }
 
 void ProcessMemory::activate() const {

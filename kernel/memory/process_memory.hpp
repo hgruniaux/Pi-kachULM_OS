@@ -20,7 +20,7 @@ class ProcessMemory {
   /* Heap Management */
   VirtualPA change_heap_end(long byte_offset);
   VirtualPA get_heap_end() const;
-  size_t get_heap_size() const;
+  size_t get_heap_byte_size() const;
 
   /** Change the memory mapping to take this process memory in account. */
   void activate() const;
