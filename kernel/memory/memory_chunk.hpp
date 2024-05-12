@@ -46,7 +46,7 @@ class MemoryChunk {
 
   struct ProcessMapped {
     VirtualPA chunk_start;
-    ProcessMemory* mem;
+    ProcessMemory* proc;
   };
 
   libk::LinkedList<ProcessMapped> _proc;

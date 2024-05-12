@@ -33,12 +33,12 @@ bool Scheduler::remove_task(Task* task) {
   if (it == m_run_queue.end())
     return false;
 
-  m_run_queue.remove(it);
+  m_run_queue.erase(it);
   return true;
 }
 
 void Scheduler::schedule() {
-  // For scheduling, we use a quite simple algorithm: round robin scheduling.
+  // For scheduling, we use a quite simple algorithm: round-robin scheduling.
   // The idea is that each task is assigned some time slice. Once a time slice is
   // expired for a process, we switch to the next task in the run queue, and add
   // the previous task at the end of the queue.
