@@ -47,8 +47,15 @@ if (${ENABLE_CHECKS})
     endif ()
 endif ()
 
-add_compile_definitions(-DBUILD_TESTS)
-add_compile_definitions(-DTARGET_QEMU)
+option(BUILD_TEST "Build the tests" OFF)
+if (${BUILD_TEST})
+    add_compile_definitions(-DBUILD_TESTS)
+endif ()
+
+option(TARGET_QEMU "Target is QEMU" OFF)
+if (${TARGET_QEMU})
+    add_compile_definitions(-DTARGET_QEMU)
+endif ()
 
 add_subdirectory(lib)
 add_subdirectory(kernel)

@@ -8,7 +8,6 @@
 #include "hardware/gpio.hpp"
 #include "hardware/kernel_dt.hpp"
 #include "hardware/mailbox.hpp"
-#include "memory/memory.hpp"
 
 // The linker provides the following pointers.
 extern uint64_t __bss_start;
