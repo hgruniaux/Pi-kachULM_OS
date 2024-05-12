@@ -21,6 +21,7 @@ add_library(libk STATIC
         include/libk/log.hpp
         include/libk/linear_allocator.hpp
         include/libk/hash.hpp
+        include/libk/linked_list.hpp
 )
 
 target_include_directories(libk PUBLIC include/)

@@ -16,7 +16,7 @@ _start:
 2: // We're on the main core!
 
     // Setup stack in low memory
-    mov x0, #STACK_SIZE
+    mov x0, #KERNEL_STACK_SIZE
     mov sp, x0
 
     // Jump to EL1
