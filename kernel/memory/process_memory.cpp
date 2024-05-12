@@ -15,15 +15,15 @@ static inline PagesAttributes get_properties(bool read_only, bool executable) {
           .type = MemoryType::Normal};
 }
 
-ProcessMemory::ProcessMemory()
+ProcessMemory::ProcessMemory(size_t minimum_stack_byte_size)
     : _tbl(memory_impl::new_process_tbl(_new_asid++)),
       _heap(HeapManager::Kind::Process, &_tbl),
-      _stack(PROCESS_STACK_PAGE_SIZE) {
+      _stack(libk::div_round_up(minimum_stack_byte_size, PAGE_SIZE)) {
   if (!_stack.is_status_okay()) {
     libk::panic("[ProcessMemory] Unable to allocate the process stack.");
   }
 
-  map_chunk(_stack, PROCESS_STACK_PAGE_TOP, false, false);
+  map_chunk(_stack, PROCESS_STACK_BASE, false, false);
 }
 
 ProcessMemory::~ProcessMemory() {
@@ -34,12 +34,12 @@ uint8_t ProcessMemory::get_asid() const {
   return _tbl.asid;
 }
 
-VirtualAddress ProcessMemory::get_stack_top() const {
-  return PROCESS_STACK_PAGE_TOP;
+VirtualAddress ProcessMemory::get_stack_end() const {
+  return PROCESS_STACK_BASE;
 }
 
-VirtualAddress ProcessMemory::get_stack_bottom() const {
-  return PROCESS_STACK_PAGE_BOTTOM;
+VirtualAddress ProcessMemory::get_stack_start() const {
+  return PROCESS_STACK_BASE + _stack.byte_size();
 }
 
 VirtualPA ProcessMemory::change_heap_end(long byte_offset) {
