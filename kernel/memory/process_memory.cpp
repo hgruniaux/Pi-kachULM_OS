@@ -114,8 +114,8 @@ void ProcessMemory::unmap_chunk(VirtualPA chunk_start_address) {
               it->mem->end_address(it->start), get_asid());
   }
 
-  _chunks.erase(it);
   it->mem->unregister_mapping(this);
+  _chunks.erase(it);
 }
 
 bool ProcessMemory::change_chunk_attr(VirtualPA chunk_start_address, bool read_only, bool executable) {
