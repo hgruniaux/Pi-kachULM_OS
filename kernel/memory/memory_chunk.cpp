@@ -91,6 +91,6 @@ bool MemoryChunk::is_status_okay() const {
   return _kernel_va != 0;
 }
 
-size_t MemoryChunk::page_byte_size() {
+size_t MemoryChunk::get_page_byte_size() {
   return PAGE_SIZE;
 }

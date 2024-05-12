@@ -30,7 +30,7 @@ Task* TaskManager::create_task(const elf::Header* program_image) {
 
     if (segment->is_load()) {
       // FIXME: use page size constant
-      const auto page_size = MemoryChunk::page_byte_size();
+      const auto page_size = MemoryChunk::get_page_byte_size();
 
       // va_start is required to be on a page boundary (aligned to page size).
       const auto va_start = libk::align_to_previous(segment->virtual_addr, page_size);
