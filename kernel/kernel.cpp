@@ -11,13 +11,21 @@
 
 extern "C" const char init[];
 
+#if defined(__GNUC__)
+#define COMPILER_NAME "GCC " __VERSION__
+#elif defined(__clang__)
+#define COMPILER_NAME __VERSION__
+#else
+#define COMPILER_NAME "Unknown Compiler"
+#endif
+
 [[noreturn]] void kmain() {
   UART log(1000000);  // Set to a High Baud-rate, otherwise UART is THE bottleneck :/
 
   libk::register_logger(log);
   libk::set_log_timer([]() { return GenericTimer::get_elapsed_time_in_ms(); });
 
-  LOG_INFO("Kernel built at " __TIME__ " on " __DATE__);
+  LOG_INFO("Kernel built at " __TIME__ " on " __DATE__ " with " COMPILER_NAME " !");
 
   LOG_INFO("Board model: {}", KernelDT::get_board_model());
   LOG_INFO("Board revision: {:#x}", KernelDT::get_board_revision());
