@@ -36,7 +36,6 @@ extern "C" void process3();
   Task* task1 = task_manager->create_task();
   task1->m_saved_state.regs.elr = (uint64_t)process1;
   task1->m_saved_state.regs.x30 = task1->m_saved_state.regs.elr;
-  //*(char*)task1->m_saved_state.sp = 0;
 
   task_manager->wake_task(task1);
 

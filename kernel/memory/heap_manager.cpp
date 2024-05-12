@@ -15,7 +15,7 @@ static inline constexpr PagesAttributes process_rw_memory = {.sh = Shareability:
                                                              .access = Accessibility::AllProcess,
                                                              .type = MemoryType::Normal};
 
-PageAllocList* _alloc = nullptr;
+static PageAllocList* _alloc = nullptr;
 
 HeapManager::HeapManager(HeapManager::Kind kind, MMUTable* table)
     : _heap_kind(kind),

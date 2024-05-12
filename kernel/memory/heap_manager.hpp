@@ -22,6 +22,7 @@ class HeapManager {
   size_t get_heap_byte_size() const;
 
   void free();
+
  private:
   Kind _heap_kind;
 
