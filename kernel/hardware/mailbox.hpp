@@ -3,6 +3,8 @@
 #include <cstdint>
 
 #include <libk/assert.hpp>
+#include <libk/log.hpp>
+#include "memory/memory.hpp"
 
 namespace MailBox {
 /** The different supported mailbox channels by our kernel. */
@@ -12,6 +14,9 @@ enum class Channel : uint8_t {
   /** Property channel VideoCore to ARM CPU. */
   TagVCToArm = 9,
 };
+
+/** Set up the MailBox. */
+void init();
 
 /** Receives a 28-bit raw message from mailbox in the requested @a channel. */
 uint32_t receive(Channel channel);

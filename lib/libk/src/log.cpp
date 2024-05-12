@@ -55,7 +55,7 @@ void vlog_logger(Logger* logger,
   // Print the message itself
   it = detail::format_to(it, message, args, args_count);
   *it = '\0';
-  logger->write(buffer, (size_t)((intptr_t)it - (intptr_t)buffer));
+  logger->writeln(buffer, (size_t)((intptr_t)it - (intptr_t)buffer));
 }
 
 void vlog(LogLevel level,
@@ -88,7 +88,7 @@ void vprint(const char* message, const detail::Argument* args, size_t args_count
     if (logger == nullptr)
       continue;
 
-    logger->write(buffer, (size_t)((intptr_t)it - (intptr_t)buffer));
+    logger->writeln(buffer, (size_t)((intptr_t)it - (intptr_t)buffer));
   }
 }
 }  // namespace detail

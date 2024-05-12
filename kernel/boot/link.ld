@@ -1,9 +1,21 @@
+#include "mmu_utils.hpp"
+
+ENTRY(_start);
+
 SECTIONS
 {
-    . = 0x80000;     /* Kernel load address for AArch64 */
-    .text : { KEEP(*(.text.boot)) *(.text .text.* .gnu.linkonce.t*) }
+    . = KERNEL_BASE;
 
-    .rodata : { *(.rodata .rodata.* .gnu.linkonce.r*) }
+    /* Kernel load address for AArch64 */
+    . += PHYSICAL_KERNEL_LOAD_ADDRESS;
+
+    _stext = .;
+    .text : { *(.text) }
+    . = ALIGN(PAGE_SIZE);
+
+    _srodata = .;
+    .rodata : { *(.rodata) }
+
     /* For clang to compile the project, .init_array and .fini_array must be contiguous with rodata */
     /* Include the list of initialization functions sorted. */
     .init_array ALIGN(8):
@@ -24,18 +36,19 @@ SECTIONS
         KEEP (*(EXCLUDE_FILE(crti.o crtn.o) .fini_array))
         __fini_array_end = .;
     }
+    . = ALIGN(PAGE_SIZE);
 
+    _srwdata = .;
     PROVIDE(_data = .);
-    .data : { *(.data .data.* .gnu.linkonce.d*) }
+    .data : { *(.data) }
     .bss (NOLOAD) : {
         . = ALIGN(16);
         __bss_start = .;
-        *(.bss .bss.*)
+        *(.bss)
         *(COMMON)
         __bss_end = .;
     }
 
-    _end = .;
-
-   /DISCARD/ : { *(.comment) *(.gnu*) *(.note*) *(.eh_frame*) }
+    . = ALIGN(PAGE_SIZE);
+    _kend = .;
 }

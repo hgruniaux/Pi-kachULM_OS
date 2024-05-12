@@ -79,6 +79,9 @@ enum class PUD_Mode : uint8_t {
   PullUp = 0b10,
 };
 
+/** Set up GPIO */
+void init();
+
 /** Set the mode of a gpio pin. */
 void set_mode(Pin gpio_pin, Mode target_mode);
 

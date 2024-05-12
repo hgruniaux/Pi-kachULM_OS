@@ -1,14 +1,58 @@
-add_executable(kernel boot.S kernel.cpp cxxabi.cpp startup.cpp
+add_executable(kernel
+        # Boot
+        boot/boot.S
+
+        boot/mmu_init.cpp
+        boot/startup.cpp
+        boot/cxxabi.cpp
+
+        boot/mmu_utils.hpp
+        boot/mmu_utils.cpp
+
+        # C++ Body
+        kernel.cpp
+
         syscall.hpp
         syscall.cpp
 
-        hardware/mmio.hpp
-        hardware/mmio.cpp
+        # Memory
+        memory/mmu_table.hpp
+        memory/mmu_table.cpp
+
+        memory/kernel_internal_memory.hpp
+        memory/kernel_internal_memory.cpp
+
+        memory/memory.hpp
+        memory/memory.cpp
+
+        memory/page_alloc.hpp
+        memory/page_alloc.cpp
+
+        memory/mem_alloc.hpp
+        memory/mem_alloc.cpp
+
+        memory/page_alloc_list.hpp
+        memory/page_alloc_list.cpp
+
+        memory/heap_manager.hpp
+        memory/heap_manager.cpp
+
+        memory/memory_chunk.hpp
+        memory/memory_chunk.cpp
+
+        memory/process_memory.hpp
+        memory/process_memory.cpp
+
+        # Hardware
+        hardware/interrupts.hpp
+        hardware/interrupts.cpp
+        hardware/interrupts.S
+
+        hardware/kernel_dt.hpp
+        hardware/kernel_dt.cpp
 
         hardware/gpio.hpp
         hardware/gpio.cpp
-
-        hardware/utils.hpp
 
         hardware/miniuart.hpp
         hardware/miniuart.cpp
@@ -25,28 +69,33 @@ add_executable(kernel boot.S kernel.cpp cxxabi.cpp startup.cpp
         hardware/framebuffer.hpp
         hardware/framebuffer.cpp
 
-        hardware/interrupts.hpp
-        hardware/interrupts.cpp
-        hardware/interrupts.S
-
         hardware/timer.hpp
 
+        # Graphics
         graphics/pkfont.hpp
         graphics/pkfont.cpp
 
         ../fonts/firacode_16.cpp
+
         graphics/graphics.hpp
         graphics/graphics.cpp
 )
 
+target_include_directories(kernel PUBLIC .)
 set_target_properties(kernel PROPERTIES OUTPUT_NAME "kernel8.elf")
 
 target_link_libraries(kernel PRIVATE libk device-tree)
 
 # Use the linker script.
-set(LINKER_SCRIPT ${CMAKE_SOURCE_DIR}/kernel/link.ld)
-target_link_options(kernel PRIVATE -nostdlib -T ${LINKER_SCRIPT})
-set_property(TARGET kernel PROPERTY LINK_DEPENDS ${LINKER_SCRIPT})
+set(LINKER_SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/boot/link.ld)
+add_custom_target(linker_script
+        DEPENDS ${LINKER_SCRIPT}
+        COMMAND ${CMAKE_C_COMPILER} -D__ASSEMBLER__ -E -P -x c ${LINKER_SCRIPT} -o ${CMAKE_CURRENT_BINARY_DIR}/link-gen.ld
+)
+target_link_options(kernel PRIVATE -nostdlib -T ${CMAKE_CURRENT_BINARY_DIR}/link-gen.ld)
+# In order to be compatible with MAKE
+# See: https://discourse.cmake.org/t/link-depends-on-output-of-add-custom-command-no-rule-to-make-target/10179
+add_dependencies(kernel linker_script)
 
 # Extracting the elf file to a binary one
 add_custom_target(kernel-img

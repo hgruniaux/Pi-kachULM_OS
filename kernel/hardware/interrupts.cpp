@@ -1,6 +1,14 @@
-#include "interrupts.hpp"
+#include "hardware/interrupts.hpp"
+
 #include <libk/log.hpp>
-#include "../syscall.hpp"
+#include "syscall.hpp"
+
+#define dump_reg(reg)                           \
+  {                                             \
+    uint64_t tmp;                               \
+    asm volatile("mrs %x0, " #reg : "=r"(tmp)); \
+    LOG_ERROR("Register " #reg ": {:#x}", tmp); \
+  }
 
 ExceptionLevel get_current_exception_level() {
   // The current exception level is stored in the system register CurrentEL in the bits [3:2].
@@ -15,8 +23,6 @@ ExceptionLevel get_current_exception_level() {
 extern "C" void jump_from_el3_to_el2();
 /** Jumps from EL2 to EL1 (Non-secure). */
 extern "C" void jump_from_el2_to_el1();
-/** Jumps from EL1 to EL0 (Non-secure). */
-extern "C" void jump_from_el1_to_el0();
 
 void jump_to_el1() {
   switch (get_current_exception_level()) {
@@ -29,17 +35,6 @@ void jump_to_el1() {
     default:
       break;
   }
-}
-
-void jump_to_el0() {
-  // We cannot check if we are already at EL0 (the system register CurrentEL is
-  // not readable in EL0). Therefore, we assume that we are not in EL0.
-
-  // Jump to EL1 if not already in it.
-  jump_to_el1();
-
-  // Then jump to EL0!
-  jump_from_el1_to_el0();
 }
 
 extern "C" void exception_handler(InterruptSource source, InterruptKind kind, Registers& registers) {
@@ -60,5 +55,45 @@ extern "C" void exception_handler(InterruptSource source, InterruptKind kind, Re
     return;
   }
 
-  LOG_WARNING("Unhandled exception/interrupt");
+  const char* source_name = nullptr;
+  switch (source) {
+    case InterruptSource::CURRENT_SP_EL0:
+      source_name = "CURRENT_SP_EL0";
+      break;
+    case InterruptSource::CURRENT_SP_ELX:
+      source_name = "CURRENT_SP_ELX";
+      break;
+    case InterruptSource::LOWER_AARCH32:
+      source_name = "LOWER_AARCH32";
+      break;
+    case InterruptSource::LOWER_AARCH64:
+      source_name = "LOWER_AARCH64";
+      break;
+  }
+
+  const char* kind_name = "";
+  switch (kind) {
+    case InterruptKind::SYNCHRONOUS:
+      kind_name = "SYNCHRONOUS";
+      break;
+    case InterruptKind::IRQ:
+      kind_name = "IRQ";
+      break;
+    case InterruptKind::FIQ:
+      kind_name = "FIQ";
+      break;
+    case InterruptKind::SERROR:
+      kind_name = "SERROR";
+      break;
+  }
+
+  LOG_ERROR("");
+  LOG_ERROR("");
+  LOG_ERROR("Arrrgl");
+  LOG_ERROR("");
+
+  dump_reg(ELR_EL1);
+  dump_reg(ESR_EL1);
+
+  LOG_CRITICAL("Unhandled exception/interrupt, source = {}, kind = {}", source_name, kind_name);
 }

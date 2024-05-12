@@ -4,15 +4,19 @@
  * the kernel entry point kmain().
  */
 
-#include <cstdint>
+#include "hardware/device.hpp"
+#include "hardware/gpio.hpp"
+#include "hardware/kernel_dt.hpp"
+#include "hardware/mailbox.hpp"
+#include "memory/memory.hpp"
 
-// The following pointers are provided by the linker.
-extern uint32_t __bss_start;
-extern uint32_t __bss_end;
+// The linker provides the following pointers.
+extern uint64_t __bss_start;
+extern uint64_t __bss_end;
 
 /** Erases the BSS section. */
 void zero_bss() {
-  uint32_t* dst = &__bss_start;
+  uint64_t* dst = &__bss_start;
   while (dst < &__bss_end) {
     *dst++ = 0;
   }
@@ -20,7 +24,7 @@ void zero_bss() {
 
 using FunctionPointer = void (*)();
 
-// The following pointers are provided by the linker.
+// The linker provides the following pointers.
 extern FunctionPointer __init_array_start[];
 extern FunctionPointer __init_array_end[];
 extern FunctionPointer __fini_array_start[];
@@ -51,14 +55,38 @@ void call_fini_array() {
 }
 
 // This function is defined in kernel.cpp. It is the real entry point of the kernel.
-extern "C" [[noreturn]] void kmain(const void* dtb);
+void kmain();
+
+extern "C" void init_interrupts_vector_table();
 
 /** The C and C++ world entry point. It is called from the boot.S assembly script. */
-extern "C" void _startup(const void* dtb) {
+extern "C" void _startup(uintptr_t dtb) {
   // Erases the BSS section as required.
   zero_bss();
 
+  // Set up the Interrupt Vector Table
+  init_interrupts_vector_table();
+
+  // Set up the DeviceTree
+  if (!KernelDT::init(dtb)) {
+    libk::halt();
+  }
+
+  // Set up the Kernel memory management
+  KernelMemory::init();
+
+  // Set up the VC-ARM Mailbox
+  MailBox::init();
+
+  // Set up general Device functions
+  if (!Device::init()) {
+    libk::halt();
+  }
+
+  // Set up GPIO Function.
+  GPIO::init();
+
   call_init_array();
-  kmain(dtb);  // the real kernel entry point
+  kmain();  // the real kernel entry point
   call_fini_array();
 }

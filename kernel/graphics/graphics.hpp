@@ -2,7 +2,7 @@
 
 #include <cstdint>
 
-#include "pkfont.hpp"
+#include "graphics/pkfont.hpp"
 
 namespace graphics {
 /** @brief Represents a ARGB color that can be used in the Kernel graphics API. */

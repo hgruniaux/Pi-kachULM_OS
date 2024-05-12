@@ -23,7 +23,7 @@ class Logger {
   /** Returns true if ANSI escape sequences should be emitted. */
   [[nodiscard]] virtual bool support_colors() const { return false; }
   /** Writes the given UTF-8 encoded data to the output. */
-  virtual void write(const char* data, size_t length) = 0;
+  virtual void writeln(const char* data, size_t length) = 0;
 };  // class Logger
 
 /** @brief The different log levels supported by the debug module. */
