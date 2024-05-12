@@ -1,6 +1,5 @@
-#include "device.hpp"
-
-#include "mailbox.hpp"
+#include "hardware/device.hpp"
+#include "hardware/mailbox.hpp"
 
 uint32_t _max_temp = 0;
 
@@ -104,4 +103,18 @@ bool Device::set_turbo(bool on) {
   message.tag.buffer.level = level;
   const bool success = MailBox::send_property(message);
   return success && (message.tag.buffer.level == level);
+}
+
+uint32_t Device::get_clock_rate(Device::ClockId id) {
+  struct GetClockRateBuffer {
+    volatile uint32_t clock_id = 0;
+    volatile uint32_t rate = 0;
+  };
+  using GetClockRateTag = MailBox::PropertyTag<0x00030002, GetClockRateBuffer>;
+
+  MailBox::PropertyMessage<GetClockRateTag> msg;
+  msg.tag.buffer.clock_id = (uint32_t)id;
+  send_property(msg);
+
+  return msg.tag.buffer.rate;
 }

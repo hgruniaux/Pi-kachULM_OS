@@ -1,7 +1,7 @@
 #include "page_alloc_list.hpp"
-#include "boot/kernel_dt.hpp"
-#include "libk/log.hpp"
-#include "libk/utils.hpp"
+#include "hardware/kernel_dt.hpp"
+#include "boot/mmu_utils.hpp"
+#include <libk/utils.hpp>
 
 void parse_memory_reg(Property prop, PageAllocList* list) {
   size_t index = 0;
@@ -64,7 +64,7 @@ PageAllocList::PageAllocList(size_t internal_memory_size) : _list(nullptr) {
   // 3. Protect the Stack, Kernel, DeviceTree, Page Allocator Memory & MMU Allocated Memory.
 
   // Stack
-  mark_as_used_range(PHYSICAL_STACK_TOP, PHYSICAL_STACK_TOP + STACK_SIZE);
+  mark_as_used_range(PHYSICAL_STACK_TOP, PHYSICAL_STACK_TOP + KERNEL_STACK_SIZE);
 
   // Kernel
   mark_as_used_range(_init_data.kernel_start, _init_data.kernel_stop);

@@ -2,7 +2,7 @@
 
 #include <libk/assert.hpp>
 #include <libk/string.hpp>
-#include "libk/log.hpp"
+#include <libk/log.hpp>
 #include "utils.hpp"
 
 bool DeviceTreeParser::from_memory(uintptr_t dts, DeviceTreeParser* dt_parser) {

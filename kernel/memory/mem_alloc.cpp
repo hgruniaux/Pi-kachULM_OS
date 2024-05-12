@@ -3,9 +3,6 @@
 
 #include <libk/utils.hpp>
 
-// FIXME: Retrieve this constant directly from KernelMemory
-#define PAGESIZE 4096
-
 using MetaPtr = struct MetaBlock*;
 
 struct MetaBlock {

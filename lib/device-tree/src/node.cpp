@@ -1,7 +1,7 @@
 #include "dtb/node.hpp"
 
 #include <libk/assert.hpp>
-#include "libk/log.hpp"
+#include <libk/log.hpp>
 #include "utils.hpp"
 
 static constexpr size_t max_val = -1;

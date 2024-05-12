@@ -6,7 +6,7 @@
 
 #include <cstddef>
 #include <cstdint>
-#include "libk/assert.hpp"
+#include <libk/assert.hpp>
 
 // See https://itanium-cxx-abi.github.io/cxx-abi/abi.html.
 
@@ -34,10 +34,6 @@ extern "C" [[noreturn]] void __cxa_deleted_virtual() {
   libk::panic("Deleted virtual function called.");
 }
 
-// FIXME: The following __cxa_guard_*() functions should be thread safe. We
-//        can simply use atomics (the <atomic.h> or <atomic> headers are
-//        available in freestanding env).
-
 extern "C" int __cxa_guard_acquire(int64_t* guard_object) {
   // From Itanium C++ ABI:
   //  > Returns 1 if the initialization is not yet complete; 0 otherwise. This
@@ -46,6 +42,7 @@ extern "C" int __cxa_guard_acquire(int64_t* guard_object) {
   //  > called with the same argument. The first byte of the guard_object is not
   //  > modified by this function.
 
+  asm volatile("dsb sy");  // Data barrier to ensure updates of guard_object is done before fetching this value.
   return static_cast<int>(*guard_object == 0);
 }
 
@@ -54,7 +51,9 @@ extern "C" void __cxa_guard_release(int64_t* guard_object) {
   //  > Sets the first byte of the guard object to a non-zero value. This
   //  > function is called after initialization is complete.
 
+  asm volatile("dsb sy");  // Data barrier to ensure updates of guard_object is done before this one.
   *guard_object = 1;
+  asm volatile("dsb sy");  // Data barrier to ensure the guard_object is modified.
 }
 
 extern "C" void __cxa_guard_abort(int64_t*) {

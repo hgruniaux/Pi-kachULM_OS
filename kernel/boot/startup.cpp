@@ -5,8 +5,10 @@
  */
 
 #include "hardware/device.hpp"
+#include "hardware/gpio.hpp"
+#include "hardware/kernel_dt.hpp"
+#include "hardware/mailbox.hpp"
 #include "memory/memory.hpp"
-#include "kernel_dt.hpp"
 
 // The linker provides the following pointers.
 extern uint64_t __bss_start;
@@ -55,15 +57,34 @@ void call_fini_array() {
 // This function is defined in kernel.cpp. It is the real entry point of the kernel.
 void kmain();
 
+extern "C" void init_interrupts_vector_table();
+
 /** The C and C++ world entry point. It is called from the boot.S assembly script. */
 extern "C" void _startup(uintptr_t dtb) {
   // Erases the BSS section as required.
   zero_bss();
 
-  // Setup DeviceTree
+  // Set up the Interrupt Vector Table
+  init_interrupts_vector_table();
+
+  // Set up the DeviceTree
   if (!KernelDT::init(dtb)) {
     libk::halt();
   }
+
+  // Set up the Kernel memory management
+  KernelMemory::init();
+
+  // Set up the VC-ARM Mailbox
+  MailBox::init();
+
+  // Set up general Device functions
+  if (!Device::init()) {
+    libk::halt();
+  }
+
+  // Set up GPIO Function.
+  GPIO::init();
 
   call_init_array();
   kmain();  // the real kernel entry point

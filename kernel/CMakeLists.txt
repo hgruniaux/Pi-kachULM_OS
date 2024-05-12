@@ -6,31 +6,21 @@ add_executable(kernel
         boot/startup.cpp
         boot/cxxabi.cpp
 
-        boot/kernel_dt.hpp
-        boot/kernel_dt.cpp
-
         boot/mmu_utils.hpp
         boot/mmu_utils.cpp
 
         # C++ Body
         kernel.cpp
 
-        syscall.S
-        syscall.h
         syscall.hpp
         syscall.cpp
-
-        scheduler.hpp
-        scheduler.cpp
-
-        task.hpp
-
-        task_manager.hpp
-        task_manager.cpp
 
         # Memory
         memory/mmu_table.hpp
         memory/mmu_table.cpp
+
+        memory/kernel_internal_memory.hpp
+        memory/kernel_internal_memory.cpp
 
         memory/memory.hpp
         memory/memory.cpp
@@ -41,18 +31,28 @@ add_executable(kernel
         memory/mem_alloc.hpp
         memory/mem_alloc.cpp
 
-        memory/memory_page.hpp
-        memory/memory_page.cpp
+        memory/page_alloc_list.hpp
+        memory/page_alloc_list.cpp
+
+        memory/heap_manager.hpp
+        memory/heap_manager.cpp
+
+        memory/memory_chunk.hpp
+        memory/memory_chunk.cpp
+
+        memory/process_memory.hpp
+        memory/process_memory.cpp
 
         # Hardware
         hardware/interrupts.hpp
         hardware/interrupts.cpp
         hardware/interrupts.S
 
+        hardware/kernel_dt.hpp
+        hardware/kernel_dt.cpp
+
         hardware/gpio.hpp
         hardware/gpio.cpp
-
-        hardware/utils.hpp
 
         hardware/miniuart.hpp
         hardware/miniuart.cpp
@@ -79,12 +79,6 @@ add_executable(kernel
 
         graphics/graphics.hpp
         graphics/graphics.cpp
-        memory/process_memory.hpp
-        memory/page_builder.hpp
-        memory/page_alloc_list.hpp
-        memory/page_alloc_list.cpp
-        memory/page_builder.cpp
-        syscall.c
 )
 
 target_include_directories(kernel PUBLIC .)

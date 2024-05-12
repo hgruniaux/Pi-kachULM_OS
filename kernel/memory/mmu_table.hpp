@@ -4,12 +4,12 @@
 #include <cstdint>
 
 #include <cstdint>
-#include "boot/mmu_utils.hpp"
+#include "memory/memory.hpp"
 
 enum class Shareability : uint8_t {
   NonShareable = 0b00,    //<! Memory not shared at all
-  OuterShareable = 0b10,  //<! Memory shared across CPU cores
-  InnerShareable = 0b11,  //<! Memory shared across multiples peripheral
+  OuterShareable = 0b10,  //<! Memory shared across multiples peripheral
+  InnerShareable = 0b11,  //<! Memory shared across CPU cores
 };
 
 enum class ExecutionPermission : uint8_t {
@@ -56,7 +56,7 @@ using ResolvePA = VirtualPA (*)(void*, PhysicalPA);  //<! This function fail int
 using ResolveVA = PhysicalPA (*)(void*, VirtualPA);  //<! This function fail internally if the conversion fail
 
 struct MMUTable {
-  enum class Kind : uintptr_t { Kernel = KERNEL_BASE, Process = PROCESS_BASE };
+  enum class Kind : uintptr_t { Kernel, Process };
 
   Kind kind;      //<! The kind of Memory mapping we're dealing with.
   VirtualPA pgd;  //<! The top level of the MMU table
@@ -114,3 +114,6 @@ struct MMUTable {
 
 /** Clear the whole table, deallocating all used pages and unmapping everything. */
 void clear_all(MMUTable* table);
+
+/** Refresh the TLB for this page mapping. */
+void reload_tlb(const MMUTable* table);

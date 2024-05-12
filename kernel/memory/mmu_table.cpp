@@ -1,5 +1,6 @@
 #include "mmu_table.hpp"
 #include <libk/utils.hpp>
+#include "boot/mmu_utils.hpp"
 
 /*
  63     48             38       30             20       12                                          Physical Memory
@@ -44,8 +45,19 @@ static inline void data_sync() {
   asm volatile("dsb sy");
 }
 
-static inline bool check_va(const MMUTable* const tbl, VirtualPA va) {
-  if ((va & TTBR_MASK) != (VirtualPA)tbl->kind) {
+static inline uint64_t get_base_address(const MMUTable* tbl) {
+  switch (tbl->kind) {
+    case MMUTable::Kind::Kernel:
+      return KERNEL_BASE;
+    case MMUTable::Kind::Process:
+      return PROCESS_BASE;
+  }
+
+  return -1;
+}
+
+static inline bool check_va(const MMUTable* tbl, VirtualPA va) {
+  if ((va & TTBR_MASK) != get_base_address(tbl)) {
     // Invalid kernel address
     return false;
   };
@@ -125,7 +137,7 @@ static inline constexpr PhysicalPA decode_entry(const uint64_t entry, PagesAttri
   return entry & libk::mask_bits(12, 47);
 }
 
-inline void reload_tlb(MMUTable* table) {
+void reload_tlb(const MMUTable* table) {
   switch (table->kind) {
     case MMUTable::Kind::Kernel: {
       // Encoding from page D8-6757
@@ -338,7 +350,7 @@ bool map_range(MMUTable* tbl, VirtualPA va_start, VirtualPA va_end, PhysicalPA p
     return false;
   }
 
-  map_range_in_table(tbl, va_start, va_end, pa_start, attr, (uint64_t*)tbl->pgd, 1, (VirtualPA)tbl->kind);
+  map_range_in_table(tbl, va_start, va_end, pa_start, attr, (uint64_t*)tbl->pgd, 1, get_base_address(tbl));
   return true;
 }
 
@@ -453,7 +465,7 @@ bool unmap_range(MMUTable* tbl, VirtualPA va_start, VirtualPA va_end) {
     return false;
   }
 
-  unmap_range_in_table(tbl, va_start, va_end, (uint64_t*)tbl->pgd, 1, (VirtualPA)tbl->kind);
+  unmap_range_in_table(tbl, va_start, va_end, (uint64_t*)tbl->pgd, 1, get_base_address(tbl));
   return true;
 }
 
@@ -497,7 +509,7 @@ void clear_all(MMUTable* tbl) {
     return;
   }
 
-  clear_table(tbl, (uint64_t*)tbl->pgd, 1, (VirtualPA)tbl->kind);
+  clear_table(tbl, (uint64_t*)tbl->pgd, 1, get_base_address(tbl));
 }
 
 /** All bound are *INCLUSIVE*
@@ -606,6 +618,6 @@ bool change_attr_range(MMUTable* tbl, VirtualPA va_start, VirtualPA va_end, Page
     return false;
   }
 
-  change_properties_for_range(tbl, va_start, va_end, attr, (uint64_t*)tbl->pgd, 1, (VirtualPA)tbl->kind);
+  change_properties_for_range(tbl, va_start, va_end, attr, (uint64_t*)tbl->pgd, 1, get_base_address(tbl));
   return true;
 }

@@ -6,12 +6,6 @@
 
 class UART : public libk::Logger {
  public:
-  // Only support 2 UART because RPi3 does
-  enum class Id : uint8_t {
-    UART0,
-    UART1,
-  };
-
   /** Initializes the PL011 UART0 channel.
    * Accepted baud_rate :
    *  - 300     [Tested]
@@ -30,7 +24,7 @@ class UART : public libk::Logger {
    *  - 1500000 [Tested]
    *  - 2000000 [Tested]
    */
-  explicit UART(const Id uart_id, uint32_t baud_rate);
+  explicit UART(uint32_t baud_rate);
 
   /** Writes the given @a value into this UART. */
   void write_one(char value) const;

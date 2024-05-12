@@ -1,8 +1,10 @@
-#include "memory/mmu_table.hpp"
+#include <limits>
 
 #include <dtb/dtb.hpp>
 #include <libk/utils.hpp>
-#include <limits>
+
+#include "boot/mmu_utils.hpp"
+#include "memory/mmu_table.hpp"
 
 #define resolve_symbol_pa(symbol)                     \
   ({                                                  \
@@ -25,8 +27,7 @@ static inline constexpr void enforce(bool res) {
 }
 
 static inline constexpr PagesAttributes kernel_code = {.sh = Shareability::InnerShareable,
-                                                       // FIXME
-                                                       .exec = ExecutionPermission::AllExecute,
+                                                       .exec = ExecutionPermission::PrivilegedExecute,
                                                        .rw = ReadWritePermission::ReadOnly,
                                                        .access = Accessibility::Privileged,
                                                        .type = MemoryType::Normal};
@@ -34,8 +35,7 @@ static inline constexpr PagesAttributes kernel_code = {.sh = Shareability::Inner
 static inline constexpr PagesAttributes rw_memory = {.sh = Shareability::InnerShareable,
                                                      .exec = ExecutionPermission::NeverExecute,
                                                      .rw = ReadWritePermission::ReadWrite,
-                                                     // FIXME
-                                                     .access = Accessibility::AllProcess,
+                                                     .access = Accessibility::Privileged,
                                                      .type = MemoryType::Normal};
 
 static inline constexpr PagesAttributes ro_memory = {.sh = Shareability::InnerShareable,

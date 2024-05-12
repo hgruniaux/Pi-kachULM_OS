@@ -1,136 +1,108 @@
-#include "miniuart.hpp"
-#include <libk/utils.hpp>
-#include "boot/mmu_utils.hpp"
-#include "gpio.hpp"
+#include "hardware/miniuart.hpp"
 
-namespace MiniUART {
+#include <libk/utils.hpp>
+#include "device.hpp"
+#include "hardware/gpio.hpp"
+#include "kernel_dt.hpp"
+
 /** Auxiliary Interrupt status (size: 3) */
-// static constexpr int32_t AUX_IRQ = 0x215000;
+// static constexpr int32_t AUX_IRQ = 0x00;
 
 /** Auxiliary enables (size: 3) */
-static constexpr int32_t AUX_ENABLES = 0x215004;
+static constexpr int32_t AUX_ENABLES = 0x04;
 
 /** Mini UART I/O Data (size: 8) */
-static constexpr int32_t AUX_MU_IO_REG = 0x215040;
+static constexpr int32_t AUX_MU_IO_REG = 0x40;
 
 /** Mini UART Interrupt Enable (size: 8) */
-static constexpr int32_t AUX_MU_IER_REG = 0x215044;
+static constexpr int32_t AUX_MU_IER_REG = 0x44;
 
 /** Mini UART Interrupt Identify (size: 8) */
-// static constexpr int32_t AUX_MU_IIR_REG = 0x215048;
+// static constexpr int32_t AUX_MU_IIR_REG = 0x48;
 
 /** Mini UART Line Control (size: 8) */
-static constexpr int32_t AUX_MU_LCR_REG = 0x21504C;
+static constexpr int32_t AUX_MU_LCR_REG = 0x4C;
 
 /** Mini UART Modem Control (size: 8) */
-static constexpr int32_t AUX_MU_MCR_REG = 0x215050;
+static constexpr int32_t AUX_MU_MCR_REG = 0x50;
 
 /** Mini UART Line Status (size: 8) */
-static constexpr int32_t AUX_MU_LSR_REG = 0x215054;
+static constexpr int32_t AUX_MU_LSR_REG = 0x54;
 
 /** Mini UART Extra Control (size: 8) */
-static constexpr int32_t AUX_MU_CNTL_REG = 0x215060;
+static constexpr int32_t AUX_MU_CNTL_REG = 0x60;
 
 /** Mini UART Baud rate (size: 16) */
-static constexpr int32_t AUX_MU_BAUD_REG = 0x215068;
+static constexpr int32_t AUX_MU_BAUD_REG = 0x68;
 
-static constexpr uint64_t RPI3_CORE_CLOCK = 250'000'000;
+MiniUART::MiniUART(uint32_t baud_rate) : _mini_uart_base(KernelDT::get_device_address("aux")) {
+  LOG_INFO("We have: {:#x}", _mini_uart_base);
 
-static constexpr uint64_t RPI4_CORE_CLOCK = 200'000'000;
-
-void init(uint32_t baud_rate) {
   // We deactivate Pull Up/Down fot the pins 14 and 15
   GPIO::set_pull_up_down(GPIO::Pin::BCM14, GPIO::PUD_Mode::Off);
   GPIO::set_pull_up_down(GPIO::Pin::BCM15, GPIO::PUD_Mode::Off);
-  //  TODO : FixThis!
+
   // Pin 14 and 15 must be in mode Alt5
   GPIO::set_mode(GPIO::Pin::BCM14, GPIO::Mode::ALT5);
   GPIO::set_mode(GPIO::Pin::BCM15, GPIO::Mode::ALT5);
 
   // Enable Mini UART (this also enables access to its registers)
-  libk::write32(DEVICE_MEMORY + AUX_ENABLES, 1);
+  libk::write32(_mini_uart_base + AUX_ENABLES, 1);
 
   // Disable auto flow control and disable receiver and transmitter (for now)
-  libk::write32(DEVICE_MEMORY + AUX_MU_CNTL_REG, 0);
+  libk::write32(_mini_uart_base + AUX_MU_CNTL_REG, 0);
 
   // Disable receive and transmit interrupts
-  libk::write32(DEVICE_MEMORY + AUX_MU_IER_REG, 0);
+  libk::write32(_mini_uart_base + AUX_MU_IER_REG, 0);
 
   // Enable 8 bit mode
-  libk::write32(DEVICE_MEMORY + AUX_MU_LCR_REG, 3);
+  libk::write32(_mini_uart_base + AUX_MU_LCR_REG, 3);
 
   // Set RTS line to be always high
-  libk::write32(DEVICE_MEMORY + AUX_MU_MCR_REG, 0);
+  libk::write32(_mini_uart_base + AUX_MU_MCR_REG, 0);
 
-  //  TODO : FixThis!
-  //  switch (MMIO::device) {
-  //    case MMIO::DeviceType::RaspberryPi3:
-  libk::write32(DEVICE_MEMORY + AUX_MU_BAUD_REG, RPI3_CORE_CLOCK / ((uint64_t)8 * baud_rate) - 1);
-  //      break;
-  //    case MMIO::DeviceType::RaspberryPi4:
-  //      libk::write32(DEVICE_MEMORY + AUX_MU_BAUD_REG, RPI4_CORE_CLOCK / ((uint64_t)8 * baud_rate) - 1);
-  //      break;
-  //  }
-  (void)RPI4_CORE_CLOCK;
+  const uint32_t core_clock = Device::get_clock_rate(Device::CORE);
+  libk::write32(_mini_uart_base + AUX_MU_BAUD_REG, core_clock / ((uint64_t)8 * baud_rate) - 1);
 
   // Finally, enable transmitter and receiver
-  libk::write32(DEVICE_MEMORY + AUX_MU_CNTL_REG, 3);
+  libk::write32(_mini_uart_base + AUX_MU_CNTL_REG, 3);
 }
 
-void write_one(uint8_t value, bool mmu_setup = true) {
-  const uintptr_t base = mmu_setup ? DEVICE_MEMORY : 0x3f000000;
-
-  while ((libk::read32(base + AUX_MU_LSR_REG) & 0x20) == 0) {
+void MiniUART::write_one(char value) const {
+  while ((libk::read32(_mini_uart_base + AUX_MU_LSR_REG) & 0x20) == 0) {
     asm("yield");
   }
 
-  libk::write32(base + AUX_MU_IO_REG, value);
+  libk::write32(_mini_uart_base + AUX_MU_IO_REG, value);
 }
 
-uint8_t read_one() {
-  while ((libk::read32(DEVICE_MEMORY + AUX_MU_LSR_REG) & 0x01) == 0) {
+char MiniUART::read_one() const {
+  while ((libk::read32(_mini_uart_base + AUX_MU_LSR_REG) & 0x01) == 0) {
     asm("yield");
   }
 
-  return (libk::read32(DEVICE_MEMORY + AUX_MU_IO_REG) & 0xFF);
+  return (libk::read32(_mini_uart_base + AUX_MU_IO_REG) & 0xFF);
 }
 
-void puts(const char* buffer, bool mmu_setup = true) {
+void MiniUART::puts(const char* buffer) const {
   while (*buffer != '\0') {
-    write_one(*(buffer++), mmu_setup);
+    write_one(*(buffer++));
   }
 }
 
-void write(const uint8_t* buffer, size_t buffer_length) {
+void MiniUART::write(const char* buffer, size_t buffer_length) const {
   for (size_t i = 0; i < buffer_length; ++i) {
-    write_one(buffer[i], true);
+    write_one(buffer[i]);
   }
 }
 
-void read(uint8_t* buffer, size_t buffer_length) {
+void MiniUART::read(char* buffer, size_t buffer_length) const {
   for (size_t i = 0; i < buffer_length; ++i) {
     buffer[i] = read_one();
   }
 }
 
-};  // namespace MiniUART
-
-extern "C" void _puts(const char* buffer, bool mmu_setup);
-extern "C" void _puts_int(uint64_t buffer, bool mmu_setup);
-
-extern "C" void _puts(const char* buffer, bool mmu_setup) {
-  MiniUART::puts(buffer, mmu_setup);
-  MiniUART::puts("\r\n", mmu_setup);
-}
-
-extern "C" void _puts_int(uint64_t buffer, bool mmu_setup) {
-  const char* hex_data = "0123456789abcdef";
-
-  MiniUART::puts("0x", mmu_setup);
-
-  for (int i = 15; i >= 0; --i) {
-    MiniUART::write_one(hex_data[(buffer >> (4 * i)) & 0xf], mmu_setup);
-  }
-
-  MiniUART::puts("\r\n", mmu_setup);
+void MiniUART::writeln(const char* buffer, size_t buffer_length) {
+  MiniUART::write(buffer, buffer_length);
+  MiniUART::puts("\r\n");
 }

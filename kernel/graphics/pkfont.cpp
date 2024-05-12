@@ -1,16 +1,10 @@
-#include "pkfont.hpp"
+#include "graphics/pkfont.hpp"
 
-#include <cstddef>
+#include <libk/string.hpp>
 
 uint32_t PKFont::get_horizontal_advance(const char* text, uint32_t length) const {
   if (length == UINT32_MAX) {
-    // FIXME: replace this with strlen()
-    length = 0;
-    const char* it = text;
-    while (*it != '\0') {
-      length++;
-      it++;
-    }
+    length = libk::strlen(text);
   }
 
   return get_horizontal_advance() * length;
@@ -18,13 +12,7 @@ uint32_t PKFont::get_horizontal_advance(const char* text, uint32_t length) const
 
 uint32_t PKFont::get_width(const char* text, uint32_t length) const {
   if (length == UINT32_MAX) {
-    // FIXME: replace this with strlen()
-    length = 0;
-    const char* it = text;
-    while (*it != '\0') {
-      length++;
-      it++;
-    }
+    length = libk::strlen(text);
   }
 
   return get_char_width() * length;

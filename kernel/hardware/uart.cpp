@@ -1,7 +1,10 @@
-#include "uart.hpp"
-#include "gpio.hpp"
+#include "hardware/uart.hpp"
+
 #include <libk/utils.hpp>
-#include "mailbox.hpp"
+#include "device.hpp"
+#include "hardware/gpio.hpp"
+#include "hardware/mailbox.hpp"
+#include "kernel_dt.hpp"
 
 /** UART0 Data Register (size: 32) */
 static inline constexpr int UART_DR = 0x0;
@@ -51,24 +54,10 @@ static inline constexpr int UART_CR = 0x30;
 /** UART0 Test Data Register (size: 32) */
 // static inline constexpr int UART_TDR = 0x8c;
 
-uintptr_t find_uart_base(const UART::Id uart_id) {
-  (void)uart_id;
-  return 0xffff'2000'0000'0000 + 0x201000;
-}
+UART::UART(uint32_t baud_rate) : _uart_base(KernelDT::get_device_address("uart0")) {
+  // Get the UART Clock
+  uint32_t uart_clock = Device::get_clock_rate(Device::UART);
 
-UART::UART(const Id uart_id, uint32_t baud_rate) : _uart_base(find_uart_base(uart_id)) {
-  // Set the UART Clock to 4MHz
-  struct GetClockRateBuffer {
-    uint32_t clock_id = 0;
-    uint32_t rate = 0;
-  };
-  using GetClockRateTag = MailBox::PropertyTag<0x00030002, GetClockRateBuffer>;
-
-  MailBox::PropertyMessage<GetClockRateTag> msg;
-  msg.tag.buffer.clock_id = 0x000000002;
-  send_property(msg);
-
-  // Deactivate Pull Up/Down on pin 14 and 15
   GPIO::set_pull_up_down(GPIO::Pin::BCM14, GPIO::PUD_Mode::Off);
   GPIO::set_pull_up_down(GPIO::Pin::BCM15, GPIO::PUD_Mode::Off);
 
@@ -77,9 +66,10 @@ UART::UART(const Id uart_id, uint32_t baud_rate) : _uart_base(find_uart_base(uar
   GPIO::set_mode(GPIO::Pin::BCM15, GPIO::Mode::ALT0);
 
   // IntegerPart = clock / (16 * baud rate)   <- Integer division
-  // FractionalPart = 64 * (clock % (16 * baud rate)) / (16 * baud rate) = 4 * (clock % (16 * baud rate)) / (baud rate)
-  const uint32_t integer_part = msg.tag.buffer.rate / (16 * baud_rate);
-  const uint32_t fractional_part = 4 * (msg.tag.buffer.rate % (16 * baud_rate)) / baud_rate;
+  // FractionalPart = 64 * (clock % (16 * baud rate)) / (16 * baud rate) = 4 * (clock % (16 * baud rate)) / (baud
+  // rate)
+  const uint32_t integer_part = uart_clock / (16 * baud_rate);
+  const uint32_t fractional_part = 4 * (uart_clock % (16 * baud_rate)) / baud_rate;
   libk::write32(_uart_base + UART_IBRD, integer_part);
   libk::write32(_uart_base + UART_FBRD, fractional_part);
 
