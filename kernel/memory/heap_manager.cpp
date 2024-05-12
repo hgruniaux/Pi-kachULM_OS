@@ -68,6 +68,9 @@ VirtualAddress HeapManager::change_heap_end(long byte_offset) {
         pa_to_del = resolve_kernel_va(va_to_del);
         break;
       }
+      default: {
+        libk::panic("Unknown heap kind.");
+      }
     }
 
     if (!unmap_range(_tbl, va_to_del, va_to_del)) {
@@ -116,6 +119,9 @@ void HeapManager::free() {
       case Kind::Kernel: {
         pa_to_del = resolve_kernel_va(va_to_del);
         break;
+      }
+      default: {
+        libk::panic("Unknown heap kind.");
       }
     }
 
