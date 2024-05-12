@@ -4,7 +4,7 @@
 static inline constexpr PagesAttributes kernel_rw_memory = {.sh = Shareability::InnerShareable,
                                                             .exec = ExecutionPermission::NeverExecute,
                                                             .rw = ReadWritePermission::ReadWrite,
-                                                            .access = Accessibility::Privileged,
+                                                            .access = Accessibility::AllProcess,
                                                             .type = MemoryType::Normal};
 
 MemoryPageBuilder::MemoryPageBuilder(PageAllocList page_alloc, MMUTable* table) : _alloc(page_alloc), _tbl(table) {}

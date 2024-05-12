@@ -25,9 +25,9 @@ process3:
 
 .global process1
 process1:
-    sub x28, x28, #16
+    sub sp, sp, #16
     mov w0, #5
-    str w0, [ x28, 12 ]
+    str w0, [ sp, 12 ]
     mov w8, #SYS_DEBUG
     svc #0
     mov w8, #SYS_SPAWN

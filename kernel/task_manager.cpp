@@ -22,7 +22,7 @@ Task* TaskManager::create_task() {
   // Allocate a new stack of the task.
   constexpr size_t STACK_SIZE = 4096 * 2;
   task->m_stack = kmalloc(STACK_SIZE, 16);
-  task->m_saved_state.regs.x28 = ((uintptr_t)task->m_stack + STACK_SIZE);
+  task->m_saved_state.sp = (void*)((uintptr_t)task->m_stack + STACK_SIZE);
   if (task->m_stack == nullptr) {
     // Failed to allocate a new stack, something bad is happening...
     delete task;
@@ -30,8 +30,6 @@ Task* TaskManager::create_task() {
   }
 
   libk::bzero(task->m_stack, STACK_SIZE);
-
-  // task->m_saved_state.regs.x29 = (uint64_t)(uintptr_t)task->m_saved_state.sp;
 
   task->m_id = m_next_available_pid++;
   // FIXME: register id mapping
