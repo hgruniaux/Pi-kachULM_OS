@@ -1,4 +1,5 @@
 #pragma once
+
 #include "memory/mmu_table.hpp"
 
 #include <libk/linked_list.hpp>
@@ -33,7 +34,7 @@ class MemoryChunk {
   [[nodiscard]] size_t byte_size() const;
 
   /** @returns the size of a page. */
-  [[gnu::always_inline, clang::always_inline]] static inline size_t page_byte_size();
+  static size_t get_page_byte_size();
 
  private:
   friend ProcessMemory;
