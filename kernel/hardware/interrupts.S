@@ -68,8 +68,7 @@ el1_entry: // EL1 entry point
 // Jumps from EL1 level to EL0 (Non-secure) level.
 // It is expected that the CPU is in EL1.
                      // Signature: void jump_to_el0(uintptr_t elr, uintptr_t stack);
-                     .global jump_to_el0
-jump_to_el0:
+                     .global jump_to_el0 jump_to_el0:
     msr SPSR_EL1, xzr
 
     // Set EL0 stack pointer.
@@ -80,9 +79,6 @@ jump_to_el0:
     msr ELR_EL1, x0
 
     eret
-
-el0_entry: // EL0 entry point
-    ret
 
 #define SIZEOF_REGISTERS 288
 

@@ -20,7 +20,7 @@ Task* TaskManager::create_task(const elf::Header* program_image) {
   // Create a process virtual memory view and allocate its stack.
   auto memory = libk::make_shared<ProcessMemory>();
   task->m_saved_state.memory = memory;
-  task->m_saved_state.sp = (void*)task->m_saved_state.memory->get_stack_top();
+  task->m_saved_state.sp = (void*)task->m_saved_state.memory->get_stack_bottom();
 
   // Load the program segments in memory.
   for (uint64_t i = 0; i < program_image->program_header_entry_count; ++i) {

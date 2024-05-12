@@ -2,7 +2,7 @@
 
 int main();
 
-void _startup() {
+void _start() {
   int exit_code = main();
   sys_exit(exit_code);
 }
