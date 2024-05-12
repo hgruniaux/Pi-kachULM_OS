@@ -39,6 +39,7 @@ class ProcessMemory {
   HeapManager _heap;
   MemoryChunk _stack;
 
+ public:
   struct MappedChunk {
     VirtualPA start;
     MemoryChunk* mem;

@@ -68,16 +68,17 @@ void ProcessMemory::free() {
   _heap.free();
 
   // Free all mappings
-  while (!_chunks.is_empty()) {
-    const MappedChunk chunk = _chunks.pop_back();
-    unmap_chunk(chunk.start);
+  for (const auto chunk : _chunks) {
+    unmap_chunk(chunk.start);  // <- chunk will be removed from the list by unmap
   }
+
+  KASSERT(_chunks.is_empty());
 
   // Free MMU Table
   memory_impl::delete_process_tbl(_tbl);
 }
 
-bool ProcessMemory::map_chunk(MemoryChunk& chunk, VirtualPA page_va, bool read_only, bool executable) {
+bool ProcessMemory::map_chunk(MemoryChunk& chunk, const VirtualPA page_va, bool read_only, bool executable) {
   if (chunk._pas == nullptr) {
     return false;
   }
@@ -87,11 +88,9 @@ bool ProcessMemory::map_chunk(MemoryChunk& chunk, VirtualPA page_va, bool read_o
   for (size_t page_id = 0; page_id < chunk._nb_pages; ++page_id) {
     const PhysicalPA page_pa = chunk._pas[page_id];
 
-    if (!map_range(&_tbl, page_va, page_va, page_pa, attr)) {
+    if (!map_range(&_tbl, page_va + page_id * PAGE_SIZE, page_va + page_id * PAGE_SIZE, page_pa, attr)) {
       return false;
     }
-
-    page_va += PAGE_SIZE;
   }
 
   _chunks.push_back({page_va, &chunk});
@@ -115,7 +114,7 @@ void ProcessMemory::unmap_chunk(VirtualPA chunk_start_address) {
               it->mem->end_address(it->start), get_asid());
   }
 
-  _chunks.remove(it);
+  _chunks.erase(it);
   it->mem->unregister_mapping(this);
 }
 

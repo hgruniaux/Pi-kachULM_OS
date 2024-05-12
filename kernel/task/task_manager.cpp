@@ -20,8 +20,8 @@ libk::SharedPointer<Task> TaskManager::create_task() {
     return nullptr;
 
   // Create a process virtual memory view and allocate its stack.
-  constexpr size_t process_stack_byte_size = 1024;
-  auto memory = libk::make_shared<ProcessMemory>(process_stack_byte_size);
+  const auto stack_size = MemoryChunk::get_page_byte_size() * 2;
+  auto memory = libk::make_shared<ProcessMemory>(stack_size);
   task->m_saved_state.memory = memory;
   task->m_saved_state.sp = (void*)task->m_saved_state.memory->get_stack_start();
 
