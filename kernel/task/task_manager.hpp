@@ -6,6 +6,7 @@
 #include <libk/memory.hpp>
 #include "scheduler.hpp"
 #include "task.hpp"
+#include "delta_queue.hpp"
 
 class TaskManager {
  public:

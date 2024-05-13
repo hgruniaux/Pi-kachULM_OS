@@ -182,6 +182,18 @@ class LinkedList {
   [[nodiscard]] Iterator end() { return Iterator(nullptr); }
   [[nodiscard]] ConstIterator end() const { return Iterator(nullptr); }
 
+  void insert_before(Iterator it, const T& value) {
+    Node* node = new Node{data};
+    KASSERT(node != nullptr);
+    insert_before(it.m_node, node);
+  }
+
+  void insert_after(Iterator it, const T& value) {
+    Node* node = new Node{data};
+    KASSERT(node != nullptr);
+    insert_after(it.m_node, node);
+  }
+
   void erase(Iterator it) { remove_node(it.m_node); }
 };  // class LinkedList
 }  // namespace libk

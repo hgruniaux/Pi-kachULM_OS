@@ -9,6 +9,7 @@ TaskManager* TaskManager::g_instance = nullptr;
 TaskManager::TaskManager() {
   KASSERT(g_instance == nullptr && "multiple task manager created");
   g_instance = this;
+  m_delta_queue = nullptr;
 
   m_default_syscall_table = create_pika_syscalls();
   m_scheduler = libk::make_scoped<Scheduler>();
@@ -87,7 +88,21 @@ libk::SharedPointer<Task> TaskManager::create_task(const elf::Header* program_im
   return task;
 }
 
-void TaskManager::sleep_task(Task* task, uint64_t time_in_us) {}
+void TaskManager::sleep_task(Task* task, uint64_t time_in_us) {
+  KASSERT(task != nullptr);
+
+  if (!task->is_running())
+    return;
+
+  LOG_DEBUG("Sleep the task pid={}", task->get_id());
+
+  task->m_state = Task::State::INTERRUPTIBLE;
+
+  // FIXME : ajouter convertion us vers ticks
+
+  m_delta_queue.add_task(task, time_in_us); 
+  m_scheduler->remove_task(task);
+}
 
 void TaskManager::pause_task(Task* task) {
   KASSERT(task != nullptr);
