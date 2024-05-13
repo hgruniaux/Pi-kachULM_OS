@@ -38,8 +38,8 @@ class Task {
      * interrupted until the probing is complete, or the hardware device could be left in
      * an unpredictable state. */
     UNINTERRUPTIBLE,
-    /** Process execution has been stopped. */
-    STOPPED
+    /** Process has been terminated/killed. */
+    TERMINATED
   };  // enum class State
 
   /** Gets the current active (running) task. This forward to TaskManager::get_current_task(). */
@@ -55,11 +55,20 @@ class Task {
   [[nodiscard]] bool is_running() const { return m_state == State::RUNNING; }
   [[nodiscard]] bool is_interruptible() const { return m_state == State::INTERRUPTIBLE; }
   [[nodiscard]] bool is_uninterruptible() const { return m_state == State::UNINTERRUPTIBLE; }
+  [[nodiscard]] bool is_terminated() const { return m_state == State::TERMINATED; }
   /** Gets the task current state. */
   [[nodiscard]] State get_state() const { return m_state; }
 
   /** Gets the task priority for scheduling. The larger it is, the higher the process priority. */
   [[nodiscard]] uint32_t get_priority() const { return m_priority; }
+
+  [[nodiscard]] bool has_parent() const { return m_parent != nullptr; }
+  /** Gets the task parent if any. */
+  [[nodiscard]] Task* get_parent() { return m_parent; }
+  [[nodiscard]] const Task* get_parent() const { return m_parent; }
+
+  [[nodiscard]] auto children_begin() const { return m_children.begin(); }
+  [[nodiscard]] auto children_end() const { return m_children.begin(); }
 
   /** Gets the task saved execution state. This is all the data needed to do context switch. */
   [[nodiscard]] TaskSavedState& get_saved_state() { return m_saved_state; }
@@ -92,6 +101,10 @@ class Task {
   TaskSavedState m_saved_state;
   const char* m_name = nullptr;
   SyscallTable* m_syscall_table = nullptr;
-  libk::LinkedList<MemoryChunk> m_mapped_chunks;
+
+  // Parent-children relationship.
+  Task* m_parent = nullptr;  // not a SharedPointer to avoid cyclic dependencies
   libk::LinkedList<libk::SharedPointer<Task>> m_children;
+
+  libk::LinkedList<MemoryChunk> m_mapped_chunks;
 };  // class Task

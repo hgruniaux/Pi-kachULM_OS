@@ -16,7 +16,7 @@ set(CMAKE_C_EXTENSIONS ON)
 add_compile_options(-Wall -Wextra)
 
 # Tell the compiler that we are in a freestanding environment.
-add_compile_options(-ffreestanding -nostdlib -fno-builtin)
+add_compile_options(-ffreestanding -nostdlib -fno-builtin -mno-outline-atomics)
 
 # Disable exceptions and RTTI in C++
 set(EXTRA_CXX_FLAGS -fno-exceptions -fno-rtti -mgeneral-regs-only)

@@ -16,7 +16,7 @@ class TaskManager {
   [[nodiscard]] SyscallTable* get_default_syscall_table() const { return m_default_syscall_table; }
   void set_default_syscall_table(SyscallTable* table) { m_default_syscall_table = table; }
 
-  libk::SharedPointer<Task> create_task();
+  libk::SharedPointer<Task> create_task(Task* parent = nullptr);
   libk::SharedPointer<Task> create_task(const elf::Header* program_image);
 
   /**

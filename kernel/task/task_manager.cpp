@@ -14,10 +14,16 @@ TaskManager::TaskManager() {
   m_scheduler = libk::make_scoped<Scheduler>();
 }
 
-libk::SharedPointer<Task> TaskManager::create_task() {
+libk::SharedPointer<Task> TaskManager::create_task(Task* parent) {
   auto task = libk::make_shared<Task>();
   if (!task)
     return nullptr;
+
+  // Set parent-child relationship.
+  if (parent != nullptr) {
+    task->m_parent = parent;
+    parent->m_children.push_back(task);
+  }
 
   // Create a process virtual memory view and allocate its stack.
   const auto stack_size = MemoryChunk::get_page_byte_size() * 2;
@@ -112,9 +118,15 @@ void TaskManager::kill_task(Task* task, int exit_code) {
 
   LOG_DEBUG("Kill the task pid={} with status {}", task->get_id(), exit_code);
 
-  task->m_state = Task::State::UNINTERRUPTIBLE;
-  m_scheduler->remove_task(task);
+  // Propagate the kill to children. This is done recursively.
+  auto it = task->children_begin();
+  for (; it != task->children_end(); ++it) {
+    auto child = *it;
+    kill_task(child.get(), exit_code);
+  }
 
+  task->m_state = Task::State::TERMINATED;
+  m_scheduler->remove_task(task);
   delete task;
 }
 
