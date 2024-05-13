@@ -9,7 +9,6 @@ TaskManager* TaskManager::g_instance = nullptr;
 TaskManager::TaskManager() {
   KASSERT(g_instance == nullptr && "multiple task manager created");
   g_instance = this;
-  m_delta_queue = nullptr;
 
   m_default_syscall_table = create_pika_syscalls();
   m_scheduler = libk::make_scoped<Scheduler>();

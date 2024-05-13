@@ -69,4 +69,5 @@ class TaskManager {
   libk::HashTable<Task::id_t, Task*> m_id_mapping;
   Task::id_t m_next_available_pid = 0;
   SyscallTable* m_default_syscall_table = nullptr;
+  DeltaQueue m_delta_queue;
 };  // class TaskManager
