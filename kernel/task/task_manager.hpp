@@ -56,6 +56,8 @@ class TaskManager {
    */
   void kill_task(Task* task, int exit_code = 0);
 
+  bool set_task_priority(Task* task, uint32_t new_priority);
+
   [[nodiscard]] Task* get_current_task() const;
   void schedule();
 

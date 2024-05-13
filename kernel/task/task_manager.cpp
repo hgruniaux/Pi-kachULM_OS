@@ -118,6 +118,18 @@ void TaskManager::kill_task(Task* task, int exit_code) {
   delete task;
 }
 
+bool TaskManager::set_task_priority(Task* task, uint32_t new_priority) {
+  KASSERT(task != nullptr);
+
+  if (new_priority < Scheduler::MIN_PRIORITY || new_priority > Scheduler::MAX_PRIORITY)
+    return false;
+
+  const uint32_t old_priority = task->get_priority();
+  task->m_priority = new_priority;
+  m_scheduler->update_task_priority(task, old_priority);
+  return true;
+}
+
 Task* TaskManager::get_current_task() const {
   return m_scheduler->get_current_task();
 }

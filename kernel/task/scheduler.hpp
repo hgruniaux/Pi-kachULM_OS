@@ -5,7 +5,12 @@
 
 class Scheduler {
  public:
+  static constexpr uint32_t MIN_PRIORITY = 0;
+  static constexpr uint32_t MAX_PRIORITY = 31;
+
   Scheduler();
+
+  // No copy and move
   Scheduler(const Scheduler&) = delete;
   Scheduler(Scheduler&&) = delete;
   Scheduler& operator=(const Scheduler&) = delete;
@@ -19,11 +24,22 @@ class Scheduler {
 
   void add_task(Task* task);
   bool remove_task(Task* task);
+  void update_task_priority(Task* task, uint32_t old_priority);
 
   void schedule();
+  void tick();
 
  private:
+  [[nodiscard]] uint32_t get_current_priority() const;
+  [[nodiscard]] Task* find_higher_priority_task_than_current();
+  void switch_to(Task* new_task);
+
   static Scheduler* g_instance;
   Task* m_current_task = nullptr;
-  libk::LinkedList<Task*> m_run_queue;
+
+  static constexpr uint32_t TIME_SLICE = 10;
+  uint32_t m_elapsed_ticks = 0;
+
+  static constexpr uint32_t PRIORITY_COUNT = MAX_PRIORITY - MIN_PRIORITY + 1;
+  libk::LinkedList<Task*> m_run_queue[PRIORITY_COUNT];
 };  // class Scheduler

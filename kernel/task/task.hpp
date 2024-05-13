@@ -42,6 +42,7 @@ class Task {
     STOPPED
   };  // enum class State
 
+  /** Gets the current active (running) task. This forward to TaskManager::get_current_task(). */
   [[nodiscard]] static Task* current();
 
   /** Gets the task identifier (process id). */
@@ -56,6 +57,9 @@ class Task {
   [[nodiscard]] bool is_uninterruptible() const { return m_state == State::UNINTERRUPTIBLE; }
   /** Gets the task current state. */
   [[nodiscard]] State get_state() const { return m_state; }
+
+  /** Gets the task priority for scheduling. The larger it is, the higher the process priority. */
+  [[nodiscard]] uint32_t get_priority() const { return m_priority; }
 
   /** Gets the task saved execution state. This is all the data needed to do context switch. */
   [[nodiscard]] TaskSavedState& get_saved_state() { return m_saved_state; }
@@ -80,10 +84,11 @@ class Task {
   void wake();
   void kill(int exit_code = 0);
 
- public:  // FIXME
+ private:
   friend class TaskManager;
   id_t m_id;
   State m_state = State::INTERRUPTIBLE;
+  uint32_t m_priority = 15;
   TaskSavedState m_saved_state;
   const char* m_name = nullptr;
   SyscallTable* m_syscall_table = nullptr;

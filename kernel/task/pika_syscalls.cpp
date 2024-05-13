@@ -39,11 +39,42 @@ static void pika_sys_yield(Registers& regs) {
 
 static void pika_sys_print(Registers& regs) {
   const auto* msg = (const char*)regs.x0;
+  // FIXME: check if pointer is accessible by current task
   libk::print("sys_print() from pid={}: {}", Task::current()->get_id(), msg);
   set_error(regs, SYS_ERR_OK);
 }
 
 static void pika_sys_spawn(Registers& regs) {
+  set_error(regs, SYS_ERR_OK);
+}
+
+static void pika_sys_getpid(Registers& regs) {
+  const sys_pid_t pid = Task::current()->get_id();
+  regs.x0 = pid;
+}
+
+static void pika_sys_sched_set_priority(Registers& regs) {
+  const sys_pid_t pid = regs.x0;
+  const uint32_t priority = regs.x1;
+
+  // TODO: use pid to set priority of another process
+  Task* current_task = Task::current();
+  if (TaskManager::get().set_task_priority(current_task, priority)) {
+    set_error(regs, SYS_ERR_OK);
+    return;
+  }
+
+  set_error(regs, SYS_ERR_INVALID_PRIORITY);
+}
+
+static void pika_sys_sched_get_priority(Registers& regs) {
+  const sys_pid_t pid = regs.x0;
+  uint32_t* priority = (uint32_t*)regs.x1;
+  // FIXME: check if pointer is accessible by current task
+
+  // TODO: use pid to set priority of another process
+  Task* current_task = Task::current();
+  *priority = current_task->get_id();
   set_error(regs, SYS_ERR_OK);
 }
 
@@ -82,6 +113,10 @@ SyscallTable* create_pika_syscalls() {
   table->register_syscall(SYS_YIELD, pika_sys_yield);
   table->register_syscall(SYS_PRINT, pika_sys_print);
   table->register_syscall(SYS_SPAWN, pika_sys_spawn);
+  table->register_syscall(SYS_GETPID, pika_sys_getpid);
+  table->register_syscall(SYS_SCHED_SET_PRIORITY, pika_sys_sched_set_priority);
+  table->register_syscall(SYS_SCHED_GET_PRIORITY, pika_sys_sched_get_priority);
+
   table->register_syscall(SYS_DEBUG, [](Registers& regs) {
     libk::print("Debug: {}", regs.x0);
     set_error(regs, SYS_ERR_OK);
