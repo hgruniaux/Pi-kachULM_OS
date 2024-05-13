@@ -29,7 +29,3 @@ sys_error_t sys_spawn(void (*__f)()) {
 sys_error_t sys_yield() {
   return __syscall0(SYS_YIELD);
 }
-
-sys_error_t sys_debug() {
-  return __syscall0(SYS_DEBUG);
-}

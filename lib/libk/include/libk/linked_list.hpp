@@ -160,9 +160,9 @@ class LinkedList {
   };
 
   [[nodiscard]] Iterator begin() const { return Iterator(m_head); }
-  [[nodiscard]] Iterator end() const { return Iterator(nullptr); }
+  [[nodiscard]] Iterator end() const { return Iterator(m_tail); }
 
-  void erase(Iterator it) { remove_node(it.m_node); }
+  void remove(Iterator it) { remove_node(it.m_node); }
 };  // class LinkedList
 }  // namespace libk
 

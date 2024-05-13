@@ -53,10 +53,8 @@ size_t MemoryChunk::read(size_t byte_offset, void* data, size_t data_byte_length
 void MemoryChunk::free() {
   // Free all mapping in processes
   for (const auto proc : _proc) {
-    proc.proc->unmap_chunk(proc.chunk_start);  // <- proc will be removed from the list by the unregister call
+    proc.mem->unmap_chunk(proc.chunk_start);  // <- proc will be removed from the list by the unregister call
   }
-
-  KASSERT(_proc.is_empty());
 
   // Free the kernel memory
   memory_impl::free_section(_nb_pages, _kernel_va);
@@ -80,13 +78,13 @@ void MemoryChunk::register_mapping(ProcessMemory* proc_mem, VirtualPA start_addr
 }
 
 void MemoryChunk::unregister_mapping(ProcessMemory* proc_mem) {
-  auto it = std::find_if(_proc.begin(), _proc.end(), [proc_mem](const auto& proc) { return proc_mem == proc.proc; });
+  auto it = std::find_if(_proc.begin(), _proc.end(), [proc_mem](const auto& proc) { return proc_mem == proc.mem; });
 
   if (it == std::end(_proc)) {
     libk::panic("Trying to remove an unknown binding Process <-> MemoryChunk !");
   }
 
-  _proc.erase(it);
+  _proc.remove(it);
 }
 
 bool MemoryChunk::is_status_okay() const {

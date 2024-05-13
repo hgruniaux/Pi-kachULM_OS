@@ -77,17 +77,23 @@ add_executable(kernel
         graphics/graphics.hpp
         graphics/graphics.cpp
 
-        # Process
-        task_manager.hpp
-        task_manager.cpp
+        # Task
+        task/task_manager.hpp
+        task/task_manager.cpp
 
-        scheduler.hpp
-        scheduler.cpp
+        task/scheduler.hpp
+        task/scheduler.cpp
 
-        syscall.hpp
-        syscall.cpp
-        task.cpp
+        task/syscall_table.hpp
+        task/syscall_table.cpp
 
+        task/task.hpp
+        task/task.cpp
+
+        task/pika_syscalls.hpp
+        task/pika_syscalls.cpp
+
+        # Embed init ELF file inside the kernel
         ${CMAKE_CURRENT_BINARY_DIR}/init_elf.c
 )
 

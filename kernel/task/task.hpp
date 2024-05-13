@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <libk/memory.hpp>
 #include "memory/process_memory.hpp"
-#include "syscall.hpp"
+#include "syscall_table.hpp"
 
 struct TaskSavedState {
   Registers regs;
@@ -42,6 +42,8 @@ class Task {
     STOPPED
   };  // enum class State
 
+  [[nodiscard]] static Task* current();
+
   /** Gets the task identifier (process id). */
   [[nodiscard]] id_t get_id() const { return m_id; }
 
@@ -55,15 +57,28 @@ class Task {
   /** Gets the task current state. */
   [[nodiscard]] State get_state() const { return m_state; }
 
+  /** Gets the task saved execution state. This is all the data needed to do context switch. */
   [[nodiscard]] TaskSavedState& get_saved_state() { return m_saved_state; }
   [[nodiscard]] const TaskSavedState& get_saved_state() const { return m_saved_state; }
+
+  /** Gets the task virtual memory. */
+  [[nodiscard]] libk::SharedPointer<ProcessMemory> get_memory() const { return m_saved_state.memory; }
 
   /** Forward to `get_syscall_table()->call_syscall(id, registers)`. */
   void call_syscall(uint32_t id, Registers& registers) { m_syscall_table->call_syscall(id, registers); }
   /** Gets the task syscall table. */
   [[nodiscard]] SyscallTable* get_syscall_table() { return m_syscall_table; }
   [[nodiscard]] const SyscallTable* get_syscall_table() const { return m_syscall_table; }
-  void set_syscall_table(SyscallTable* table) { m_syscall_table = table; }
+  void set_syscall_table(SyscallTable* table) {
+    KASSERT(table != nullptr);
+    m_syscall_table = table;
+  }
+
+  // Forward to TaskManager functions.
+  void sleep(uint64_t time_in_us);
+  void pause();
+  void wake();
+  void kill(int exit_code = 0);
 
  public:  // FIXME
   friend class TaskManager;
@@ -73,4 +88,5 @@ class Task {
   const char* m_name = nullptr;
   SyscallTable* m_syscall_table = nullptr;
   libk::LinkedList<MemoryChunk> m_mapped_chunks;
+  libk::LinkedList<libk::SharedPointer<Task>> m_children;
 };  // class Task

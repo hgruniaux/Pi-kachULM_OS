@@ -7,15 +7,15 @@
 
 class ProcessMemory {
  public:
-  explicit ProcessMemory(size_t minimum_stack_byte_size);
+  explicit ProcessMemory();
   ~ProcessMemory();
 
   /** Returns the ASID (Address Space ID) for this process. */
   uint8_t get_asid() const;
 
   /* Stack Management */
-  VirtualAddress get_stack_end() const;
-  VirtualAddress get_stack_start() const;
+  VirtualAddress get_stack_top() const;
+  VirtualAddress get_stack_bottom() const;
 
   /* Heap Management */
   VirtualPA change_heap_end(long byte_offset);
@@ -39,7 +39,6 @@ class ProcessMemory {
   HeapManager _heap;
   MemoryChunk _stack;
 
- public:
   struct MappedChunk {
     VirtualPA start;
     MemoryChunk* mem;

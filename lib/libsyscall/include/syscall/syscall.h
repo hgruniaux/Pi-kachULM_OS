@@ -11,13 +11,18 @@
 #define SYS_YIELD 3
 #define SYS_PRINT 4
 #define SYS_SPAWN 5
-#define SYS_DEBUG 100
+#define SYS_DEBUG 6
+#define SYS_GFX_DRAW_LINE 100
+#define SYS_GFX_DRAW_RECT 101
+#define SYS_GFX_FILL_RECT 102
+#define SYS_GFX_DRAW_TEXT 103
 
 #ifndef __ASSEMBLER__
 typedef int sys_error_t;
 #endif  // !__ASSEMBLER__
 // The system call error codes:
 #define SYS_ERR_OK 0
+#define SYS_ERR_UNKNOWN_SYSCALL 1
 #define SYS_ERR_INTERNAL 1
 
 #ifndef __ASSEMBLER__
@@ -31,7 +36,12 @@ sys_error_t sys_usleep(uint64_t __time_in_us);
 sys_error_t sys_print(const char* __msg);
 sys_error_t sys_spawn(void (*__f)());
 sys_error_t sys_yield();
-sys_error_t sys_debug();
+sys_error_t sys_debug(uint64_t __x);
+
+sys_error_t sys_gfx_draw_line(uint32_t x0, uint32_t y0, uint32_t x1, uint32_t y1, uint32_t argb);
+sys_error_t sys_gfx_draw_rect(uint32_t x0, uint32_t y0, uint32_t x1, uint32_t y1, uint32_t argb);
+sys_error_t sys_gfx_fill_line(uint32_t x0, uint32_t y0, uint32_t x1, uint32_t y1, uint32_t argb);
+sys_error_t sys_gfx_draw_text(uint32_t x0, uint32_t y0, uint32_t x1, uint32_t y1, uint32_t argb);
 
 #ifdef __cplusplus
 }

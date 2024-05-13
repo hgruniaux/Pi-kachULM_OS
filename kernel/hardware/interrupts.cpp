@@ -1,7 +1,6 @@
 #include "interrupts.hpp"
 #include <libk/log.hpp>
-#include "../task_manager.hpp"
-#include "syscall.hpp"
+#include "task/task_manager.hpp"
 
 ExceptionLevel get_current_exception_level() {
   // The current exception level is stored in the system register CurrentEL in the bits [3:2].

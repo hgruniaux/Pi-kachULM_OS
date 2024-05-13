@@ -1,5 +1,6 @@
 #include "task_manager.hpp"
 #include "memory/mem_alloc.hpp"
+#include "pika_syscalls.hpp"
 
 #include <libk/log.hpp>
 
@@ -9,21 +10,38 @@ TaskManager::TaskManager() {
   KASSERT(g_instance == nullptr && "multiple task manager created");
   g_instance = this;
 
+  m_default_syscall_table = create_pika_syscalls();
   m_scheduler = libk::make_scoped<Scheduler>();
 }
 
-Task* TaskManager::create_task(const elf::Header* program_image) {
-  Task* task = new Task;
-  if (task == nullptr)
+libk::SharedPointer<Task> TaskManager::create_task() {
+  auto task = libk::make_shared<Task>();
+  if (!task)
     return nullptr;
 
   // Create a process virtual memory view and allocate its stack.
-  constexpr size_t process_stack_byte_size = 1024;
-  auto memory = libk::make_shared<ProcessMemory>(process_stack_byte_size);
+  auto memory = libk::make_shared<ProcessMemory>();
   task->m_saved_state.memory = memory;
-  task->m_saved_state.sp = (void*)task->m_saved_state.memory->get_stack_start();
+  task->m_saved_state.sp = (void*)task->m_saved_state.memory->get_stack_bottom();
+
+  // Set process unique ID.
+  task->m_id = m_next_available_pid++;
+  // FIXME: register id mapping
+
+  task->m_syscall_table = m_default_syscall_table;
+
+  m_tasks.push_back(task);
+  LOG_DEBUG("Create a new task with pid={}", task->get_id());
+  return task;
+}
+
+libk::SharedPointer<Task> TaskManager::create_task(const elf::Header* program_image) {
+  auto task = create_task();
+  if (!task)
+    return nullptr;
 
   // Load the program segments in memory.
+  ProcessMemory* memory = task->get_memory().get();
   for (uint64_t i = 0; i < program_image->program_header_entry_count; ++i) {
     const elf::ProgramHeader* segment = elf::get_program_header(program_image, i);
     if (segment == nullptr)
@@ -47,10 +65,7 @@ Task* TaskManager::create_task(const elf::Header* program_image) {
 
       if (segment->file_size > 0) {
         const char* segment_data = (const char*)(program_image) + segment->offset;
-        const size_t written_bytes = chunk.write(
-            0, segment_data, segment->file_size);  // FIXME : This cannot be 0 here, if
-                                                   //  segment->virtual_addr is not a multiple of page_size.
-                                                   //  Surely somthing like : (segment->virtual_addr - va_start)
+        const size_t written_bytes = chunk.write(0, segment_data, segment->file_size);
         KASSERT(written_bytes == segment->file_size);
       }
     }
@@ -59,16 +74,10 @@ Task* TaskManager::create_task(const elf::Header* program_image) {
   // Set the entry point of the process.
   const auto entry_addr = program_image->entry_addr;
   task->m_saved_state.regs.elr = entry_addr;
-
-  task->m_id = m_next_available_pid++;
-  // FIXME: register id mapping
-
-  task->m_syscall_table = m_default_syscall_table;
-  m_tasks.push_back(task);
-
-  LOG_DEBUG("Create a new task with pid={}", task->get_id());
   return task;
 }
+
+void TaskManager::sleep_task(Task* task, uint64_t time_in_us) {}
 
 void TaskManager::pause_task(Task* task) {
   KASSERT(task != nullptr);
@@ -103,14 +112,6 @@ void TaskManager::kill_task(Task* task, int exit_code) {
   m_scheduler->remove_task(task);
 
   delete task;
-}
-
-void TaskManager::kill_current_task(int exit_code) {
-  Task* current_task = get_current_task();
-  if (current_task == nullptr)
-    return;
-
-  kill_task(current_task, exit_code);
 }
 
 Task* TaskManager::get_current_task() const {

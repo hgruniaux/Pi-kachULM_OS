@@ -8,16 +8,17 @@ void _start() {
   sys_exit(exit_code);
 }
 
-static const char* hex_digits = "0123456789ABCDEF";
+static const char hex_digits[] = "0123456789ABCDEF";
 
 void pp_uint(uint64_t value) {
-  char buffer[29] = "0x";
+  char buffer[sizeof(uint64_t) * 2 + 3] = {'0', 'x'};
 
   for (size_t i = 0; i < sizeof(uint64_t) * 2; ++i) {
     buffer[i + 2] = hex_digits[(value >> (4 * (sizeof(uint64_t) * 2 - (i + 1)))) & 0xf];
   }
 
-  buffer[28] = 0;
+  sys_print("Bar");
+  buffer[sizeof(uint64_t) * 2 + 2] = 0;
   sys_print(buffer);
 }
 
@@ -28,10 +29,8 @@ void pp_stack() {
 }
 
 int main() {
-  sys_debug();
-  sys_yield();
-  sys_debug();
   sys_print("Hello from process !");
+  sys_yield();
   sys_print("My stack is:");
   pp_stack();
   sys_print("END !");
