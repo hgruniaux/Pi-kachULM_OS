@@ -1,10 +1,12 @@
 #pragma once
+
 #include "libk/linked_list.hpp"
-#include "task_manager.hpp"
+#include "task.hpp"
 
 class DeltaQueue {
  public:
   void tick();
+
   void add_task(Task* task, uint64_t ticks);
 
  private:

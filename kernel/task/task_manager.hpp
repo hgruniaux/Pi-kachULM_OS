@@ -60,7 +60,9 @@ class TaskManager {
   bool set_task_priority(Task* task, uint32_t new_priority);
 
   [[nodiscard]] Task* get_current_task() const;
+
   void schedule();
+  void tick();
 
  private:
   static TaskManager* g_instance;

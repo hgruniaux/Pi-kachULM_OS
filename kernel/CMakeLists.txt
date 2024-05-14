@@ -93,10 +93,14 @@ add_executable(kernel
         task/pika_syscalls.hpp
         task/pika_syscalls.cpp
 
-        # Embed init ELF file inside the kernel
-        ${CMAKE_CURRENT_BINARY_DIR}/init_elf.c
         task/wait_list.hpp
         task/wait_list.cpp
+
+        task/delta_queue.hpp
+        task/delta_queue.cpp
+
+        # Embed init ELF file inside the kernel
+        ${CMAKE_CURRENT_BINARY_DIR}/init_elf.c
 )
 
 target_include_directories(kernel PUBLIC .)

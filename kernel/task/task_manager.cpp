@@ -99,7 +99,7 @@ void TaskManager::sleep_task(Task* task, uint64_t time_in_us) {
 
   // FIXME : ajouter convertion us vers ticks
 
-  m_delta_queue.add_task(task, time_in_us); 
+  m_delta_queue.add_task(task, time_in_us);
   m_scheduler->remove_task(task);
 }
 
@@ -162,4 +162,9 @@ Task* TaskManager::get_current_task() const {
 
 void TaskManager::schedule() {
   m_scheduler->schedule();
+}
+
+void TaskManager::tick() {
+  m_delta_queue.tick();
+  m_scheduler->tick();
 }
