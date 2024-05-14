@@ -6,7 +6,7 @@
 
 TaskManager* TaskManager::g_instance = nullptr;
 
-TaskManager::TaskManager() {
+TaskManager::TaskManager() : m_delta_queue(this) {
   KASSERT(g_instance == nullptr && "multiple task manager created");
   g_instance = this;
 

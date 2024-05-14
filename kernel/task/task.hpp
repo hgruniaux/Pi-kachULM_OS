@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <libk/memory.hpp>
 #include "memory/process_memory.hpp"
-#include "syscall_table.hpp"
+#include "task/syscall_table.hpp"
 
 struct TaskSavedState {
   Registers regs;

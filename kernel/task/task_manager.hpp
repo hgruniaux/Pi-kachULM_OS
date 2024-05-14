@@ -4,9 +4,9 @@
 #include <libk/hash_table.hpp>
 #include <libk/linked_list.hpp>
 #include <libk/memory.hpp>
+#include "delta_queue.hpp"
 #include "scheduler.hpp"
 #include "task.hpp"
-#include "delta_queue.hpp"
 
 class TaskManager {
  public:
@@ -68,7 +68,7 @@ class TaskManager {
   static TaskManager* g_instance;
   libk::ScopedPointer<Scheduler> m_scheduler;
   libk::LinkedList<libk::SharedPointer<Task>> m_tasks;
-  libk::HashTable<Task::id_t, Task*> m_id_mapping;
+  //  libk::HashTable<Task::id_t, Task*> m_id_mapping;  // Unused
   Task::id_t m_next_available_pid = 0;
   SyscallTable* m_default_syscall_table = nullptr;
   DeltaQueue m_delta_queue;

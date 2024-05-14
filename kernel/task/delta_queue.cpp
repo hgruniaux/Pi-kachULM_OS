@@ -1,4 +1,7 @@
-#include "delta_queue.hpp"
+#include "task/delta_queue.hpp"
+#include "task/task_manager.hpp"
+
+DeltaQueue::DeltaQueue(TaskManager* task_manager) : m_items(), m_task_manager(task_manager) {}
 
 void DeltaQueue::tick() {
   if (m_items.is_empty())
@@ -7,8 +10,8 @@ void DeltaQueue::tick() {
   --m_items.begin()->remaining_time;
 
   while (m_items.is_empty() && m_items.begin()->remaining_time == 0) {
-    const auto item = m_items.pop_front();
-    item.task->wake();
+    const auto waking = m_items.pop_front();
+    m_task_manager->wake_task(waking.task);
   }
 }
 
