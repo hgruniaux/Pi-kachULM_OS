@@ -12,13 +12,22 @@ static void set_error(Registers& regs, sys_error_t error) {
   regs.x0 = error;
 }
 
+static void step_back_one_inst(Registers& regs) {
+  // See aarch64 documentation about ELR_EL1 register, IL bit.
+  const bool is_32bits_inst = (regs.esr & (1 << 25)) != 0;
+  if (is_32bits_inst)
+    regs.elr -= 4;  // 32-bits instruction
+  else
+    regs.elr -= 2;  // 16-bits instruction
+}
+
 static void pika_sys_unknown(Registers& regs) {
   set_error(regs, SYS_ERR_UNKNOWN_SYSCALL);
 }
 
 static void pika_sys_exit(Registers& regs) {
   const auto exit_code = (int)regs.x0;
-  Task::current()->kill(exit_code);
+  TaskManager::get().kill_task(Task::current(), exit_code);
   // This syscall does not return to the user process, no need to set the error code.
 }
 
@@ -26,7 +35,7 @@ static void pika_sys_sleep(Registers& regs) {
   const auto time_in_us = regs.x0;
 
   if (time_in_us > 0) {
-    Task::current()->sleep(time_in_us);
+    TaskManager::get().sleep_task(Task::current(), time_in_us);
   }
 
   set_error(regs, SYS_ERR_OK);
@@ -58,8 +67,7 @@ static void pika_sys_sched_set_priority(Registers& regs) {
   const uint32_t priority = regs.x1;
 
   // TODO: use pid to set priority of another process
-  Task* current_task = Task::current();
-  if (TaskManager::get().set_task_priority(current_task, priority)) {
+  if (TaskManager::get().set_task_priority(Task::current(), priority)) {
     set_error(regs, SYS_ERR_OK);
     return;
   }
@@ -73,9 +81,41 @@ static void pika_sys_sched_get_priority(Registers& regs) {
   // FIXME: check if pointer is accessible by current task
 
   // TODO: use pid to set priority of another process
-  Task* current_task = Task::current();
-  *priority = current_task->get_id();
+  *priority = Task::current()->get_priority();
   set_error(regs, SYS_ERR_OK);
+}
+
+static void pika_sys_poll_msg(Registers& regs) {
+  sys_msg_t* msg = (sys_msg_t*)regs.x0;
+  // FIXME: check if pointer is accessible by current task
+
+  MessageQueue& queue = Task::current()->get_message_queue();
+
+  if (queue.dequeue(*msg))
+    set_error(regs, SYS_ERR_OK);
+  else
+    set_error(regs, SYS_ERR_MSG_QUEUE_EMPTY);
+}
+
+static void pika_sys_wait_msg(Registers& regs) {
+  sys_msg_t* msg = (sys_msg_t*)regs.x0;
+  // FIXME: check if pointer is accessible by current task
+
+  auto current_task = Task::current();
+  MessageQueue& queue = current_task->get_message_queue();
+
+  if (queue.block_task_until_not_empty(current_task)) {
+    // Task was blocked, the message queue is currently empty.
+    // Step back at the SVC instruction, so the next time this task
+    // is preempted, the system call is resubmitted.
+    step_back_one_inst(regs);
+    return;
+  }
+
+  if (queue.dequeue(*msg))
+    set_error(regs, SYS_ERR_OK);
+  else
+    set_error(regs, SYS_ERR_INTERNAL);
 }
 
 static void pika_sys_draw_line(Registers& regs) {
@@ -116,6 +156,9 @@ SyscallTable* create_pika_syscalls() {
   table->register_syscall(SYS_GETPID, pika_sys_getpid);
   table->register_syscall(SYS_SCHED_SET_PRIORITY, pika_sys_sched_set_priority);
   table->register_syscall(SYS_SCHED_GET_PRIORITY, pika_sys_sched_get_priority);
+
+  table->register_syscall(SYS_POLL_MSG, pika_sys_poll_msg);
+  table->register_syscall(SYS_WAIT_MSG, pika_sys_wait_msg);
 
   table->register_syscall(SYS_DEBUG, [](Registers& regs) {
     libk::print("Debug: {}", regs.x0);

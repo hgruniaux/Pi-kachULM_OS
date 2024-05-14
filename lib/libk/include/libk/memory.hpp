@@ -109,8 +109,8 @@ class SharedPointer {
   }
 
   [[nodiscard]] T* get() const { return m_block->data; }
-  [[nodiscard]] operator bool() const { return m_block->data != nullptr; }
-  [[nodiscard]] bool operator!() const { return m_block->data == nullptr; }
+  [[nodiscard]] operator bool() const { return m_block != nullptr; }
+  [[nodiscard]] bool operator!() const { return m_block == nullptr; }
   [[nodiscard]] T& operator*() const { return *m_block->data; }
   [[nodiscard]] T* operator->() const { return m_block->data; }
 
@@ -122,6 +122,11 @@ class SharedPointer {
 
   Block* m_block;
 };  // class SharedPointer
+
+template <class T>
+[[nodiscard]] bool operator==(const SharedPointer<T>& lhs, std::nullptr_t) {
+  return !lhs;
+}
 
 template <class T, class... Args>
 [[nodiscard]] SharedPointer<T> make_shared(Args&&... args) {

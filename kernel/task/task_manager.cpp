@@ -14,10 +14,12 @@ TaskManager::TaskManager() : m_delta_queue(this) {
   m_scheduler = libk::make_scoped<Scheduler>();
 }
 
-libk::SharedPointer<Task> TaskManager::create_task(Task* parent) {
+TaskPtr TaskManager::create_task(Task* parent) {
   auto task = libk::make_shared<Task>();
   if (!task)
     return nullptr;
+
+  task->m_manager = this;
 
   // Set parent-child relationship.
   if (parent != nullptr) {
@@ -35,6 +37,7 @@ libk::SharedPointer<Task> TaskManager::create_task(Task* parent) {
   task->m_id = m_next_available_pid++;
   // FIXME: register id mapping
 
+  task->m_priority = Scheduler::DEFAULT_PRIORITY;
   task->m_syscall_table = m_default_syscall_table;
 
   m_tasks.push_back(task);
@@ -42,7 +45,7 @@ libk::SharedPointer<Task> TaskManager::create_task(Task* parent) {
   return task;
 }
 
-libk::SharedPointer<Task> TaskManager::create_task(const elf::Header* program_image) {
+TaskPtr TaskManager::create_task(const elf::Header* program_image) {
   auto task = create_task();
   if (!task)
     return nullptr;
@@ -87,8 +90,9 @@ libk::SharedPointer<Task> TaskManager::create_task(const elf::Header* program_im
   return task;
 }
 
-void TaskManager::sleep_task(Task* task, uint64_t time_in_us) {
+void TaskManager::sleep_task(const TaskPtr& task, uint64_t time_in_us) {
   KASSERT(task != nullptr);
+  KASSERT(task->get_manager() == this);
 
   if (!task->is_running())
     return;
@@ -103,8 +107,9 @@ void TaskManager::sleep_task(Task* task, uint64_t time_in_us) {
   m_scheduler->remove_task(task);
 }
 
-void TaskManager::pause_task(Task* task) {
+void TaskManager::pause_task(const TaskPtr& task) {
   KASSERT(task != nullptr);
+  KASSERT(task->get_manager() == this);
 
   if (!task->is_running())
     return;
@@ -115,8 +120,9 @@ void TaskManager::pause_task(Task* task) {
   m_scheduler->remove_task(task);
 }
 
-void TaskManager::wake_task(Task* task) {
+void TaskManager::wake_task(const TaskPtr& task) {
   KASSERT(task != nullptr);
+  KASSERT(task->get_manager() == this);
 
   if (task->is_running())
     return;
@@ -127,8 +133,9 @@ void TaskManager::wake_task(Task* task) {
   m_scheduler->add_task(task);
 }
 
-void TaskManager::kill_task(Task* task, int exit_code) {
+void TaskManager::kill_task(const TaskPtr& task, int exit_code) {
   KASSERT(task != nullptr);
+  KASSERT(task->get_manager() == this);
 
   LOG_DEBUG("Kill the task pid={} with status {}", task->get_id(), exit_code);
 
@@ -136,15 +143,14 @@ void TaskManager::kill_task(Task* task, int exit_code) {
   auto it = task->children_begin();
   for (; it != task->children_end(); ++it) {
     auto child = *it;
-    kill_task(child.get(), exit_code);
+    kill_task(child, exit_code);
   }
 
   task->m_state = Task::State::TERMINATED;
   m_scheduler->remove_task(task);
-  delete task;
 }
 
-bool TaskManager::set_task_priority(Task* task, uint32_t new_priority) {
+bool TaskManager::set_task_priority(const TaskPtr& task, uint32_t new_priority) {
   KASSERT(task != nullptr);
 
   if (new_priority < Scheduler::MIN_PRIORITY || new_priority > Scheduler::MAX_PRIORITY)
@@ -156,7 +162,7 @@ bool TaskManager::set_task_priority(Task* task, uint32_t new_priority) {
   return true;
 }
 
-Task* TaskManager::get_current_task() const {
+TaskPtr TaskManager::get_current_task() const {
   return m_scheduler->get_current_task();
 }
 

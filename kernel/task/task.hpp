@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <libk/memory.hpp>
 #include "memory/process_memory.hpp"
+#include "task/message_queue.hpp"
 #include "task/syscall_table.hpp"
 
 struct TaskSavedState {
@@ -13,6 +14,8 @@ struct TaskSavedState {
   void save(const Registers& current_regs);
   void restore(Registers& current_regs);
 };  // struct TaskSavedState
+
+class TaskManager;
 
 /**
  * Represents a runnable task in the system. This can be a user process, a thread, etc.
@@ -43,7 +46,7 @@ class Task {
   };  // enum class State
 
   /** Gets the current active (running) task. This forward to TaskManager::get_current_task(). */
-  [[nodiscard]] static Task* current();
+  [[nodiscard]] static libk::SharedPointer<Task> current();
 
   /** Gets the task identifier (process id). */
   [[nodiscard]] id_t get_id() const { return m_id; }
@@ -62,6 +65,10 @@ class Task {
   /** Gets the task priority for scheduling. The larger it is, the higher the process priority. */
   [[nodiscard]] uint32_t get_priority() const { return m_priority; }
 
+  /** Gets the task manager that that ownership over this task. */
+  [[nodiscard]] TaskManager* get_manager() { return m_manager; }
+  [[nodiscard]] const TaskManager* get_manager() const { return m_manager; }
+
   [[nodiscard]] bool has_parent() const { return m_parent != nullptr; }
   /** Gets the task parent if any. */
   [[nodiscard]] Task* get_parent() { return m_parent; }
@@ -77,6 +84,9 @@ class Task {
   /** Gets the task virtual memory. */
   [[nodiscard]] libk::SharedPointer<ProcessMemory> get_memory() const { return m_saved_state.memory; }
 
+  [[nodiscard]] MessageQueue& get_message_queue() { return m_message_queue; }
+  [[nodiscard]] const MessageQueue& get_message_queue() const { return m_message_queue; }
+
   /** Forward to `get_syscall_table()->call_syscall(id, registers)`. */
   void call_syscall(uint32_t id, Registers& registers) { m_syscall_table->call_syscall(id, registers); }
   /** Gets the task syscall table. */
@@ -87,24 +97,24 @@ class Task {
     m_syscall_table = table;
   }
 
-  // Forward to TaskManager functions.
-  void sleep(uint64_t time_in_us);
-  void pause();
-  void wake();
-  void kill(int exit_code = 0);
-
  private:
   friend class TaskManager;
   id_t m_id;
   State m_state = State::INTERRUPTIBLE;
-  uint32_t m_priority = 15;
+  uint32_t m_priority = 0;
   TaskSavedState m_saved_state;
   const char* m_name = nullptr;
   SyscallTable* m_syscall_table = nullptr;
+  TaskManager* m_manager = nullptr;
 
   // Parent-children relationship.
   Task* m_parent = nullptr;  // not a SharedPointer to avoid cyclic dependencies
   libk::LinkedList<libk::SharedPointer<Task>> m_children;
 
+  // Message system
+  MessageQueue m_message_queue;
+
   libk::LinkedList<MemoryChunk> m_mapped_chunks;
 };  // class Task
+
+using TaskPtr = libk::SharedPointer<Task>;

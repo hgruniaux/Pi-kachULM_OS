@@ -14,6 +14,8 @@
 #define SYS_GETPID 6
 #define SYS_SCHED_SET_PRIORITY 7
 #define SYS_SCHED_GET_PRIORITY 8
+#define SYS_POLL_MSG 9
+#define SYS_WAIT_MSG 10
 #define SYS_DEBUG 50
 #define SYS_GFX_DRAW_LINE 100
 #define SYS_GFX_DRAW_RECT 101
@@ -29,6 +31,7 @@ typedef uint32_t sys_pid_t;
 #define SYS_ERR_INTERNAL 1
 #define SYS_ERR_UNKNOWN_SYSCALL 2
 #define SYS_ERR_INVALID_PRIORITY 3
+#define SYS_ERR_MSG_QUEUE_EMPTY 4
 
 #ifndef __ASSEMBLER__
 #ifdef __cplusplus

@@ -101,6 +101,8 @@ add_executable(kernel
 
         # Embed init ELF file inside the kernel
         ${CMAKE_CURRENT_BINARY_DIR}/init_elf.c
+        task/message_queue.hpp
+        task/message_queue.cpp
 )
 
 target_include_directories(kernel PUBLIC .)

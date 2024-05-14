@@ -15,7 +15,7 @@ void DeltaQueue::tick() {
   }
 }
 
-void DeltaQueue::add_task(Task* sleepy, uint64_t ticks) {
+void DeltaQueue::add_task(const TaskPtr& sleepy, uint64_t ticks) {
   uint64_t elapsed_time = 0;
 
   for (auto it = m_items.begin(); it != m_items.end(); ++it) {

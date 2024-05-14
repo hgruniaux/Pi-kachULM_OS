@@ -1,4 +1,6 @@
 #include "wait_list.hpp"
+#include "task.hpp"
+#include "task_manager.hpp"
 
 void WaitList::add(const libk::SharedPointer<Task>& task) {
   KASSERT(task);
@@ -8,7 +10,7 @@ void WaitList::add(const libk::SharedPointer<Task>& task) {
   if (task->is_terminated())
     return;
 
-  task->pause();
+  task->get_manager()->pause_task(task);
   m_wait_list.push_back(task);
 }
 
@@ -24,7 +26,7 @@ void WaitList::wake_one() {
     task = m_wait_list.pop_front();
   } while (!task->is_terminated());
 
-  task->wake();
+  task->get_manager()->wake_task(task);
 }
 
 void WaitList::wake_all() {
@@ -35,7 +37,7 @@ void WaitList::wake_all() {
     if (task->is_terminated())
       continue;
 
-    task->wake();
+    task->get_manager()->wake_task(task);
   }
 
   m_wait_list.clear();

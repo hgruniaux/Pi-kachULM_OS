@@ -9,7 +9,7 @@ Scheduler::Scheduler() {
   g_instance = this;
 }
 
-void Scheduler::add_task(Task* task) {
+void Scheduler::add_task(const TaskPtr& task) {
   KASSERT(task != nullptr);
 
   const uint32_t priority = task->get_priority();
@@ -17,7 +17,7 @@ void Scheduler::add_task(Task* task) {
   m_run_queue[priority].push_back(task);
 }
 
-bool Scheduler::remove_task(Task* task) {
+bool Scheduler::remove_task(const TaskPtr& task) {
   KASSERT(task != nullptr);
 
   const uint32_t priority = task->get_priority();
@@ -41,7 +41,7 @@ bool Scheduler::remove_task(Task* task) {
   return true;
 }
 
-void Scheduler::update_task_priority(Task* task, uint32_t old_priority) {
+void Scheduler::update_task_priority(const TaskPtr& task, uint32_t old_priority) {
   KASSERT(task != nullptr);
 
   if (m_current_task == task) {
@@ -68,7 +68,7 @@ void Scheduler::update_task_priority(Task* task, uint32_t old_priority) {
 }
 
 void Scheduler::schedule() {
-  Task* new_task = nullptr;
+  TaskPtr new_task = nullptr;
 
   // Find a new task starting with higher priority tasks.
   for (int i = MAX_PRIORITY; i >= (int)MIN_PRIORITY; --i) {
@@ -100,7 +100,7 @@ void Scheduler::tick() {
   m_elapsed_ticks++;
 
   // Check if there is a waiting process with a higher priority.
-  Task* new_task = find_higher_priority_task_than_current();
+  TaskPtr new_task = find_higher_priority_task_than_current();
 
   // Otherwise, check if the current task time slice has expired and if yes
   // then schedule using round-robin.
@@ -123,7 +123,7 @@ uint32_t Scheduler::get_current_priority() const {
   return m_current_task->get_priority();
 }
 
-Task* Scheduler::find_higher_priority_task_than_current() {
+TaskPtr Scheduler::find_higher_priority_task_than_current() {
   const uint32_t current_priority = get_current_priority();
   for (uint32_t i = MAX_PRIORITY; i > current_priority; --i) {
     auto& run_queue = m_run_queue[i];
@@ -135,7 +135,7 @@ Task* Scheduler::find_higher_priority_task_than_current() {
   return nullptr;
 }
 
-void Scheduler::switch_to(Task* new_task) {
+void Scheduler::switch_to(const TaskPtr& new_task) {
   if (new_task == nullptr)
     return;  // no new task, nothing to do
 

@@ -1,4 +1,5 @@
 #include <stddef.h>
+#include <syscall/message.h>
 #include <syscall/syscall.h>
 
 int main();
@@ -31,6 +32,11 @@ void pp_stack() {
 int main() {
   sys_print("Hello from process !");
   sys_yield();
+
+  sys_msg_t msg;
+  sys_wait_msg(&msg);
+  sys_debug(msg.timestamp);
+
   sys_print("My stack is:");
   pp_stack();
   sys_print("END !");

@@ -35,7 +35,7 @@ extern "C" const char init[];
   TaskManager* task_manager = new TaskManager;
 
   auto task1 = task_manager->create_task((const elf::Header*)&init);
-  task_manager->wake_task(task1.get());
+  task_manager->wake_task(task1);
 
   //  Enter userspace
   task_manager->schedule();

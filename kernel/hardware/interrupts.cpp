@@ -30,7 +30,7 @@ void jump_to_el1() {
 }
 
 static bool do_syscall(Registers& registers) {
-  Task* current_task = TaskManager::get().get_current_task();
+  auto current_task = TaskManager::get().get_current_task();
   // current_task is guaranteed to be non-null here.
 
   // The system call number is stored in w8 (lower 32-bits of x8).
@@ -42,7 +42,7 @@ static bool do_syscall(Registers& registers) {
 static bool do_dispatch_userspace_interrupt(Registers& registers) {
   const uint32_t ec = (registers.esr >> 26) & 0x3F;
 
-  Task* current_task = TaskManager::get().get_current_task();
+  auto current_task = TaskManager::get().get_current_task();
   // current_task is guaranteed to be non-null here.
 
   const auto pid = current_task->get_id();
@@ -78,8 +78,10 @@ static bool do_dispatch_userspace_interrupt(Registers& registers) {
 static bool do_userspace_interrupt(Registers& registers) {
   TaskManager& task_manager = TaskManager::get();
 
-  Task* current_task = task_manager.get_current_task();
+  auto current_task = task_manager.get_current_task();
   KASSERT(current_task != nullptr);
+
+  auto saved_task = current_task;
 
   current_task->get_saved_state().save(registers);
 
@@ -88,6 +90,9 @@ static bool do_userspace_interrupt(Registers& registers) {
     current_task = task_manager.get_current_task();
     KASSERT(current_task != nullptr);
     task_manager.kill_task(current_task);
+  } else {
+    // Save modified registers in the current task before context switch to another task.
+    current_task->get_saved_state().save(registers);
   }
 
   current_task = task_manager.get_current_task();

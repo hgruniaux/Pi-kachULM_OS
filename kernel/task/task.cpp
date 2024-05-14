@@ -15,22 +15,6 @@ void TaskSavedState::restore(Registers& current_regs) {
     memory->activate();
 }
 
-Task* Task::current() {
+TaskPtr Task::current() {
   return TaskManager::get().get_current_task();
-}
-
-void Task::sleep(uint64_t time_in_us) {
-  return TaskManager::get().sleep_task(this, time_in_us);
-}
-
-void Task::pause() {
-  return TaskManager::get().pause_task(this);
-}
-
-void Task::wake() {
-  return TaskManager::get().wake_task(this);
-}
-
-void Task::kill(int exit_code) {
-  return TaskManager::get().kill_task(this, exit_code);
 }

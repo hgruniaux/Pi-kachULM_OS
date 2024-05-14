@@ -1,7 +1,10 @@
 #pragma once
 
+#include <libk/linked_list.hpp>
+#include <libk/memory.hpp>
 #include <libk/spinlock.hpp>
-#include "task.hpp"
+
+class Task;
 
 class WaitList {
  public:
