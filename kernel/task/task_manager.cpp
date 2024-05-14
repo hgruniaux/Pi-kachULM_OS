@@ -6,7 +6,7 @@
 
 TaskManager* TaskManager::g_instance = nullptr;
 
-TaskManager::TaskManager() {
+TaskManager::TaskManager() : m_delta_queue(this) {
   KASSERT(g_instance == nullptr && "multiple task manager created");
   g_instance = this;
 
@@ -99,7 +99,7 @@ void TaskManager::sleep_task(Task* task, uint64_t time_in_us) {
 
   // FIXME : ajouter convertion us vers ticks
 
-  m_delta_queue.add_task(task, time_in_us); 
+  m_delta_queue.add_task(task, time_in_us);
   m_scheduler->remove_task(task);
 }
 

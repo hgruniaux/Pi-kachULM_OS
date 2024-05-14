@@ -4,9 +4,9 @@
 #include <libk/hash_table.hpp>
 #include <libk/linked_list.hpp>
 #include <libk/memory.hpp>
+#include "delta_queue.hpp"
 #include "scheduler.hpp"
 #include "task.hpp"
-#include "delta_queue.hpp"
 
 class TaskManager {
  public:
