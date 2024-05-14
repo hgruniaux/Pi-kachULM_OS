@@ -54,7 +54,7 @@ static void pika_sys_getpid(Registers& regs) {
 }
 
 static void pika_sys_sched_set_priority(Registers& regs) {
-  const sys_pid_t pid = regs.x0;
+  //  const sys_pid_t pid = regs.x0;  // Unused
   const uint32_t priority = regs.x1;
 
   // TODO: use pid to set priority of another process
@@ -68,7 +68,7 @@ static void pika_sys_sched_set_priority(Registers& regs) {
 }
 
 static void pika_sys_sched_get_priority(Registers& regs) {
-  const sys_pid_t pid = regs.x0;
+  //  const sys_pid_t pid = regs.x0;  // Unused
   uint32_t* priority = (uint32_t*)regs.x1;
   // FIXME: check if pointer is accessible by current task
 
