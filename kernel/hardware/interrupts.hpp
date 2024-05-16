@@ -62,4 +62,4 @@ extern "C" void jump_to_el1();
  * @warning It is assumed that the kernel is not yet in EL0. The kernel will
  * crash if the assumption is not hold.
  */
-extern "C" void jump_to_el0();
+extern "C" void jump_to_el0(uintptr_t elr, uintptr_t stack);

@@ -172,7 +172,7 @@ static IntegerSpec parse_integer_spec(const char* spec) {
 
 static char* format_int_to(char* out, intmax_t value, const char* spec) {
   const auto parsed_spec = parse_integer_spec(spec);
-  out = output_sign(out, value > 0, parsed_spec.sign_format);
+  out = output_sign(out, value >= 0, parsed_spec.sign_format);
   return output_uint(out, (value >= 0) ? value : -value, parsed_spec);
 }
 

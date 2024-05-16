@@ -15,18 +15,12 @@ static inline constexpr PagesAttributes process_rw_memory = {.sh = Shareability:
                                                              .access = Accessibility::AllProcess,
                                                              .type = MemoryType::Normal};
 
-PageAllocList* _alloc = nullptr;
-
 HeapManager::HeapManager(HeapManager::Kind kind, MMUTable* table)
     : _heap_kind(kind),
       _heap_start(kind == Kind::Kernel ? HEAP_MEMORY : PROCESS_HEAP_BASE),
       _heap_va_end(_heap_start),
       _heap_byte_size(0),
-      _tbl(table) {
-  if (_alloc == nullptr) {
-    _alloc = memory_impl::get_kernel_alloc();
-  }
-}
+      _tbl(table) {}
 
 VirtualAddress HeapManager::change_heap_end(long byte_offset) {
   _heap_byte_size += byte_offset;
@@ -35,7 +29,7 @@ VirtualAddress HeapManager::change_heap_end(long byte_offset) {
     // Increase heap here.
     PhysicalPA new_heap_pa_page = -1;
 
-    if (!_alloc->fresh_page(&new_heap_pa_page)) {
+    if (!memory_impl::get_kernel_alloc()->fresh_page(&new_heap_pa_page)) {
       return 0;
     }
 
@@ -74,13 +68,16 @@ VirtualAddress HeapManager::change_heap_end(long byte_offset) {
         pa_to_del = resolve_kernel_va(va_to_del);
         break;
       }
+      default: {
+        libk::panic("Unknown heap kind.");
+      }
     }
 
     if (!unmap_range(_tbl, va_to_del, va_to_del)) {
       return 0;
     }
 
-    _alloc->free_page(pa_to_del);
+    memory_impl::get_kernel_alloc()->free_page(pa_to_del);
 
     _heap_va_end -= PAGE_SIZE;
   }
@@ -123,13 +120,16 @@ void HeapManager::free() {
         pa_to_del = resolve_kernel_va(va_to_del);
         break;
       }
+      default: {
+        libk::panic("Unknown heap kind.");
+      }
     }
 
     if (!unmap_range(_tbl, va_to_del, va_to_del)) {
       libk::panic("[HeapManager] Unable to free heap.");
     }
 
-    _alloc->free_page(pa_to_del);
+    memory_impl::get_kernel_alloc()->free_page(pa_to_del);
 
     _heap_byte_size -= PAGE_SIZE;
   }

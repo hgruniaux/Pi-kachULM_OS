@@ -1,14 +1,6 @@
-#include "hardware/interrupts.hpp"
-
+#include "interrupts.hpp"
 #include <libk/log.hpp>
-#include "syscall.hpp"
-
-#define dump_reg(reg)                           \
-  {                                             \
-    uint64_t tmp;                               \
-    asm volatile("mrs %x0, " #reg : "=r"(tmp)); \
-    LOG_ERROR("Register " #reg ": {:#x}", tmp); \
-  }
+#include "task/task_manager.hpp"
 
 ExceptionLevel get_current_exception_level() {
   // The current exception level is stored in the system register CurrentEL in the bits [3:2].
@@ -37,24 +29,112 @@ void jump_to_el1() {
   }
 }
 
-extern "C" void exception_handler(InterruptSource source, InterruptKind kind, Registers& registers) {
-  if (source == InterruptSource::LOWER_AARCH64 && kind == InterruptKind::SYNCHRONOUS) {
-    const uint32_t ec = (registers.esr >> 26) & 0x3F;
+static bool do_syscall(Registers& registers) {
+  auto current_task = TaskManager::get().get_current_task();
+  // current_task is guaranteed to be non-null here.
 
-    // Handle AArch64 syscall
-    if (ec == 0b010101) {  // SVC instruction execution in AArch64 state.
-      // The system call number is stored in w8 (lower 32-bits of x8).
-      const uint32_t syscall_id = registers.x8 & 0xFFFFFFFF;
-      SyscallManager::get().call_syscall(syscall_id, registers);
-      return;
-    }
+  // The system call number is stored in w8 (lower 32-bits of x8).
+  const uint32_t syscall_id = registers.x8 & 0xFFFFFFFF;
+  current_task->call_syscall(syscall_id, registers);
+  return true;  // Syscall handled
+}
+
+static bool do_dispatch_userspace_interrupt(Registers& registers) {
+  const uint32_t ec = (registers.esr >> 26) & 0x3F;
+
+  auto current_task = TaskManager::get().get_current_task();
+  // current_task is guaranteed to be non-null here.
+
+  const auto pid = current_task->get_id();
+  const auto far = registers.far;
+  const auto pc = registers.elr;
+  switch (ec) {
+      // Handle AArch64 syscall
+    case 0b010101:  // SVC instruction execution in AArch64 state.
+      return do_syscall(registers);
+    case 0b100000:
+      LOG_WARNING("Instruction Abort from user space (pid={}) at {:#x}. PC = {:#x}", pid, far, pc);
+      break;
+    case 0b100100:
+      LOG_WARNING("Data Abort from user space (pid={}) at {:#x}. PC = {:#x}", pid, far, pc);
+      break;
+    case 0b100010:
+      LOG_WARNING("PC alignment fault exception from user space (pid={}) at {:#x}. PC = {:#x}", pid, far, pc);
+      break;
+    case 0b100110:
+      LOG_WARNING("SP alignment fault exception from user space (pid={}) at {:#x}. PC = {:#x}", pid, far, pc);
+      break;
+    case 0b101100:
+      LOG_WARNING("Trapped floating-point exception from user space (pid={}). PC = {:#x}", pid, pc);
+      break;
+    default:
+      LOG_WARNING("Exception with EC={:#b} from user space (pid={}). PC = {:#x}", ec, pid, pc);
+      break;
   }
 
-  if (source == InterruptSource::LOWER_AARCH32) {
-    LOG_WARNING("interrupt/exception from userspace aarch32 code (not supported)");
-    return;
+  return false;
+}
+
+static bool do_userspace_interrupt(Registers& registers) {
+  TaskManager& task_manager = TaskManager::get();
+
+  auto current_task = task_manager.get_current_task();
+  KASSERT(current_task != nullptr);
+
+  auto saved_task = current_task;
+
+  current_task->get_saved_state().save(registers);
+
+  if (!do_dispatch_userspace_interrupt(registers)) {
+    // Failed to handle the interrupt: probably a fatal error, kill the current task.
+    current_task = task_manager.get_current_task();
+    KASSERT(current_task != nullptr);
+    task_manager.kill_task(current_task);
+  } else {
+    // Save modified registers in the current task before context switch to another task.
+    current_task->get_saved_state().save(registers);
   }
 
+  current_task = task_manager.get_current_task();
+  if (current_task != nullptr) {
+    // Do context switch.
+    current_task->get_saved_state().restore(registers);
+  } else {
+    LOG_WARNING("No more available tasks... the kernel will enter an infinite loop.");
+    libk::halt();
+  }
+
+  return true;
+}
+
+static bool do_kernelspace_interrupt(Registers& registers) {
+  const uint32_t ec = (registers.esr >> 26) & 0x3F;
+
+  switch (ec) {
+    case 0b100001:
+      LOG_WARNING("Instruction Abort from kernel space at {:#x}.", registers.far);
+      break;
+    case 0b100101:
+      LOG_WARNING("Data Abort from kernel space at {:#x}.", registers.far);
+      break;
+    case 0b100010:
+      LOG_WARNING("PC alignment fault exception from kernel space at {:#x}.", registers.far);
+      break;
+    case 0b100110:
+      LOG_WARNING("SP alignment fault exception from kernel space at {:#x}.", registers.far);
+      break;
+    case 0b101100:
+      LOG_WARNING("Trapped floating-point exception from kernel space.");
+      break;
+    default:
+      LOG_WARNING("Exception with EC={:#b} from kernel space.", ec);
+      break;
+  }
+
+  return false;
+}
+
+static void dump_unhandled_interrupt(InterruptSource source, InterruptKind kind, Registers& registers) {
   const char* source_name = nullptr;
   switch (source) {
     case InterruptSource::CURRENT_SP_EL0:
@@ -71,7 +151,7 @@ extern "C" void exception_handler(InterruptSource source, InterruptKind kind, Re
       break;
   }
 
-  const char* kind_name = "";
+  const char* kind_name = nullptr;
   switch (kind) {
     case InterruptKind::SYNCHRONOUS:
       kind_name = "SYNCHRONOUS";
@@ -87,13 +167,28 @@ extern "C" void exception_handler(InterruptSource source, InterruptKind kind, Re
       break;
   }
 
-  LOG_ERROR("");
-  LOG_ERROR("");
-  LOG_ERROR("Arrrgl");
-  LOG_ERROR("");
+  LOG_CRITICAL("Unhandled interrupt, source = {}, kind = {}\nELR_EL1 = {:#x}\nESR_EL1 = {:#x}\nFAR_EL1 = {:#x}",
+               source_name, kind_name, registers.elr, registers.esr, registers.far);
+}
 
-  dump_reg(ELR_EL1);
-  dump_reg(ESR_EL1);
+extern "C" void exception_handler(InterruptSource source, InterruptKind kind, Registers& registers) {
+  if (source == InterruptSource::LOWER_AARCH64 && kind == InterruptKind::SYNCHRONOUS) {
+    if (do_userspace_interrupt(registers))
+      return;
+  }
 
-  LOG_CRITICAL("Unhandled exception/interrupt, source = {}, kind = {}", source_name, kind_name);
+  if (source == InterruptSource::LOWER_AARCH32) {
+    LOG_WARNING("interrupt/exception from userspace aarch32 code (not supported)");
+    // Kill the process.
+    TaskManager& task_manager = TaskManager::get();
+    task_manager.kill_task(task_manager.get_current_task(), 1);
+    return;
+  }
+
+  if (source == InterruptSource::CURRENT_SP_ELX && kind == InterruptKind::SYNCHRONOUS) {
+    if (do_kernelspace_interrupt(registers))
+      return;
+  }
+
+  dump_unhandled_interrupt(source, kind, registers);
 }

@@ -16,7 +16,7 @@ set(CMAKE_C_EXTENSIONS ON)
 add_compile_options(-Wall -Wextra)
 
 # Tell the compiler that we are in a freestanding environment.
-add_compile_options(-ffreestanding -nostdlib -fno-builtin)
+add_compile_options(-ffreestanding -nostdlib -fno-builtin -mno-outline-atomics)
 
 # Disable exceptions and RTTI in C++
 set(EXTRA_CXX_FLAGS -fno-exceptions -fno-rtti -mgeneral-regs-only)
@@ -47,9 +47,15 @@ if (${ENABLE_CHECKS})
     endif ()
 endif ()
 
-add_compile_definitions(-DBUILD_TESTS)
-add_compile_definitions(-DTARGET_QEMU)
+option(BUILD_TEST "Build the tests" OFF)
+if (${BUILD_TEST})
+    add_compile_definitions(-DBUILD_TESTS)
+endif ()
 
-add_subdirectory(lib/libk)
-add_subdirectory(lib/device-tree)
+option(TARGET_QEMU "Target is QEMU" OFF)
+if (${TARGET_QEMU})
+    add_compile_definitions(-DTARGET_QEMU)
+endif ()
+
+add_subdirectory(lib)
 add_subdirectory(kernel)

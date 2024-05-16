@@ -15,16 +15,15 @@ static inline PagesAttributes get_properties(bool read_only, bool executable) {
           .type = MemoryType::Normal};
 }
 
-ProcessMemory::ProcessMemory()
+ProcessMemory::ProcessMemory(size_t minimum_stack_byte_size)
     : _tbl(memory_impl::new_process_tbl(_new_asid++)),
       _heap(HeapManager::Kind::Process, &_tbl),
-      _stack(PROCESS_STACK_PAGE_SIZE) {
-
+      _stack(libk::div_round_up(minimum_stack_byte_size, PAGE_SIZE)) {
   if (!_stack.is_status_okay()) {
     libk::panic("[ProcessMemory] Unable to allocate the process stack.");
   }
 
-  map_chunk(_stack, PROCESS_STACK_PAGE_TOP, false, false);
+  map_chunk(_stack, PROCESS_STACK_BASE, false, false);
 }
 
 ProcessMemory::~ProcessMemory() {
@@ -35,12 +34,12 @@ uint8_t ProcessMemory::get_asid() const {
   return _tbl.asid;
 }
 
-VirtualAddress ProcessMemory::get_stack_top() const {
-  return PROCESS_STACK_PAGE_TOP;
+VirtualAddress ProcessMemory::get_stack_end() const {
+  return PROCESS_STACK_BASE;
 }
 
-VirtualAddress ProcessMemory::get_stack_bottom() const {
-  return PROCESS_STACK_PAGE_BOTTOM;
+VirtualAddress ProcessMemory::get_stack_start() const {
+  return PROCESS_STACK_BASE + _stack.byte_size();
 }
 
 VirtualPA ProcessMemory::change_heap_end(long byte_offset) {
@@ -69,16 +68,17 @@ void ProcessMemory::free() {
   _heap.free();
 
   // Free all mappings
-  while (!_chunks.is_empty()) {
-    const MappedChunk chunk = _chunks.pop_back();
-    unmap_chunk(chunk.start);
+  for (const auto chunk : _chunks) {
+    unmap_chunk(chunk.start);  // <- chunk will be removed from the list by unmap
   }
+
+  KASSERT(_chunks.is_empty());
 
   // Free MMU Table
   memory_impl::delete_process_tbl(_tbl);
 }
 
-bool ProcessMemory::map_chunk(MemoryChunk& chunk, VirtualPA page_va, bool read_only, bool executable) {
+bool ProcessMemory::map_chunk(MemoryChunk& chunk, const VirtualPA page_va, bool read_only, bool executable) {
   if (chunk._pas == nullptr) {
     return false;
   }
@@ -88,11 +88,9 @@ bool ProcessMemory::map_chunk(MemoryChunk& chunk, VirtualPA page_va, bool read_o
   for (size_t page_id = 0; page_id < chunk._nb_pages; ++page_id) {
     const PhysicalPA page_pa = chunk._pas[page_id];
 
-    if (!map_range(&_tbl, page_va, page_va, page_pa, attr)) {
+    if (!map_range(&_tbl, page_va + page_id * PAGE_SIZE, page_va + page_id * PAGE_SIZE, page_pa, attr)) {
       return false;
     }
-
-    page_va += PAGE_SIZE;
   }
 
   _chunks.push_back({page_va, &chunk});
@@ -116,8 +114,8 @@ void ProcessMemory::unmap_chunk(VirtualPA chunk_start_address) {
               it->mem->end_address(it->start), get_asid());
   }
 
-  _chunks.remove(it);
   it->mem->unregister_mapping(this);
+  _chunks.erase(it);
 }
 
 bool ProcessMemory::change_chunk_attr(VirtualPA chunk_start_address, bool read_only, bool executable) {

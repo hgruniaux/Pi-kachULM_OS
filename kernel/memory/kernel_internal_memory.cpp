@@ -9,9 +9,9 @@ static inline constexpr PagesAttributes custom_memory_rw = {.sh = Shareability::
                                                             .access = Accessibility::Privileged,
                                                             .type = MemoryType::Normal};
 
-MMUTable _tbl;
-PageAllocList _page_alloc;
-VirtualPA _custom_pages = CUSTOM_PAGES_MEMORY;
+static MMUTable _tbl;
+static PageAllocList _page_alloc;
+static VirtualPA _custom_pages = CUSTOM_PAGES_MEMORY;
 
 VirtualPA mmu_resolve_pa(void*, PhysicalPA page_address) {
   return page_address + KERNEL_BASE;

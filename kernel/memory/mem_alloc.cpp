@@ -41,8 +41,6 @@ static MetaPtr extend_heap(MetaPtr last, size_t size, size_t alignment) {  // al
   end->is_free = true;
   end->next = nullptr;
   end->previous = last;
-  // FIXME: Euh, sure? Verify this code.
-  // *(end->data) = (((((uintptr_t)(end->data) - 1) / alignment) * alignment) + alignment);
   end->ptr = (void*)(((((uintptr_t)(end->data) - 1) / alignment) * alignment) + alignment);
 
   if (last != nullptr)
@@ -99,7 +97,8 @@ static void merge_block(MetaPtr lhs, MetaPtr rhs) {
     lhs->is_free = lhs->is_free && rhs->is_free;
     lhs->size += rhs->size + META_BLOCK_SIZE;
     lhs->next = rhs->next;
-    (rhs->next)->previous = lhs;
+    if (rhs->next != nullptr)
+      (rhs->next)->previous = lhs;
   }
 }
 

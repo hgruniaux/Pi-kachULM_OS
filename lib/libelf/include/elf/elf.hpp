@@ -117,7 +117,7 @@ struct Header {
   /** Specifies target instruction set architecture.
    * On the kernel we only support Machine::Aarch64. */
   Machine machine;
-  Version version; // always 1
+  Version version;  // always 1
   /** The virtual address of the program's entry point.
    * May be 0 if there is no entry point. */
   uint64_t entry_addr;
@@ -150,7 +150,7 @@ enum class ProgramType {
   PROGRAM_HEADER = 6,
   /** Thread-Local Storage template. */
   TLS = 7
-}; // enum class ProgramType
+};  // enum class ProgramType
 
 /** The allowed flags in ProgramHeader::flags. */
 enum class ProgramFlag : uint32_t {
@@ -161,6 +161,14 @@ enum class ProgramFlag : uint32_t {
   /** The section is readable. */
   READABLE = 0x4
 };  // enum class SectionFlag
+
+[[nodiscard]] inline uint32_t operator&(uint32_t lhs, ProgramFlag flag) {
+  return lhs | (uint32_t)flag;
+}
+
+[[nodiscard]] inline uint32_t operator|(uint32_t lhs, ProgramFlag flag) {
+  return lhs | (uint32_t)flag;
+}
 
 /**
  * ELF 64-bits program header.

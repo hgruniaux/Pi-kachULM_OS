@@ -2,13 +2,22 @@
 #include "hardware/device.hpp"
 #include "hardware/uart.hpp"
 
+#include "hardware/interrupts.hpp"
 #include "hardware/kernel_dt.hpp"
 #include "hardware/timer.hpp"
-#include "libk/test.hpp"
-#include "memory/memory.hpp"
+#include "task/task_manager.hpp"
 
-#include "graphics/graphics.hpp"
-#include "hardware/framebuffer.hpp"
+#include <syscall/syscall.h>
+
+extern "C" const char init[];
+
+#if defined(__GNUC__)
+#define COMPILER_NAME "GCC " __VERSION__
+#elif defined(__clang__)
+#define COMPILER_NAME __VERSION__
+#else
+#define COMPILER_NAME "Unknown Compiler"
+#endif
 
 [[noreturn]] void kmain() {
   UART log(1000000);  // Set to a High Baud-rate, otherwise UART is THE bottleneck :/
@@ -16,31 +25,22 @@
   libk::register_logger(log);
   libk::set_log_timer([]() { return GenericTimer::get_elapsed_time_in_ms(); });
 
-  LOG_INFO("Kernel built at " __TIME__ " on " __DATE__);
+  LOG_INFO("Kernel built at " __TIME__ " on " __DATE__ " with " COMPILER_NAME " !");
 
   LOG_INFO("Board model: {}", KernelDT::get_board_model());
   LOG_INFO("Board revision: {:#x}", KernelDT::get_board_revision());
   LOG_INFO("Board serial: {:#x}", KernelDT::get_board_serial());
   LOG_INFO("Temp: {} °C / {} °C", Device::get_current_temp() / 1000, Device::get_max_temp() / 1000);
 
-  FrameBuffer& framebuffer = FrameBuffer::get();
-  if (!framebuffer.init(1920, 1080)) {
-    LOG_CRITICAL("failed to initialize framebuffer");
-  }
-  const uint32_t fb_width = framebuffer.get_width();
-  const uint32_t fb_height = framebuffer.get_height();
-  graphics::Painter painter;
-  const char* text = "Hello kernel World from Graphics!";
-  const PKFont font = painter.get_font();
-  const uint32_t text_width = font.get_horizontal_advance(text);
-  const uint32_t text_height = font.get_char_height();
-  // Draw the text at the middle of screen
-  painter.clear(graphics::Color::WHITE);
-  painter.set_pen(graphics::Color::BLACK);
-  painter.draw_text((fb_width - text_width) / 2, (fb_height - text_height) / 2, text);
+  TaskManager* task_manager = new TaskManager;
 
-  LOG_ERROR("END");
-  while (true) {
-    log.write_one(log.read_one());
-  }
+  auto task1 = task_manager->create_task((const elf::Header*)&init);
+  task_manager->wake_task(task1);
+
+  //  Enter userspace
+  task_manager->schedule();
+  task_manager->get_current_task()->get_saved_state().memory->activate();
+  jump_to_el0(task1->get_saved_state().regs.elr, (uintptr_t)task_manager->get_current_task()->get_saved_state().sp);
+  LOG_CRITICAL("Not in user space");
+  libk::halt();
 }

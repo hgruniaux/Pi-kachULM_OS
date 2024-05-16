@@ -12,9 +12,6 @@ add_executable(kernel
         # C++ Body
         kernel.cpp
 
-        syscall.hpp
-        syscall.cpp
-
         # Memory
         memory/mmu_table.hpp
         memory/mmu_table.cpp
@@ -79,12 +76,49 @@ add_executable(kernel
 
         graphics/graphics.hpp
         graphics/graphics.cpp
+
+        # Task
+        task/task_manager.hpp
+        task/task_manager.cpp
+
+        task/scheduler.hpp
+        task/scheduler.cpp
+
+        task/syscall_table.hpp
+        task/syscall_table.cpp
+
+        task/task.hpp
+        task/task.cpp
+
+        task/pika_syscalls.hpp
+        task/pika_syscalls.cpp
+
+        task/wait_list.hpp
+        task/wait_list.cpp
+
+        task/delta_queue.hpp
+        task/delta_queue.cpp
+
+        # Embed init ELF file inside the kernel
+        ${CMAKE_CURRENT_BINARY_DIR}/init_elf.c
+        task/message_queue.hpp
+        task/message_queue.cpp
 )
 
 target_include_directories(kernel PUBLIC .)
 set_target_properties(kernel PROPERTIES OUTPUT_NAME "kernel8.elf")
 
-target_link_libraries(kernel PRIVATE libk device-tree)
+target_link_libraries(kernel PRIVATE libk libsyscall libelf device-tree)
+
+add_executable(init init.c)
+target_link_libraries(init PRIVATE libsyscall)
+target_compile_options(init PRIVATE -nostdlib -no-pie -Wl,-e_start)
+target_link_options(init PRIVATE -nostdlib -no-pie -Wl,-e_start)
+add_custom_command(
+        OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/init_elf.c
+        COMMAND xxd -i init > ${CMAKE_CURRENT_BINARY_DIR}/init_elf.c
+        DEPENDS init
+        COMMENT "Embedding ELF init in kernel")
 
 # Use the linker script.
 set(LINKER_SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/boot/link.ld)

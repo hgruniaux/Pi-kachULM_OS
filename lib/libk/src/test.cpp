@@ -48,6 +48,7 @@ void run_tests() {
     exit_code = 1;
   }
 
+  (void)exit_code;
 #ifdef TARGET_QEMU
   libk::qemu_exit(exit_code);
 #endif  // TARGET_QEMU
