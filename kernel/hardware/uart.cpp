@@ -58,12 +58,12 @@ UART::UART(uint32_t baud_rate) : _uart_base(KernelDT::force_get_device_address("
   // Get the UART Clock
   uint32_t uart_clock = Device::get_clock_rate(Device::UART);
 
-  GPIO::set_pull_up_down(GPIO::Pin::BCM14, GPIO::PUD_Mode::Off);
-  GPIO::set_pull_up_down(GPIO::Pin::BCM15, GPIO::PUD_Mode::Off);
+  GPIO::set_pull_up_down(14, GPIO::PUD_Mode::Off);
+  GPIO::set_pull_up_down(15, GPIO::PUD_Mode::Off);
 
   // Set pin 14 and 15 to mode Alternate0
-  GPIO::set_mode(GPIO::Pin::BCM14, GPIO::Mode::ALT0);
-  GPIO::set_mode(GPIO::Pin::BCM15, GPIO::Mode::ALT0);
+  GPIO::set_mode(14, GPIO::Mode::ALT0);
+  GPIO::set_mode(15, GPIO::Mode::ALT0);
 
   // IntegerPart = clock / (16 * baud rate)   <- Integer division
   // FractionalPart = 64 * (clock % (16 * baud rate)) / (16 * baud rate) = 4 * (clock % (16 * baud rate)) / (baud

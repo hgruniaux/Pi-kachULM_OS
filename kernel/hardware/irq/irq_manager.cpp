@@ -1,6 +1,4 @@
 #include "irq_manager.hpp"
-#include <algorithm>
-#include "libk/linked_list.hpp"
 #include "libk/log.hpp"
 
 #include "hardware/kernel_dt.hpp"
@@ -8,20 +6,22 @@
 #include "bcm2711_irq_manager.hpp"
 #include "bcm2837_irq_manager.hpp"
 
-static void (*_enable_irq)(uint32_t);
-static void (*_disable_irq)(uint32_t);
-static void (*_mask_as_processed)(uint32_t);
-static bool (*_has_pending_interrupt)(uint32_t*);
+namespace IRQManager {
+
+static void (*_enable_irq)(IRQ);
+static void (*_disable_irq)(IRQ);
+static void (*_mask_as_processed)(IRQ);
+static bool (*_has_pending_interrupt)(IRQ*);
 
 struct CallBackAssoc {
-  uint64_t irq = 0;
-  IRQManager::IRQCallBack cb = nullptr;
+  IRQCallBack cb = nullptr;
   void* cb_handle = nullptr;
 };
 
-libk::LinkedList<CallBackAssoc> _callbacks;
+static CallBackAssoc armc_handler[ARMC_IRQ_NB] = {};
+static CallBackAssoc vc_handler[VC_IRQ_NB] = {};
 
-void IRQManager::init() {
+void init() {
   for (const auto comp : KernelDT::get_board_compatible()) {
     if (comp.find("bcm2837") != libk::StringView::npos) {
       _enable_irq = &BCM2837_IRQManager::enable_irq;
@@ -45,94 +45,94 @@ void IRQManager::init() {
   }
 }
 
-void IRQManager::enable_irq_interrupts() {
+void enable_irq_interrupts() {
   asm volatile("msr daifclr, #2");
 }
 
-void IRQManager::disable_irq_interrupts() {
+void disable_irq_interrupts() {
   asm volatile("msr daifset, #2");
 }
 
-bool IRQManager::handle_interrupts() {
+void handle_interrupts() {
   disable_irq_interrupts();
-  uint32_t irq_id = -1;
 
-  while ((*_has_pending_interrupt)(&irq_id)) {
-    auto it = _callbacks.begin();
-    bool handled = false;
+  IRQ irq;
 
-    while (it != std::end(_callbacks) && !handled) {
-      if (it->irq == irq_id) {
-        handled = (*it->cb)(it->cb_handle);
-      }
+  while ((*_has_pending_interrupt)(&irq)) {
+    LOG_INFO("Got IRQ id: {:#x}, IRQ type: {}", irq.id, (int)irq.type);
 
-      ++it;
+    CallBackAssoc cb_assoc;
+    switch (irq.type) {
+      case IRQ::Type::ARMCore:
+        cb_assoc = armc_handler[irq.id];
+        break;
+      case IRQ::Type::VideoCore:
+        cb_assoc = vc_handler[irq.id];
+        break;
     }
 
-    if (!handled) {
-      return false;
+    LOG_INFO("Found Handler: {:#x} (handle: {:#x})", (void*)(cb_assoc.cb), cb_assoc.cb_handle);
+
+    if (cb_assoc.cb == nullptr) {
+      LOG_ERROR("No handler for interrupt: (id: {:#x}, type: {})", irq.id, (int)irq.type);
+      libk::panic("IRQ Handler Missing");
     }
 
-    (*_mask_as_processed)(irq_id);
+    (*cb_assoc.cb)(cb_assoc.cb_handle);
+    (*_mask_as_processed)(irq);
   }
 
   enable_irq_interrupts();
-  return true;
 }
 
-bool IRQManager::register_irq_handler(uint64_t irq_id, IRQCallBack callback, void* cb_handle) {
-  if (callback == nullptr) {
-    return false;
+void register_irq_handler(IRQ irq, IRQCallBack callback, void* cb_handle) {
+  switch (irq.type) {
+    case IRQ::Type::ARMCore:
+      armc_handler[irq.id] = {callback, cb_handle};
+      break;
+    case IRQ::Type::VideoCore:
+      vc_handler[irq.id] = {callback, cb_handle};
+      break;
   }
 
-  _callbacks.push_front({irq_id, callback, cb_handle});
-  activate_irq(irq_id);
-
-  return true;
+  activate_irq(irq);
 }
 
-bool IRQManager::unregister_first_irq_handle(uint64_t irq_id, IRQCallBack* callback, void** callback_handle) {
-  auto it = _callbacks.begin();
+void unregister_irq_handle(IRQ irq, IRQCallBack* callback, void** callback_handle) {
+  deactivate_irq(irq);
 
-  while (it != std::end(_callbacks)) {
-    if (it->irq == irq_id) {
+  switch (irq.type) {
+    case IRQ::Type::ARMCore: {
+      const auto cb_entry = armc_handler[irq.id];
+
       if (callback != nullptr) {
-        *callback = it->cb;
+        *callback = cb_entry.cb;
       }
-
       if (callback_handle != nullptr) {
-        *callback_handle = it->cb_handle;
+        *callback_handle = cb_entry.cb_handle;
       }
-
-      _callbacks.erase(it);
-      return true;
+      break;
     }
 
-    it++;
-  }
+    case IRQ::Type::VideoCore: {
+      const auto cb_entry = vc_handler[irq.id];
 
-  return false;
-}
-
-void IRQManager::unregister_all_irq_handle(uint64_t irq_id) {
-  auto it = _callbacks.begin();
-
-  while (it != std::end(_callbacks)) {
-    if (it->irq == irq_id) {
-      auto to_rem = it;
-      _callbacks.erase(to_rem);
+      if (callback != nullptr) {
+        *callback = cb_entry.cb;
+      }
+      if (callback_handle != nullptr) {
+        *callback_handle = cb_entry.cb_handle;
+      }
+      break;
     }
-
-    it++;
   }
-
-  deactivate_irq(irq_id);
 }
 
-void IRQManager::activate_irq(uint64_t irq_id) {
-  (*_enable_irq)(irq_id);
+void activate_irq(IRQ irq) {
+  (*_enable_irq)(irq);
 }
 
-void IRQManager::deactivate_irq(uint64_t irq_id) {
-  (*_disable_irq)(irq_id);
+void deactivate_irq(IRQ irq) {
+  (*_disable_irq)(irq);
 }
+}  // namespace IRQManager

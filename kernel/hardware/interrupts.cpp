@@ -192,9 +192,8 @@ extern "C" void exception_handler(InterruptSource source, InterruptKind kind, Re
   }
 
   if (kind == InterruptKind::IRQ) {
-    if (IRQManager::handle_interrupts()) {
-      return;
-    }
+    IRQManager::handle_interrupts();
+    return;
   }
 
   dump_unhandled_interrupt(source, kind, registers);
