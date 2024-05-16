@@ -9,7 +9,27 @@ FrameBuffer& FrameBuffer::get() {
   return framebuffer;
 }
 
-bool FrameBuffer::init(uint32_t width, uint32_t height) {
+static bool get_framebuffer_real_size(uint32_t& width, uint32_t& height) {
+  struct GetFrameBufferSizeTagBuffer {
+    uint32_t width;
+    uint32_t height;
+  };  // struct GetFrameBufferSizeTagBuffer
+
+  using GetFrameBufferSizeTag = MailBox::PropertyTag<0x00040003, GetFrameBufferSizeTagBuffer>;
+
+  MailBox::PropertyMessage<GetFrameBufferSizeTag> message = {};
+  const bool success = MailBox::send_property(message);
+  width = message.tag.buffer.width;
+  height = message.tag.buffer.height;
+  return success && MailBox::check_tag_status(message.tag.status);
+}
+
+bool FrameBuffer::init() {
+  uint32_t width, height;
+  if (!get_framebuffer_real_size(width, height)) {
+    return false;
+  }
+
   // Common to SetPhysicalSizeTag and SetVirtualSizeTag.
   struct SetFrameBufferSizeTagBuffer {
     uint32_t width;
@@ -69,13 +89,16 @@ bool FrameBuffer::init(uint32_t width, uint32_t height) {
     m_height = message.set_virtual_size_tag.buffer.height;
   m_pitch = message.get_pitch_tag.buffer / sizeof(m_buffer[0]);
   m_buffer_size = message.allocate_tag.buffer.response.size / sizeof(uint32_t);
-  m_buffer = (uint32_t*)(uintptr_t)message.allocate_tag.buffer.response.base_address;
 
-  // Initially clear the framebuffer with black color. In case the VideoCore gives us
-  // an uninitialized framebuffer.
-  // This is called before double buffering initialization, so both the front and back
-  // buffers are cleared.
-  clear(0x00000000);
+  uint64_t buffer_address = message.allocate_tag.buffer.response.base_address;
+  buffer_address &= 0x3FFFFFFF;  // convert GPU address to ARM address
+  buffer_address = KernelMemory::get_virtual_vc_address(buffer_address);
+  m_buffer = (uint32_t*)buffer_address;
+
+  libk::print("Raw address (as returned by mailbox): {:#x}", message.allocate_tag.buffer.response.base_address);
+  libk::print("Converted to ARM physical (AND 0x3FFFFFFF): {:#x}",
+              message.allocate_tag.buffer.response.base_address & 0x3FFFFFFF);
+  libk::print("Converted to virtual address: {:#x}", buffer_address);
 
   LOG_TRACE("framebuffer of size {}x{} allocated (requested {}x{})", m_width, m_height, width, height);
 
@@ -83,6 +106,12 @@ bool FrameBuffer::init(uint32_t width, uint32_t height) {
   LOG_DEBUG("framebuffer at {} of size {} bytes (pitch = {})", m_buffer, m_buffer_size, m_pitch);
   LOG_DEBUG("framebuffer pixel order: {} (0 = BGR, 1 = RGB)", message.set_pixel_order_tag.buffer);
   LOG_DEBUG("framebuffer depth: {}", message.set_depth_tag.buffer);
+
+  // Initially clear the framebuffer with black color. In case the VideoCore gives us
+  // an uninitialized framebuffer.
+  // This is called before double buffering initialization, so both the front and back
+  // buffers are cleared.
+  clear(0x00000000);
 
   if (m_use_double_buffering) {
     // Display the screen 0.

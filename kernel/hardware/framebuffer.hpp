@@ -40,7 +40,7 @@ class FrameBuffer {
   static FrameBuffer& get();
 
   /** @brief Initializes a framebuffer of the given size. */
-  bool init(uint32_t width, uint32_t height);
+  bool init();
 
   /** @brief Converts a color to 0xAARRGGBB format suitable to be directly written to the buffer. */
   [[gnu::always_inline, nodiscard]] constexpr static uint32_t from_rgb(uint8_t r,
