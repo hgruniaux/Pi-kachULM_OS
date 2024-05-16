@@ -210,14 +210,14 @@ extern "C" void exception_handler(InterruptSource source, InterruptKind kind, Re
 
 static int interrupt_disable_level = 0;
 
-void disable_interrupts() {
-  asm volatile("msr DAIFSet, #0b1111");
+void disable_irqs() {
+  asm volatile("msr DAIFSet, #2");
   interrupt_disable_level++;
 }
 
-void enable_interrupts() {
+void enable_irqs() {
   interrupt_disable_level--;
   if (interrupt_disable_level == 0) {
-    asm volatile("msr DAIFClr, #0b1111");
+    asm volatile("msr DAIFClr, #2");
   }
 }
