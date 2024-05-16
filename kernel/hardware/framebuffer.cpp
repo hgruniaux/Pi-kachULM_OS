@@ -98,17 +98,12 @@ bool FrameBuffer::init(uint32_t width, uint32_t height) {
   buffer_address = KernelMemory::get_virtual_vc_address(buffer_address);
   m_buffer = (uint32_t*)buffer_address;
 
-  libk::print("Raw address (as returned by mailbox): {:#x}", message.allocate_tag.buffer.response.base_address);
-  libk::print("Converted to ARM physical (AND 0x3FFFFFFF): {:#x}",
-              message.allocate_tag.buffer.response.base_address & 0x3FFFFFFF);
-  libk::print("Converted to virtual address: {:#x}", buffer_address);
-
-  LOG_TRACE("framebuffer of size {}x{} allocated (requested {}x{})", m_width, m_height, width, height);
+  LOG_INFO("framebuffer of size {}x{} allocated (requested {}x{})", m_width, m_height, width, height);
 
   // Dump some debugging information in case of something is not working as intended.
-  LOG_DEBUG("framebuffer at {} of size {} bytes (pitch = {})", m_buffer, m_buffer_size, m_pitch);
-  LOG_DEBUG("framebuffer pixel order: {} (0 = BGR, 1 = RGB)", message.set_pixel_order_tag.buffer);
-  LOG_DEBUG("framebuffer depth: {}", message.set_depth_tag.buffer);
+  LOG_INFO("framebuffer at {} of size {} bytes (pitch = {})", m_buffer, m_buffer_size, m_pitch);
+  LOG_INFO("framebuffer pixel order: {} (0 = BGR, 1 = RGB)", message.set_pixel_order_tag.buffer);
+  LOG_INFO("framebuffer depth: {}", message.set_depth_tag.buffer);
 
   // Initially clear the framebuffer with black color. In case the VideoCore gives us
   // an uninitialized framebuffer.
