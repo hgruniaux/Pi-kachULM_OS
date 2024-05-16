@@ -41,9 +41,9 @@ size_t KernelMemory::get_memory_overhead() {
 }
 
 PhysicalAddress KernelMemory::get_physical_vc_address(VirtualAddress vc_addr) {
-  return vc_addr - VC_MEMORY;
+  return vc_addr - VC_MEMORY + _init_data.vc_offset;
 }
 
 VirtualAddress KernelMemory::get_virtual_vc_address(PhysicalAddress vc_addr) {
-  return vc_addr + VC_MEMORY;
+  return vc_addr - _init_data.vc_offset + VC_MEMORY;
 }
