@@ -1,5 +1,6 @@
 #include "interrupts.hpp"
 #include <libk/log.hpp>
+#include "hardware/irq/irq_manager.hpp"
 #include "task/task_manager.hpp"
 
 ExceptionLevel get_current_exception_level() {
@@ -188,6 +189,12 @@ extern "C" void exception_handler(InterruptSource source, InterruptKind kind, Re
   if (source == InterruptSource::CURRENT_SP_ELX && kind == InterruptKind::SYNCHRONOUS) {
     if (do_kernelspace_interrupt(registers))
       return;
+  }
+
+  if (kind == InterruptKind::IRQ) {
+    if (IRQManager::handle_interrupts()) {
+      return;
+    }
   }
 
   dump_unhandled_interrupt(source, kind, registers);

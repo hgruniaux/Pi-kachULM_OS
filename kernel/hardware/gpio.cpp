@@ -67,7 +67,7 @@ static constexpr int32_t GPPUDCLK = 0x98;  // GPIO Pin Pull-up/down Enable Clock
 static uintptr_t gpio_base;
 
 void GPIO::init() {
-  gpio_base = KernelDT::get_device_address("gpio");
+  gpio_base = KernelDT::force_get_device_address("gpio");
 }
 
 void GPIO::set_mode(GPIO::Pin gpio_pin, GPIO::Mode target_mode) {

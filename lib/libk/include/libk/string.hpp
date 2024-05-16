@@ -82,6 +82,25 @@ constexpr inline char* strchrnul(const char* str, int ch) {
   return const_cast<char*>(str);
 }
 
+/** Implementation of the C standard `strstr()` function. */
+constexpr inline const char* strstr(const char* haystack, const char* needle) {
+  const size_t needle_length = strlen(needle);
+
+  if (needle_length == 0) {
+    return haystack;
+  }
+
+  while (*haystack != '\0') {
+    if ((*haystack == *needle) && (strncmp(haystack, needle, needle_length) == 0)) {
+      return haystack;
+    }
+
+    haystack++;
+  }
+
+  return nullptr;
+}
+
 /** Implementation of the C standard `memchr()` function. */
 inline void* memchr(const void* ptr, int value, size_t length) {
   const unsigned char* p = (const unsigned char*)ptr;

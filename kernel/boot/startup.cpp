@@ -6,8 +6,10 @@
 
 #include "hardware/device.hpp"
 #include "hardware/gpio.hpp"
+#include "hardware/irq/irq_manager.hpp"
 #include "hardware/kernel_dt.hpp"
 #include "hardware/mailbox.hpp"
+#include "hardware/system_timer.hpp"
 
 // The linker provides the following pointers.
 extern uint64_t __bss_start;
@@ -81,6 +83,12 @@ extern "C" void _startup(uintptr_t dtb) {
   if (!Device::init()) {
     libk::halt();
   }
+
+  // Set up the IRQ Manager
+  IRQManager::init();
+
+  // Set up the System Timer
+  SystemTimer::init();
 
   // Set up GPIO Function.
   GPIO::init();

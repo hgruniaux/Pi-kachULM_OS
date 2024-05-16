@@ -9,14 +9,19 @@
 class DeviceTree;
 
 class Node;
+struct StringList;
 
 struct Property {
-  libk::StringView name;
-  size_t length;
-  const char* data;
+  /* Property Members */
+  libk::StringView name = "";
+  size_t length = 0;
+  const char* data = nullptr;
 
   /** @brief Tests if this property is likely a string */
   [[nodiscard]] bool is_string() const;
+
+  /** @brief Tests if this property is likely a string */
+  [[nodiscard]] bool is_string_list() const;
 
   /** Tries to parse an `<u32>` at *byte index* @a index into @a value.
    * @returns - `true` if @a value contains the parsed integer, and @a index the next index to use for parsing
@@ -40,7 +45,39 @@ struct Property {
   /** @brief Parses the property value as a `<u32>` or `<u64>` depending on property length. */
   [[nodiscard]] libk::Option<uint64_t> get_u32_or_u64() const;
   /** @brief Parses the property value as a `<string>`. */
-  [[nodiscard]] libk::StringView get_string() const;
+  [[nodiscard]] libk::Option<libk::StringView> get_string() const;
+  /** @brief Parses the property value as a list of strings. */
+  [[nodiscard]] libk::Option<StringList> get_string_list() const;
+};
+
+class StringListIterator {
+ public:
+  using iterator_category = std::forward_iterator_tag;
+  using element_type = libk::StringView;
+  using difference_type = std::ptrdiff_t;
+
+  StringListIterator() = default;
+  explicit StringListIterator(const char* data);
+
+  element_type operator*() const;
+
+  StringListIterator& operator++();
+  StringListIterator operator++(int) {
+    StringListIterator old = *this;
+    ++(*this);
+    return old;
+  }
+
+  bool operator==(const StringListIterator& b) const { return m_p == b.m_p; }
+
+ private:
+  const char* m_p = nullptr;
+};
+
+struct StringList {
+  const Property* _prop = nullptr;
+  [[nodiscard]] StringListIterator begin() const { return StringListIterator(_prop->data); }
+  [[nodiscard]] StringListIterator end() const { return StringListIterator(_prop->data + _prop->length); }
 };
 
 class PropertyIterator {
@@ -65,8 +102,8 @@ class PropertyIterator {
   bool operator==(const PropertyIterator& b) const { return m_p == b.m_p && m_off == b.m_off; }
 
  private:
-  const DeviceTreeParser* m_p;
-  size_t m_off;
+  const DeviceTreeParser* m_p = nullptr;
+  size_t m_off = 0;
 };
 
 class NodeIterator {
@@ -91,8 +128,8 @@ class NodeIterator {
   bool operator==(const NodeIterator& b) const { return m_p == b.m_p && m_off == b.m_off; }
 
  private:
-  const DeviceTreeParser* m_p;
-  size_t m_off;
+  const DeviceTreeParser* m_p = nullptr;
+  size_t m_off = 0;
 };
 
 class Node {
@@ -166,3 +203,4 @@ class Node {
 
 static_assert(std::forward_iterator<PropertyIterator>);
 static_assert(std::forward_iterator<NodeIterator>);
+static_assert(std::forward_iterator<StringListIterator>);

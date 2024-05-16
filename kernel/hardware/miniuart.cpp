@@ -35,7 +35,7 @@ static constexpr int32_t AUX_MU_CNTL_REG = 0x60;
 /** Mini UART Baud rate (size: 16) */
 static constexpr int32_t AUX_MU_BAUD_REG = 0x68;
 
-MiniUART::MiniUART(uint32_t baud_rate) : _mini_uart_base(KernelDT::get_device_address("aux")) {
+MiniUART::MiniUART(uint32_t baud_rate) : _mini_uart_base(KernelDT::force_get_device_address("aux")) {
   // We deactivate Pull Up/Down fot the pins 14 and 15
   GPIO::set_pull_up_down(GPIO::Pin::BCM14, GPIO::PUD_Mode::Off);
   GPIO::set_pull_up_down(GPIO::Pin::BCM15, GPIO::PUD_Mode::Off);

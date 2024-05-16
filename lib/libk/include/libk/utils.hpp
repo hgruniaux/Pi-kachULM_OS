@@ -60,6 +60,16 @@ static inline constexpr U div_round_down(U a, V b) {
   asm volatile("yield");
 }
 
+/** @brief The WFE instruction. */
+[[gnu::always_inline]] static inline void wfe() {
+  asm volatile("wfe");
+}
+
+/** @brief The WFI instruction. */
+[[gnu::always_inline]] static inline void wfi() {
+  asm volatile("wfi");
+}
+
 /** @brief Halt the CPU (enter into a infinite loop). */
 [[noreturn, gnu::always_inline]] static inline void halt() {
   // The `asm volatile` is required here to avoid Clang to optimize away the infinite loop.

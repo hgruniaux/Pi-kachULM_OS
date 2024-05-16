@@ -17,8 +17,11 @@ bool init(uintptr_t dtb);
 [[nodiscard]] libk::StringView get_board_model();
 [[nodiscard]] uint32_t get_board_revision();
 [[nodiscard]] uint64_t get_board_serial();
+[[nodiscard]] StringList get_board_compatible();
 
-[[nodiscard]] Node get_device_node(libk::StringView device);
-[[nodiscard]] uintptr_t get_device_address(libk::StringView device);
+[[nodiscard]] bool get_device_node(libk::StringView device, Node* device_node);
+[[nodiscard]] bool get_device_address(libk::StringView device, uintptr_t* device_address);
+[[nodiscard]] uintptr_t convert_soc_address(uintptr_t soc_address);
 
+[[nodiscard]] uintptr_t force_get_device_address(libk::StringView device);
 };  // namespace KernelDT

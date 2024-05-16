@@ -54,7 +54,7 @@ static inline constexpr int UART_CR = 0x30;
 /** UART0 Test Data Register (size: 32) */
 // static inline constexpr int UART_TDR = 0x8c;
 
-UART::UART(uint32_t baud_rate) : _uart_base(KernelDT::get_device_address("uart0")) {
+UART::UART(uint32_t baud_rate) : _uart_base(KernelDT::force_get_device_address("uart0")) {
   // Get the UART Clock
   uint32_t uart_clock = Device::get_clock_rate(Device::UART);
 

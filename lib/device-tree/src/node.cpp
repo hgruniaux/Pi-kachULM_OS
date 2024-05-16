@@ -7,11 +7,36 @@
 static constexpr size_t max_val = -1;
 
 /*
+ * StringListIterator class
+ */
+
+StringListIterator::StringListIterator(const char* data) : m_p(data) {}
+
+StringListIterator::element_type StringListIterator::operator*() const {
+  return libk::StringView(m_p);
+}
+
+StringListIterator& StringListIterator::operator++() {
+  m_p += libk::strlen(m_p) + 1;
+  return *this;
+}
+
+/*
  * Property class
  */
 bool Property::is_string() const {
   for (size_t i = 0; i < length - 1; ++i) {
     if (data[i] <= 0x1f || data[i] >= 0x7f) {
+      return false;
+    }
+  }
+
+  return data[length - 1] == '\0';
+}
+
+bool Property::is_string_list() const {
+  for (size_t i = 0; i < length - 1; ++i) {
+    if ((data[i] <= 0x1f || data[i] >= 0x7f) && data[i] != 0x00) {
       return false;
     }
   }
@@ -85,7 +110,7 @@ libk::Option<uint64_t> Property::get_u64() const {
   return libk::from_be(u32_2_u64.u64);
 }
 
-[[nodiscard]] libk::Option<uint64_t> Property::get_u32_or_u64() const {
+libk::Option<uint64_t> Property::get_u32_or_u64() const {
   if (length == sizeof(uint32_t)) {
     const uint32_t value = *((const uint32_t*)data);
     return libk::from_be(value);
@@ -98,8 +123,21 @@ libk::Option<uint64_t> Property::get_u64() const {
 
   return {};
 }
-libk::StringView Property::get_string() const {
-  return {data, length - 1};
+
+libk::Option<libk::StringView> Property::get_string() const {
+  if (is_string()) {
+    return libk::StringView(data, length - 1);
+  }
+
+  return {};
+}
+
+libk::Option<StringList> Property::get_string_list() const {
+  if (is_string_list()) {
+    return StringList(this);
+  }
+
+  return {};
 }
 
 /*

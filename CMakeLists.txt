@@ -2,8 +2,8 @@ cmake_minimum_required(VERSION 3.20)
 
 project(Pi-kachULM_OS LANGUAGES CXX C ASM)
 
-# Enable C++20 (with GNU extensions)
-set(CMAKE_CXX_STANDARD 20)
+# Enable C++23 (with GNU extensions)
+set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS ON)
 

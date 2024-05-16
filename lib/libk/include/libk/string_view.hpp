@@ -2,6 +2,7 @@
 
 #include <compare>
 #include <cstddef>
+#include <memory>
 #include "string.hpp"
 #include "utils.hpp"
 
@@ -17,6 +18,8 @@ class StringView {
   using iterator = const_iterator;
   using size_type = size_t;
   using difference_type = ptrdiff_t;
+
+  static inline constexpr size_t npos = -1;
 
   constexpr StringView() = default;
   constexpr StringView(const char* str) : m_data(str), m_length(strlen(str)) {}
@@ -44,16 +47,27 @@ class StringView {
     return strncmp(m_data + (m_length - substring.m_length), substring.m_data, substring.m_length) == 0;
   }
 
-  /** @brief Finds the first occurrence of @a ch starting at position @a pos. */
-  [[nodiscard]] constexpr const_iterator find(char ch, size_t pos = 0) const {
-    KASSERT(pos <= m_length);
-    for (const_iterator it = begin() + pos; it != end(); ++it) {
-      if (*it == ch)
-        return it;
+  /** @brief Finds the first substring equal to the given character sequence. */
+  constexpr size_t find(libk::StringView needle, size_t pos = 0) const noexcept {
+    if (needle.get_length() == 0) {
+      return libk::StringView::npos;
     }
 
-    return end();
+    while (pos < get_length()) {
+      if (*(get_data() + pos) == *(needle.get_data()) &&
+          libk::strncmp(get_data() + pos, needle.get_data(), needle.get_length()) == 0) {
+        return pos;
+      }
+
+      pos++;
+    }
+
+    return libk::StringView::npos;
   }
+  constexpr size_type find(const char* s, size_type pos, size_type count) const {
+    return find(StringView(s, count), pos);
+  }
+  constexpr size_type find(const char* s, size_type pos = 0) const { return find(StringView(s), pos); }
 
   /** @brief Finds the last occurrence of @a ch. */
   [[nodiscard]] constexpr const_iterator rfind(char ch) const {
