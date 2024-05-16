@@ -3,31 +3,31 @@
 #include <cstdint>
 
 static inline constexpr uint64_t VC_IRQ_MASK = 0x1000;
-static inline constexpr uint64_t ARM_IRQ_MASK = 0x0000;
+static inline constexpr uint64_t ARMC_IRQ_MASK = 0x0000;
 
-/** ARM Timer IRQ id. */
-static inline constexpr uint64_t ARM_TIMER = ARM_IRQ_MASK | 0;
+/** ARM Core Timer IRQ id. */
+static inline constexpr uint64_t ARMC_TIMER = ARMC_IRQ_MASK | 0;
 
-/** ARM Mailbox IRQ id. */
-static inline constexpr uint64_t ARM_MAILBOX = ARM_IRQ_MASK | 1;
+/** ARM Core Mailbox IRQ id. */
+static inline constexpr uint64_t ARMC_MAILBOX = ARMC_IRQ_MASK | 1;
 
-/** ARM Doorbell0 IRQ id. */
-// static inline constexpr uint64_t ARM_DOORBELL0 = ARM_IRQ_MASK | 2;
+/** ARM Core Doorbell0 IRQ id. */
+static inline constexpr uint64_t ARMC_DOORBELL0 = ARMC_IRQ_MASK | 2;
 
-/** ARM Doorbell1 IRQ id. */
-// static inline constexpr uint64_t ARM_DOORBELL1 = ARM_IRQ_MASK | 3;
+/** ARM Core Doorbell1 IRQ id. */
+static inline constexpr uint64_t ARMC_DOORBELL1 = ARMC_IRQ_MASK | 3;
 
-/** ARM GPU0 halted IRQ id. */
-// static inline constexpr uint64_t ARM_GPU0_HALTED = ARM_IRQ_MASK | 4;
+/** ARM Core GPU0 halted IRQ id. */
+static inline constexpr uint64_t ARMC_GPU0_HALTED = ARMC_IRQ_MASK | 4;
 
-/** ARM GPU1 halted IRQ id. */
-// static inline constexpr uint64_t ARM_GPU1_HALTED = ARM_IRQ_MASK | 5;
+/** ARM Core GPU1 halted IRQ id. */
+static inline constexpr uint64_t ARMC_GPU1_HALTED = ARMC_IRQ_MASK | 5;
 
-/** ARM Illegal access type 1 IRQ id. */
-// static inline constexpr uint64_t ARM_ILLEGAL_ACCESS_TYPE1 = ARM_IRQ_MASK | 6;
+/** ARM Core Illegal access type 1 IRQ id. */
+static inline constexpr uint64_t ARMC_ILLEGAL_ACCESS_TYPE1 = ARMC_IRQ_MASK | 6;
 
-/** ARM Illegal access type 0 IRQ id. */
-// static inline constexpr uint64_t ARM_ILLEGAL_ACCESS_TYPE0 = ARM_IRQ_MASK | 7;
+/** ARM Core Illegal access type 0 IRQ id. */
+static inline constexpr uint64_t ARMC_ILLEGAL_ACCESS_TYPE0 = ARMC_IRQ_MASK | 7;
 
 /** Base for Timer IRQ id. */
 static inline constexpr uint64_t VC_TIMER_BASE = VC_IRQ_MASK | 0;

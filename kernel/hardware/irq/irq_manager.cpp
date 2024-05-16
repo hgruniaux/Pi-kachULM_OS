@@ -8,10 +8,10 @@
 #include "bcm2711_irq_manager.hpp"
 #include "bcm2837_irq_manager.hpp"
 
-static void (*_enable_irq)(uint64_t);
-static void (*_disable_irq)(uint64_t);
-static void (*_mask_as_processed)(uint64_t);
-static bool (*_has_pending_interrupt)(uint64_t*);
+static void (*_enable_irq)(uint32_t);
+static void (*_disable_irq)(uint32_t);
+static void (*_mask_as_processed)(uint32_t);
+static bool (*_has_pending_interrupt)(uint32_t*);
 
 struct CallBackAssoc {
   uint64_t irq = 0;
@@ -54,7 +54,7 @@ void IRQManager::disable_irq_interrupts() {
 }
 
 bool IRQManager::handle_interrupts() {
-  uint64_t irq_id = -1;
+  uint32_t irq_id = -1;
 
   while ((*_has_pending_interrupt)(&irq_id)) {
     auto it = _callbacks.begin();
