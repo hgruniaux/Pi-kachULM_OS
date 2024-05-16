@@ -79,7 +79,7 @@ inline void print(const char* message, const Args&... args) {
  *   - LOG_WARNING_LEVEL
  *   - LOG_ERROR_LEVEL
  *   - LOG_CRITICAL_LEVEL: only show critical messages */
-#define LOG_MIN_LEVEL LOG_TRACE_LEVEL
+#define LOG_MIN_LEVEL LOG_INFO_LEVEL
 #endif  // LOG_MIN_LEVEL
 
 // For each logging function, we define a corresponding identical macro.
