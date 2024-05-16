@@ -24,7 +24,7 @@
   LOG_INFO("Temp: {} °C / {} °C", Device::get_current_temp() / 1000, Device::get_max_temp() / 1000);
 
   FrameBuffer& framebuffer = FrameBuffer::get();
-  if (!framebuffer.init()) {
+  if (!framebuffer.init(1920, 1080)) {
     LOG_CRITICAL("failed to initialize framebuffer");
   }
   const uint32_t fb_width = framebuffer.get_width();
@@ -38,6 +38,7 @@
   painter.clear(graphics::Color::WHITE);
   painter.set_pen(graphics::Color::BLACK);
   painter.draw_text((fb_width - text_width) / 2, (fb_height - text_height) / 2, text);
+
   LOG_ERROR("END");
   while (true) {
     log.write_one(log.read_one());
