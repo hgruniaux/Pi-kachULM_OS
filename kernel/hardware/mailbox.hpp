@@ -27,7 +27,7 @@ template <uint32_t Id, class Buffer>
 struct alignas(alignof(uint32_t)) PropertyTag {
   [[maybe_unused]] uint32_t id = Id;
   [[maybe_unused]] uint32_t buffer_size = sizeof(Buffer);
-  volatile uint32_t status = 0;  // Can be modified by the GPU
+  volatile uint32_t status = sizeof(Buffer);  // Can be modified by the GPU
   volatile Buffer buffer = {};   // Can be modified by the GPU
 };
 

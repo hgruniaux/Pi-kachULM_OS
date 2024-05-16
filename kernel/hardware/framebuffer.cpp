@@ -9,12 +9,32 @@ FrameBuffer& FrameBuffer::get() {
   return framebuffer;
 }
 
+[[maybe_unused]] static bool get_framebuffer_real_size(uint32_t& width, uint32_t& height) {
+  struct GetFrameBufferSizeTagBuffer {
+    uint32_t width;
+    uint32_t height;
+  };  // struct GetFrameBufferSizeTagBuffer
+
+  using GetFrameBufferSizeTag = MailBox::PropertyTag<0x00040003, GetFrameBufferSizeTagBuffer>;
+
+  MailBox::PropertyMessage<GetFrameBufferSizeTag> message = {};
+  const bool success = MailBox::send_property(message);
+  width = message.tag.buffer.width;
+  height = message.tag.buffer.height;
+  return success && MailBox::check_tag_status(message.tag.status);
+}
+
 bool FrameBuffer::init(uint32_t width, uint32_t height) {
   // Common to SetPhysicalSizeTag and SetVirtualSizeTag.
   struct SetFrameBufferSizeTagBuffer {
     uint32_t width;
     uint32_t height;
   };  // struct SetFrameBufferSizeTagBuffer
+
+  struct SetVirtualOffsetTagBuffer {
+    uint32_t x;
+    uint32_t y;
+  };  // struct SetVirtualOffsetTagBuffer
 
   union AllocateTagBuffer {
     uint32_t alignment;
@@ -26,9 +46,9 @@ bool FrameBuffer::init(uint32_t width, uint32_t height) {
 
   using SetPhysicalSizeTag = MailBox::PropertyTag<0x00048003, SetFrameBufferSizeTagBuffer>;
   using SetVirtualSizeTag = MailBox::PropertyTag<0x00048004, SetFrameBufferSizeTagBuffer>;
+  using SetVirtualOffsetTag = MailBox::PropertyTag<0x00048009, SetVirtualOffsetTagBuffer>;
   using SetPixelOrderTag = MailBox::PropertyTag<0x00048006, uint32_t>;
   using SetDepthTag = MailBox::PropertyTag<0x00048005, uint32_t>;
-  using SetAlphaModeTag = MailBox::PropertyTag<0x00044007, uint32_t>;
   using AllocateTag = MailBox::PropertyTag<0x00040001, AllocateTagBuffer>;
   using GetPitchTag = MailBox::PropertyTag<0x00040008, uint32_t>;
 
@@ -37,9 +57,9 @@ bool FrameBuffer::init(uint32_t width, uint32_t height) {
     uint32_t status = 0;
     SetPhysicalSizeTag set_physical_size_tag = {};
     SetVirtualSizeTag set_virtual_size_tag = {};
+    SetVirtualOffsetTag set_virtual_offset_tag = {};
     SetDepthTag set_depth_tag = {};
     SetPixelOrderTag set_pixel_order_tag = {};
-    SetAlphaModeTag set_alpha_mode_tag = {};
     AllocateTag allocate_tag = {};
     GetPitchTag get_pitch_tag = {};
     uint32_t end_tag = 0;
@@ -48,15 +68,18 @@ bool FrameBuffer::init(uint32_t width, uint32_t height) {
   // Allocate a virtual buffer double the size in case of double buffering.
   const uint32_t requested_virtual_height = m_use_double_buffering ? height * 2 : height;
 
-  PropertyMessage message = {};
+  PropertyMessage message;
+  message.set_physical_size_tag.status = 0;
   message.set_physical_size_tag.buffer.width = width;
   message.set_physical_size_tag.buffer.height = height;
   message.set_virtual_size_tag.buffer.width = width;
   message.set_virtual_size_tag.buffer.height = requested_virtual_height;
+  message.set_virtual_offset_tag.buffer.x = 0;
+  message.set_virtual_offset_tag.buffer.y = 0;
   message.set_depth_tag.buffer = 32;        // 32-bits per pixel (8-bits per component)
   message.set_pixel_order_tag.buffer = 0;   // BGR (so we have 0xRRGGBB, yep, this seems inverted but is not)
-  message.set_alpha_mode_tag.buffer = 0x0;  // 0 = fully opaque
-  message.allocate_tag.buffer.alignment = alignof(max_align_t);  // Which value to choose?
+  message.allocate_tag.buffer.alignment = 4096;  // Which value to choose?
+  message.get_pitch_tag.buffer = 0;
   const bool success = MailBox::send_property(message);
   if (!success)
     return false;
@@ -69,20 +92,24 @@ bool FrameBuffer::init(uint32_t width, uint32_t height) {
     m_height = message.set_virtual_size_tag.buffer.height;
   m_pitch = message.get_pitch_tag.buffer / sizeof(m_buffer[0]);
   m_buffer_size = message.allocate_tag.buffer.response.size / sizeof(uint32_t);
-  m_buffer = (uint32_t*)(uintptr_t)message.allocate_tag.buffer.response.base_address;
+
+  uint64_t buffer_address = message.allocate_tag.buffer.response.base_address;
+  buffer_address &= 0x3FFFFFFF;  // convert GPU address to ARM address
+  buffer_address = KernelMemory::get_virtual_vc_address(buffer_address);
+  m_buffer = (uint32_t*)buffer_address;
+
+  LOG_INFO("framebuffer of size {}x{} allocated (requested {}x{})", m_width, m_height, width, height);
+
+  // Dump some debugging information in case of something is not working as intended.
+  LOG_INFO("framebuffer at {} of size {} bytes (pitch = {})", m_buffer, m_buffer_size, m_pitch);
+  LOG_INFO("framebuffer pixel order: {} (0 = BGR, 1 = RGB)", message.set_pixel_order_tag.buffer);
+  LOG_INFO("framebuffer depth: {}", message.set_depth_tag.buffer);
 
   // Initially clear the framebuffer with black color. In case the VideoCore gives us
   // an uninitialized framebuffer.
   // This is called before double buffering initialization, so both the front and back
   // buffers are cleared.
   clear(0x00000000);
-
-  LOG_TRACE("framebuffer of size {}x{} allocated (requested {}x{})", m_width, m_height, width, height);
-
-  // Dump some debugging information in case of something is not working as intended.
-  LOG_DEBUG("framebuffer at {} of size {} bytes (pitch = {})", m_buffer, m_buffer_size, m_pitch);
-  LOG_DEBUG("framebuffer pixel order: {} (0 = BGR, 1 = RGB)", message.set_pixel_order_tag.buffer);
-  LOG_DEBUG("framebuffer depth: {}", message.set_depth_tag.buffer);
 
   if (m_use_double_buffering) {
     // Display the screen 0.

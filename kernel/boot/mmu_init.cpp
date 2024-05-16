@@ -133,7 +133,7 @@ void inline setup_memory_mapping(MMUTable* tbl, const DeviceTree& dt, const MMUI
   }
 }
 
-void inline setup_vc_mapping(MMUTable* tbl, const DeviceTree& dt, const DeviceMemoryProperties& prop) {
+void inline setup_vc_mapping(MMUTable* tbl, const DeviceTree& dt, MMUInitData* prop) {
   uint64_t mmio_base_start = std::numeric_limits<uint64_t>::max();
 
   Property tmp_prop;
@@ -143,9 +143,9 @@ void inline setup_vc_mapping(MMUTable* tbl, const DeviceTree& dt, const DeviceMe
   while (index < tmp_prop.length) {
     uint64_t memory_chunk_start = 0;
 
-    enforce(tmp_prop.get_variable_int(&index, nullptr, prop.is_soc_mem_address_u64));
-    enforce(tmp_prop.get_variable_int(&index, &memory_chunk_start, prop.is_arm_mem_address_u64));
-    enforce(tmp_prop.get_variable_int(&index, nullptr, prop.is_soc_mem_size_u64));
+    enforce(tmp_prop.get_variable_int(&index, nullptr, prop->mem_prop.is_soc_mem_address_u64));
+    enforce(tmp_prop.get_variable_int(&index, &memory_chunk_start, prop->mem_prop.is_arm_mem_address_u64));
+    enforce(tmp_prop.get_variable_int(&index, nullptr, prop->mem_prop.is_soc_mem_size_u64));
 
     if (memory_chunk_start < mmio_base_start) {
       mmio_base_start = memory_chunk_start;
@@ -163,6 +163,7 @@ void inline setup_vc_mapping(MMUTable* tbl, const DeviceTree& dt, const DeviceMe
 
   const uint64_t final_vc_size = libk::min(vc_size, mmio_base_start - vc_start);
 
+  prop->vc_offset = vc_start;
   enforce(map_range(tbl, VC_MEMORY, VC_MEMORY + final_vc_size - PAGE_SIZE, vc_start, vc_memory));
 }
 
@@ -318,7 +319,7 @@ extern "C" void mmu_init(uintptr_t dtb) {
   enforce(dt.is_status_okay());
   init_data->mem_prop = get_memory_properties(dt);
   setup_memory_mapping(&tbl, dt, init_data);
-  setup_vc_mapping(&tbl, dt, init_data->mem_prop);
+  setup_vc_mapping(&tbl, dt, init_data);
   setup_device_mapping(&tbl, dt, init_data->mem_prop);
   setup_stack_mapping(&tbl);
 

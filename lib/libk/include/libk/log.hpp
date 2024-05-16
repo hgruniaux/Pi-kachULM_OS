@@ -94,7 +94,7 @@ inline void print(const char* message, const Args&... args) {
 
 #if LOG_DEBUG_LEVEL >= LOG_MIN_LEVEL
 #define LOG_DEBUG(message, ...) \
-  ::libk::log(::libk::LogLevel::libk, (message), std::source_location::current() __VA_OPT__(, ) __VA_ARGS__)
+  ::libk::log(::libk::LogLevel::DEBUG, (message), std::source_location::current() __VA_OPT__(, ) __VA_ARGS__)
 #else
 #define LOG_DEBUG(message, ...)
 #endif
