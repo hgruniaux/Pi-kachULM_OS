@@ -179,7 +179,9 @@ extern "C" void exception_handler(InterruptSource source, InterruptKind kind, Re
 
   if (source == InterruptSource::LOWER_AARCH32) {
     LOG_WARNING("interrupt/exception from userspace aarch32 code (not supported)");
-    // FIXME: Crash the userspace task.
+    // Kill the process.
+    TaskManager& task_manager = TaskManager::get();
+    task_manager.kill_task(task_manager.get_current_task(), 1);
     return;
   }
 

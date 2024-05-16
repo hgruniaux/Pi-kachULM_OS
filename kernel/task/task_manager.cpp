@@ -75,10 +75,7 @@ TaskPtr TaskManager::create_task(const elf::Header* program_image) {
 
       if (segment->file_size > 0) {
         const char* segment_data = (const char*)(program_image) + segment->offset;
-        const size_t written_bytes = chunk.write(
-            0, segment_data, segment->file_size);  // FIXME : This cannot be 0 here, if
-                                                   //  segment->virtual_addr is not a multiple of page_size.
-                                                   //  Surely somthing like : (segment->virtual_addr - va_start)
+        const size_t written_bytes = chunk.write(segment->virtual_addr - va_start, segment_data, segment->file_size);
         KASSERT(written_bytes == segment->file_size);
       }
     }

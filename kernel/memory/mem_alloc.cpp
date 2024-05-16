@@ -41,8 +41,6 @@ static MetaPtr extend_heap(MetaPtr last, size_t size, size_t alignment) {  // al
   end->is_free = true;
   end->next = nullptr;
   end->previous = last;
-  // FIXME: Euh, sure? Verify this code.
-  // *(end->data) = (((((uintptr_t)(end->data) - 1) / alignment) * alignment) + alignment);
   end->ptr = (void*)(((((uintptr_t)(end->data) - 1) / alignment) * alignment) + alignment);
 
   if (last != nullptr)
