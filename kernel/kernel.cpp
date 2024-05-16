@@ -4,7 +4,6 @@
 #include "graphics/graphics.hpp"
 #include "hardware/framebuffer.hpp"
 #include "hardware/kernel_dt.hpp"
-#include "hardware/mailbox.hpp"
 #include "hardware/system_timer.hpp"
 #include "hardware/timer.hpp"
 #include "hardware/uart.hpp"
