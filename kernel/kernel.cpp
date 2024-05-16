@@ -2,6 +2,7 @@
 #include "hardware/device.hpp"
 #include "hardware/uart.hpp"
 
+#include "boot/mmu_utils.hpp"
 #include "hardware/kernel_dt.hpp"
 #include "hardware/timer.hpp"
 #include "libk/test.hpp"
@@ -15,25 +16,10 @@
 
   LOG_INFO("Kernel built at " __TIME__ " on " __DATE__);
 
-  ktest::run_tests();
+  LOG_INFO("Conversion: {:#x}", KernelMemory::get_virtual_vc_address(0x3c100000));
+  LOG_INFO("Conversion: {:#x}", _init_data.vc_offset);
 
-  LOG_INFO("Board model: {}", KernelDT::get_board_model());
-  LOG_INFO("Board revision: {:#x}", KernelDT::get_board_revision());
-  LOG_INFO("Board serial: {:#x}", KernelDT::get_board_serial());
-  LOG_INFO("Temp: {} °C / {} °C", Device::get_current_temp() / 1000, Device::get_max_temp() / 1000);
-
-  LOG_INFO("Heap test start:");
-
-  char* heap_start = (char*)KernelMemory::get_heap_end();
-  LOG_INFO("Current kernel end: {:#x}", (uintptr_t)heap_start);
-
-  constexpr const char* m_data = "Hello Kernel Heap!";
-  constexpr size_t m_data_size = libk::strlen(m_data);
-  LOG_INFO("New kernel end: {:#x}", KernelMemory::change_heap_end(m_data_size));
-
-  libk::memcpy(heap_start, m_data, m_data_size);
-  LOG_INFO("Written: {:$}", heap_start);
-  LOG_INFO("Truc: {}", m_data_size);
+  libk::write64(KernelMemory::get_virtual_vc_address(0x3c100000), 0xffff);
 
   //  SyscallManager::get().register_syscall(24, [](Registers& ) { LOG_INFO("Syscall 24"); });
   //
