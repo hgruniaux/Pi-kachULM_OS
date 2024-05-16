@@ -76,6 +76,7 @@ class StringListIterator {
 
 struct StringList {
   const Property* _prop = nullptr;
+  explicit StringList(const Property* prop) : _prop(prop) {}
   [[nodiscard]] StringListIterator begin() const { return StringListIterator(_prop->data); }
   [[nodiscard]] StringListIterator end() const { return StringListIterator(_prop->data + _prop->length); }
 };
