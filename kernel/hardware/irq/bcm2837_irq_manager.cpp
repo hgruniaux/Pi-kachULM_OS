@@ -4,12 +4,14 @@
 #include <libk/log.hpp>
 #include "hardware/irq/irq_lists.hpp"
 
-#define IF_BIT_SET(irq_handler, var, bit, irq) \
-  {                                            \
-    if ((((var) >> (bit)) & 0b1) != 0) {       \
-      *(irq_handler) = (irq);                  \
-      return true;                             \
-    }                                          \
+#define FILL_IRQ(irq_handler, var, bit, irq_id, irq_type) \
+  {                                                       \
+    if ((((var) >> (bit)) & 0b1) != 0) {                  \
+      irq_handler->type = (irq_type);                     \
+      irq_handler->id = (irq_id);                         \
+                                                          \
+      return true;                                        \
+    }                                                     \
   }
 
 static inline constexpr uint32_t IRQ_PEND_BASIC = 0x0;  // IRQ basic pending
@@ -40,129 +42,123 @@ void BCM2837_IRQManager::init() {
   _base = KernelDT::force_get_device_address("intc");
 }
 
-void BCM2837_IRQManager::enable_irq(uint32_t irq_id) {
-  const bool is_vc_irq = (irq_id & VC_IRQ_MASK) != 0;
+void BCM2837_IRQManager::enable_irq(IRQ irq) {
+  switch (irq.type) {
+    case IRQ::Type::ARMCore: {
+      if (irq.id > 7) {
+        LOG_ERROR("Unknown ARM IRQ {}", irq.id);
+        libk::panic("Unable to activate an IRQ");
+      }
 
-  if (is_vc_irq) {
-    const uint64_t vc_irq = irq_id & ~(VC_IRQ_MASK);
-    const uint8_t enable_reg = vc_irq / 32;
+      const uint32_t enable_mask = (uint32_t)1 << irq.id;
+      libk::write32(_base + IRQ_ENABLE_BASIC, enable_mask);
 
-    if (enable_reg > 1) {
-      LOG_ERROR("Unknown VideoCore IRQ {}", vc_irq);
-      libk::panic("Unable to activate an IRQ");
+      break;
     }
+    case IRQ::Type::VideoCore: {
+      const uint8_t enable_reg = irq.id / 32;
 
-    const uint32_t enable_mask = (uint32_t)1 << (vc_irq % 32);
-    libk::write32(_base + IRQ_ENABLE_VC_BASE + enable_reg * sizeof(uint32_t), enable_mask);
-    return;
-  }
+      if (enable_reg > 1) {
+        LOG_ERROR("Unknown VideoCore IRQ {}", irq.id);
+        libk::panic("Unable to activate an IRQ");
+      }
 
-  const bool is_armc_irq = (irq_id & ARMC_IRQ_MASK) != 0;
+      const uint32_t enable_mask = (uint32_t)1 << (irq.id % 32);
+      libk::write32(_base + IRQ_ENABLE_VC_BASE + enable_reg * sizeof(uint32_t), enable_mask);
 
-  if (is_armc_irq) {
-    // It's an ARM IRQ.
-    const uint64_t arm_irq = irq_id & ~(ARMC_IRQ_MASK);
-    if (arm_irq > 7) {
-      LOG_ERROR("Unknown ARM IRQ {}", arm_irq);
-      libk::panic("Unable to activate an IRQ");
+      break;
     }
-
-    const uint32_t enable_mask = (uint32_t)1 << arm_irq;
-    libk::write32(_base + IRQ_ENABLE_BASIC, enable_mask);
   }
 }
 
-void BCM2837_IRQManager::disable_irq(uint32_t irq_id) {
-  const bool is_vc_irq = (irq_id & VC_IRQ_MASK) != 0;
+void BCM2837_IRQManager::disable_irq(IRQ irq) {
+  switch (irq.type) {
+    case IRQ::Type::ARMCore: {
+      if (irq.id > 7) {
+        LOG_ERROR("Unknown ARM IRQ {}", irq.id);
+        libk::panic("Unable to activate an IRQ");
+      }
 
-  if (is_vc_irq) {
-    const uint64_t vc_irq = irq_id & ~(VC_IRQ_MASK);
-    const uint8_t enable_reg = vc_irq / 32;
+      const uint32_t disable_mask = (uint32_t)1 << irq.id;
+      libk::write32(_base + IRQ_DISABLE_BASIC, disable_mask);
 
-    if (enable_reg > 1) {
-      LOG_ERROR("Unknown VideoCore IRQ {}", vc_irq);
-      libk::panic("Unable to deactivate an IRQ");
+      break;
     }
+    case IRQ::Type::VideoCore: {
+      const uint8_t disable_reg = irq.id / 32;
 
-    const uint32_t disable_mask = (uint32_t)1 << (vc_irq % 32);
-    libk::write32(_base + IRQ_DISABLE_VC_BASE + enable_reg * sizeof(uint32_t), disable_mask);
-    return;
-  }
+      if (disable_reg > 1) {
+        LOG_ERROR("Unknown VideoCore IRQ {}", irq.id);
+        libk::panic("Unable to activate an IRQ");
+      }
 
-  const bool is_armc_irq = (irq_id & ARMC_IRQ_MASK) != 0;
+      const uint32_t disable_mask = (uint32_t)1 << (irq.id % 32);
+      libk::write32(_base + IRQ_DISABLE_VC_BASE + disable_reg * sizeof(uint32_t), disable_mask);
 
-  if (is_armc_irq) {
-    // It's an ARM IRQ.
-    const uint64_t arm_irq = irq_id & ~(ARMC_IRQ_MASK);
-    if (arm_irq > 7) {
-      LOG_ERROR("Unknown ARM IRQ {}", arm_irq);
-      libk::panic("Unable to deactivate an IRQ");
+      break;
     }
-
-    const uint32_t disable_mask = (uint32_t)1 << arm_irq;
-    libk::write32(_base + IRQ_DISABLE_BASIC, disable_mask);
   }
 }
 
-void BCM2837_IRQManager::mask_as_processed(uint32_t irq_id) {
-  (void)irq_id;
+void BCM2837_IRQManager::mask_as_processed(IRQ irq) {
+  (void)irq;
 }
 
-bool fill_vc_1(uint32_t* irq_id) {
+bool fill_vc_1(IRQ* irq) {
   const uint32_t vc_1_pending = libk::read32(_base + IRQ_PEND_1);
 
-  IF_BIT_SET(irq_id, vc_1_pending, 0, VC_TIMER_BASE + 0);
-  IF_BIT_SET(irq_id, vc_1_pending, 1, VC_TIMER_BASE + 1);
-  IF_BIT_SET(irq_id, vc_1_pending, 2, VC_TIMER_BASE + 2);
-  IF_BIT_SET(irq_id, vc_1_pending, 3, VC_TIMER_BASE + 3);
+  FILL_IRQ(irq, vc_1_pending, 0, VC_TIMER_BASE.id + 0, VC_TIMER_BASE.type);
+  FILL_IRQ(irq, vc_1_pending, 1, VC_TIMER_BASE.id + 1, VC_TIMER_BASE.type);
+  FILL_IRQ(irq, vc_1_pending, 2, VC_TIMER_BASE.id + 2, VC_TIMER_BASE.type);
+  FILL_IRQ(irq, vc_1_pending, 3, VC_TIMER_BASE.id + 3, VC_TIMER_BASE.type);
 
-  IF_BIT_SET(irq_id, vc_1_pending, 29, VC_AUX);
+  FILL_IRQ(irq, vc_1_pending, 29, VC_AUX.id, VC_AUX.type);
 
   return false;
 }
 
-bool fill_vc_2(uint32_t* irq_id) {
+bool fill_vc_2(IRQ* irq) {
   const uint32_t vc_2_pending = libk::read32(_base + IRQ_PEND_2);
 
-  IF_BIT_SET(irq_id, vc_2_pending, 17 /* 49 */, VC_GPIO_BASE + 0);
-  IF_BIT_SET(irq_id, vc_2_pending, 18 /* 50 */, VC_GPIO_BASE + 1);
-  IF_BIT_SET(irq_id, vc_2_pending, 19 /* 51 */, VC_GPIO_BASE + 2);
-  IF_BIT_SET(irq_id, vc_2_pending, 20 /* 52 */, VC_GPIO_BASE + 3);
+  FILL_IRQ(irq, vc_2_pending, 17 /* 49 */, VC_GPIO_BASE.id + 0, VC_GPIO_BASE.type);
+  FILL_IRQ(irq, vc_2_pending, 18 /* 50 */, VC_GPIO_BASE.id + 1, VC_GPIO_BASE.type);
+  FILL_IRQ(irq, vc_2_pending, 19 /* 51 */, VC_GPIO_BASE.id + 2, VC_GPIO_BASE.type);
+  FILL_IRQ(irq, vc_2_pending, 20 /* 52 */, VC_GPIO_BASE.id + 3, VC_GPIO_BASE.type);
 
-  IF_BIT_SET(irq_id, vc_2_pending, 21 /* 53 */, VC_I2C);
-  IF_BIT_SET(irq_id, vc_2_pending, 22 /* 54 */, VC_SPI);
-  IF_BIT_SET(irq_id, vc_2_pending, 23 /* 55 */, VC_PCM);
+  FILL_IRQ(irq, vc_2_pending, 21 /* 53 */, VC_I2C.id, VC_I2C.type);
+  FILL_IRQ(irq, vc_2_pending, 22 /* 54 */, VC_SPI.id, VC_SPI.type);
+  FILL_IRQ(irq, vc_2_pending, 23 /* 55 */, VC_PCM.id, VC_PCM.type);
 
-  IF_BIT_SET(irq_id, vc_2_pending, 25 /* 57 */, VC_UART);
+  FILL_IRQ(irq, vc_2_pending, 25 /* 57 */, VC_UART.id, VC_UART.type);
 
-  IF_BIT_SET(irq_id, vc_2_pending, 30 /* 62 */, VC_EMMC);
+  FILL_IRQ(irq, vc_2_pending, 30 /* 62 */, VC_EMMC.id, VC_EMMC.type);
 
   return false;
 }
 
-bool BCM2837_IRQManager::has_pending_interrupt(uint32_t* irq_id) {
+bool BCM2837_IRQManager::has_pending_interrupt(IRQ* irq) {
   const uint32_t base_pending = libk::read32(_base + IRQ_PEND_BASIC);
 
-  IF_BIT_SET(irq_id, base_pending, 0, ARMC_TIMER);
-  IF_BIT_SET(irq_id, base_pending, 1, ARMC_MAILBOX);
-  IF_BIT_SET(irq_id, base_pending, 2, ARMC_DOORBELL0);
-  IF_BIT_SET(irq_id, base_pending, 3, ARMC_DOORBELL1);
-  IF_BIT_SET(irq_id, base_pending, 4, ARMC_GPU0_HALTED);
-  IF_BIT_SET(irq_id, base_pending, 5, ARMC_GPU1_HALTED);
-  IF_BIT_SET(irq_id, base_pending, 6, ARMC_ILLEGAL_ACCESS_TYPE1);
-  IF_BIT_SET(irq_id, base_pending, 7, ARMC_ILLEGAL_ACCESS_TYPE0);
+  FILL_IRQ(irq, base_pending, 0, ARMC_TIMER.id, ARMC_TIMER.type);
+  FILL_IRQ(irq, base_pending, 1, ARMC_MAILBOX.id, ARMC_MAILBOX.type);
+  FILL_IRQ(irq, base_pending, 2, ARMC_DOORBELL0.id, ARMC_DOORBELL0.type);
+  FILL_IRQ(irq, base_pending, 3, ARMC_DOORBELL1.id, ARMC_DOORBELL1.type);
+  FILL_IRQ(irq, base_pending, 4, ARMC_GPU0_HALTED.id, ARMC_GPU0_HALTED.type);
+  FILL_IRQ(irq, base_pending, 5, ARMC_GPU1_HALTED.id, ARMC_GPU1_HALTED.type);
+  FILL_IRQ(irq, base_pending, 6, ARMC_ILLEGAL_ACCESS_TYPE1.id, ARMC_ILLEGAL_ACCESS_TYPE1.type);
+  FILL_IRQ(irq, base_pending, 7, ARMC_ILLEGAL_ACCESS_TYPE0.id, ARMC_ILLEGAL_ACCESS_TYPE0.type);
 
-  IF_BIT_SET(irq_id, base_pending, 15, VC_I2C);
-  IF_BIT_SET(irq_id, base_pending, 16, VC_SPI);
-  IF_BIT_SET(irq_id, base_pending, 17, VC_PCM);
-  IF_BIT_SET(irq_id, base_pending, 19, VC_UART);
-  IF_BIT_SET(irq_id, base_pending, 20, VC_EMMC);
+  FILL_IRQ(irq, base_pending, 15, VC_I2C.id, VC_I2C.type);
+  FILL_IRQ(irq, base_pending, 16, VC_SPI.id, VC_SPI.type);
+  FILL_IRQ(irq, base_pending, 17, VC_PCM.id, VC_PCM.type);
+  FILL_IRQ(irq, base_pending, 19, VC_UART.id, VC_UART.type);
+  FILL_IRQ(irq, base_pending, 20, VC_EMMC.id, VC_EMMC.type);
 
-  if (((base_pending >> 8) & 0b1) != 0 && fill_vc_1(irq_id)) {
+  if (((base_pending >> 8) & 0b1) != 0 && fill_vc_1(irq)) {
     return true;
   }
 
-  if (((base_pending >> 9) & 0b1) != 0 && fill_vc_2(irq_id)) {
+  if (((base_pending >> 9) & 0b1) != 0 && fill_vc_2(irq)) {
     return true;
   }
 

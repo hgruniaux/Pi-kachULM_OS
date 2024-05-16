@@ -65,6 +65,7 @@ extern "C" void init_interrupts_vector_table();
 extern "C" void _startup(uintptr_t dtb) {
   // Erases the BSS section as required.
   zero_bss();
+  call_init_array();
 
   // Set up the Interrupt Vector Table
   init_interrupts_vector_table();
@@ -99,7 +100,6 @@ extern "C" void _startup(uintptr_t dtb) {
   SystemTimer::init();
   libk::set_log_timer(&SystemTimer::get_elapsed_time_in_ms);
 
-  call_init_array();
   kmain();  // the real kernel entry point
   call_fini_array();
 }

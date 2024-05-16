@@ -1,64 +1,10 @@
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
 
 namespace GPIO {
-enum class Pin : uint8_t {
-  BCM00 = 0,
-  BCM01 = 1,
-  BCM02 = 2,
-  BCM03 = 3,
-  BCM04 = 4,
-  BCM05 = 5,
-  BCM06 = 6,
-  BCM07 = 7,
-  BCM08 = 8,
-  BCM09 = 9,
-  BCM10 = 10,
-  BCM11 = 11,
-  BCM12 = 12,
-  BCM13 = 13,
-  BCM14 = 14,
-  BCM15 = 15,
-  BCM16 = 16,
-  BCM17 = 17,
-  BCM18 = 18,
-  BCM19 = 19,
-  BCM20 = 20,
-  BCM21 = 21,
-  BCM22 = 22,
-  BCM23 = 23,
-  BCM24 = 24,
-  BCM25 = 25,
-  BCM26 = 26,
-  BCM27 = 27,
-  BCM28 = 28,
-  BCM29 = 29,
-  BCM30 = 30,
-  BCM31 = 31,
-  BCM32 = 32,
-  BCM33 = 33,
-  BCM34 = 34,
-  BCM35 = 35,
-  BCM36 = 36,
-  BCM37 = 37,
-  BCM38 = 38,
-  BCM39 = 39,
-  BCM40 = 40,
-  BCM41 = 41,
-  BCM42 = 42,
-  BCM43 = 43,
-  BCM44 = 44,
-  BCM45 = 45,
-  BCM46 = 46,
-  BCM47 = 47,
-  BCM48 = 48,
-  BCM49 = 49,
-  BCM50 = 50,
-  BCM51 = 51,
-  BCM52 = 52,
-  BCM53 = 53,
-};
+static constexpr size_t NB_PINS = 58;
 
 enum class Mode : uint8_t {
   // Values from BCM2835-ARM-Peripherals.pdf, page 92.
@@ -79,22 +25,53 @@ enum class PUD_Mode : uint8_t {
   PullUp = 0b10,
 };
 
+using CallBack = void (*)(size_t);
+
 /** Set up GPIO */
 void init();
 
 /** Set the mode of a gpio pin. */
-void set_mode(Pin gpio_pin, Mode target_mode);
+void set_mode(size_t gpio_pin, Mode target_mode);
 
 /** Get the mode of a gpio pin. */
-Mode get_mode(Pin gpio_pin);
+Mode get_mode(size_t gpio_pin);
 
 /** Set/clear gpio pull up/down resistor of a gpio pin */
-void set_pull_up_down(Pin gpio_pin, PUD_Mode target_pud_mode);
+void set_pull_up_down(size_t gpio_pin, PUD_Mode target_pud_mode);
 
 /** Read the value of a gpio pin */
-bool read(Pin gpio_pin);
+bool read(size_t gpio_pin);
 
 /** Sets a gpio pin to an OUTPUT and write the specified value to it. */
-void write(Pin gpio_pin, bool on);
+void write(size_t gpio_pin, bool on);
+
+/** Checks if one of the event that is registered for the gpio pin @a gpio_pin has occurred.
+ * If multiple event are registered for a pin, you can't detect which one it is. */
+bool has_event(size_t gpio_pin);
+
+/** Clear any event of gpio pin @a gpio_pin */
+void clear_event(size_t gpio_pin);
+
+/** Execute the function @a cb on event on pin @a gpio_pin. */
+void set_event_callback(size_t gpio_pin, CallBack cb);
+
+/** Remove the callback function for the gpio pin @a gpio_pin.
+ * @a returns the old callback. */
+CallBack remove_event_callback(size_t gpio_pin);
+
+/** Set the Rising Edge event for the gpio pin @a gpio_pin. */
+void set_rising_edge_detect(size_t gpio_pin, bool enable);
+/** Set the Falling Edge event for the gpio pin @a gpio_pin. */
+void set_falling_edge_detect(size_t gpio_pin, bool enable);
+
+/** Set the Asynchronous Rising Edge event for the gpio pin @a gpio_pin. */
+void set_rising_edge_async_detect(size_t gpio_pin, bool enable);
+/** Set the Asynchronous Falling Edge event for the gpio pin @a gpio_pin. */
+void set_falling_edge_async_detect(size_t gpio_pin, bool enable);
+
+/** Set the Pin High event for the gpio pin @a gpio_pin. */
+void set_pin_high_detect(size_t gpio_pin, bool enable);
+/** Set the Pin Low event for the gpio pin @a gpio_pin. */
+void set_low_detect(size_t gpio_pin, bool enable);
 
 }  // namespace GPIO

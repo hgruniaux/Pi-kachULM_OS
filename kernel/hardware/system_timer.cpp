@@ -45,29 +45,25 @@ void setup_next_period(size_t tim, uint32_t period) {
   libk::write32(_base + CB + tim * sizeof(uint32_t), next_counter_match);
 }
 
-bool process_interrupt(void* handle) {
+void process_interrupt(void* handle) {
   const size_t timer = (uintptr_t)handle;
   const uint32_t mask = (uint32_t)1 << timer;
   const uint32_t timer_matchs = libk::read32(_base + CS);
 
-  if ((timer_matchs & mask) != 0) {
-    const CallBack cb = _callbacks[timer];
-
-    if (cb == nullptr) {
-      return false;
-    }
-
-    const uint32_t period = _tick_period[timer];
-    if (period != 0) {
-      setup_next_period(timer, period);
-    }
-    libk::write32(_base + CS, mask);
-
-    (*cb)();
-    return true;
+  if ((timer_matchs & mask) == 0) {
+    return;
   }
 
-  return false;
+  const CallBack cb = _callbacks[timer];
+  const uint32_t period = _tick_period[timer];
+  if (period != 0) {
+    setup_next_period(timer, period);
+  }
+  libk::write32(_base + CS, mask);
+
+  if (cb != nullptr) {
+    (*cb)();
+  }
 }
 
 void init() {
@@ -77,7 +73,8 @@ void init() {
     _tim_reserved[tim] = libk::read32(_base + CB + tim * sizeof(uint32_t)) != 0;
 
     if (!_tim_reserved[tim]) {
-      KASSERT(IRQManager::register_irq_handler(VC_TIMER_BASE + tim, &process_interrupt, (void*)tim));
+      IRQManager::register_irq_handler({.type = VC_TIMER_BASE.type, .id = VC_TIMER_BASE.id + tim},
+                                               &process_interrupt, (void*)tim);
     }
   }
 }
