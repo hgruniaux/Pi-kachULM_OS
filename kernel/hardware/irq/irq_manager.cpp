@@ -54,6 +54,7 @@ void IRQManager::disable_irq_interrupts() {
 }
 
 bool IRQManager::handle_interrupts() {
+  disable_irq_interrupts();
   uint32_t irq_id = -1;
 
   while ((*_has_pending_interrupt)(&irq_id)) {
@@ -75,6 +76,7 @@ bool IRQManager::handle_interrupts() {
     (*_mask_as_processed)(irq_id);
   }
 
+  enable_irq_interrupts();
   return true;
 }
 
