@@ -82,7 +82,7 @@ add_executable(kernel
 
         hardware/irq/irq_manager.cpp
         hardware/irq/irq_manager.hpp
-        
+
         # Graphics
         graphics/pkfont.hpp
         graphics/pkfont.cpp
