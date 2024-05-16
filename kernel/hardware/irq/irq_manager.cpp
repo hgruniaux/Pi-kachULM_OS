@@ -54,13 +54,9 @@ void disable_irq_interrupts() {
 }
 
 void handle_interrupts() {
-  disable_irq_interrupts();
-
   IRQ irq;
 
   while ((*_has_pending_interrupt)(&irq)) {
-    LOG_INFO("Got IRQ id: {:#x}, IRQ type: {}", irq.id, (int)irq.type);
-
     CallBackAssoc cb_assoc;
     switch (irq.type) {
       case IRQ::Type::ARMCore:
@@ -69,9 +65,8 @@ void handle_interrupts() {
       case IRQ::Type::VideoCore:
         cb_assoc = vc_handler[irq.id];
         break;
-    }
 
-    LOG_INFO("Found Handler: {:#x} (handle: {:#x})", (void*)(cb_assoc.cb), cb_assoc.cb_handle);
+    }
 
     if (cb_assoc.cb == nullptr) {
       LOG_ERROR("No handler for interrupt: (id: {:#x}, type: {})", irq.id, (int)irq.type);
@@ -81,8 +76,6 @@ void handle_interrupts() {
     (*cb_assoc.cb)(cb_assoc.cb_handle);
     (*_mask_as_processed)(irq);
   }
-
-  enable_irq_interrupts();
 }
 
 void register_irq_handler(IRQ irq, IRQCallBack callback, void* cb_handle) {
