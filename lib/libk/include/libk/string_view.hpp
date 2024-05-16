@@ -48,7 +48,7 @@ class StringView {
   }
 
   /** @brief Finds the first substring equal to the given character sequence. */
-  constexpr size_t find(libk::StringView needle, size_t pos = 0) const noexcept {
+  [[nodiscard]] constexpr size_t find(libk::StringView needle, size_t pos = 0) const noexcept {
     if (needle.get_length() == 0) {
       return libk::StringView::npos;
     }
@@ -64,10 +64,10 @@ class StringView {
 
     return libk::StringView::npos;
   }
-  constexpr size_type find(const char* s, size_type pos, size_type count) const {
+  [[nodiscard]] constexpr size_type find(const char* s, size_type pos, size_type count) const {
     return find(StringView(s, count), pos);
   }
-  constexpr size_type find(const char* s, size_type pos = 0) const { return find(StringView(s), pos); }
+  [[nodiscard]] constexpr size_type find(const char* s, size_type pos = 0) const { return find(StringView(s), pos); }
 
   /** @brief Finds the last occurrence of @a ch. */
   [[nodiscard]] constexpr const_iterator rfind(char ch) const {

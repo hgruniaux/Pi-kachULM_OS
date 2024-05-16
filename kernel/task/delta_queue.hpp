@@ -18,7 +18,7 @@ class DeltaQueue {
  private:
   struct Item {
     libk::SharedPointer<Task> task;
-    uint64_t remaining_time;
+    uint64_t remaining_ticks;
   };  // struct Item
 
   libk::LinkedList<Item> m_items;

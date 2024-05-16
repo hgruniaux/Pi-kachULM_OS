@@ -98,12 +98,12 @@ bool FrameBuffer::init(uint32_t width, uint32_t height) {
   buffer_address = KernelMemory::get_virtual_vc_address(buffer_address);
   m_buffer = (uint32_t*)buffer_address;
 
-  LOG_INFO("framebuffer of size {}x{} allocated (requested {}x{})", m_width, m_height, width, height);
+  LOG_INFO("Framebuffer of size {}x{} allocated (requested {}x{})", m_width, m_height, width, height);
 
   // Dump some debugging information in case of something is not working as intended.
-  LOG_INFO("framebuffer at {} of size {} bytes (pitch = {})", m_buffer, m_buffer_size, m_pitch);
-  LOG_INFO("framebuffer pixel order: {} (0 = BGR, 1 = RGB)", message.set_pixel_order_tag.buffer);
-  LOG_INFO("framebuffer depth: {}", message.set_depth_tag.buffer);
+  LOG_DEBUG("Framebuffer at {} of size {} bytes (pitch = {})", m_buffer, m_buffer_size, m_pitch);
+  LOG_DEBUG("Framebuffer pixel order: {} (0 = BGR, 1 = RGB)", message.set_pixel_order_tag.buffer);
+  LOG_DEBUG("Framebuffer depth: {}", message.set_depth_tag.buffer);
 
   // Initially clear the framebuffer with black color. In case the VideoCore gives us
   // an uninitialized framebuffer.

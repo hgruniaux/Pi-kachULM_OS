@@ -77,32 +77,11 @@ static bool do_dispatch_userspace_interrupt(Registers& registers) {
 }
 
 static bool do_userspace_interrupt(Registers& registers) {
-  TaskManager& task_manager = TaskManager::get();
-
-  auto current_task = task_manager.get_current_task();
-  KASSERT(current_task != nullptr);
-
-  auto saved_task = current_task;
-
-  current_task->get_saved_state().save(registers);
-
   if (!do_dispatch_userspace_interrupt(registers)) {
     // Failed to handle the interrupt: probably a fatal error, kill the current task.
-    current_task = task_manager.get_current_task();
-    KASSERT(current_task != nullptr);
-    task_manager.kill_task(current_task);
-  } else {
-    // Save modified registers in the current task before context switch to another task.
-    current_task->get_saved_state().save(registers);
-  }
-
-  current_task = task_manager.get_current_task();
-  if (current_task != nullptr) {
-    // Do context switch.
-    current_task->get_saved_state().restore(registers);
-  } else {
-    LOG_WARNING("No more available tasks... the kernel will enter an infinite loop.");
-    libk::halt();
+    TaskManager& task_manager = TaskManager::get();
+    task_manager.kill_task(Task::current());
+    task_manager.schedule();
   }
 
   return true;
@@ -172,7 +151,36 @@ static void dump_unhandled_interrupt(InterruptSource source, InterruptKind kind,
                source_name, kind_name, registers.elr, registers.esr, registers.far);
 }
 
+class ContextSwitcher {
+ public:
+  ContextSwitcher(Registers& regs) : m_regs(regs) { m_old_task = Task::current(); }
+
+  ~ContextSwitcher() {
+    auto current_task = Task::current();
+    if (current_task == m_old_task)
+      return;
+
+    if (m_old_task != nullptr)
+      m_old_task->get_saved_state().save(m_regs);
+
+    if (current_task != nullptr) {
+      // Do context switch.
+      current_task->get_saved_state().restore(m_regs);
+      LOG_TRACE("Context switch to pid={} from pid={}", current_task->get_id(),
+                m_old_task ? m_old_task->get_id() : UINT16_MAX);
+    } else {
+      LOG_CRITICAL("No more available tasks to run... The process pid=0 should never exit.");
+    }
+  }
+
+ private:
+  Registers& m_regs;
+  TaskPtr m_old_task;
+};  // class ContextSwitcher
+
 extern "C" void exception_handler(InterruptSource source, InterruptKind kind, Registers& registers) {
+  ContextSwitcher context_switcher(registers);
+
   if (source == InterruptSource::LOWER_AARCH64 && kind == InterruptKind::SYNCHRONOUS) {
     if (do_userspace_interrupt(registers))
       return;
@@ -182,7 +190,8 @@ extern "C" void exception_handler(InterruptSource source, InterruptKind kind, Re
     LOG_WARNING("interrupt/exception from userspace aarch32 code (not supported)");
     // Kill the process.
     TaskManager& task_manager = TaskManager::get();
-    task_manager.kill_task(task_manager.get_current_task(), 1);
+    task_manager.kill_task(Task::current(), 1);
+    task_manager.schedule();
     return;
   }
 
@@ -192,10 +201,23 @@ extern "C" void exception_handler(InterruptSource source, InterruptKind kind, Re
   }
 
   if (kind == InterruptKind::IRQ) {
-    if (IRQManager::handle_interrupts()) {
-      return;
-    }
+    IRQManager::handle_interrupts();
+    return;
   }
 
   dump_unhandled_interrupt(source, kind, registers);
+}
+
+static int interrupt_disable_level = 0;
+
+void disable_interrupts() {
+  asm volatile("msr DAIFSet, #0b1111");
+  interrupt_disable_level++;
+}
+
+void enable_interrupts() {
+  interrupt_disable_level--;
+  if (interrupt_disable_level == 0) {
+    asm volatile("msr DAIFClr, #0b1111");
+  }
 }

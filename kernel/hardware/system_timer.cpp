@@ -95,12 +95,15 @@ uint64_t get_tick_count() {
 uint64_t get_elapsed_time_in_ns() {
   return (get_tick_count() * 1'000'000'000) / freq;
 }
+
 uint64_t get_elapsed_time_in_micros() {
   return (get_tick_count() * 1'000'000) / freq;
 }
+
 uint64_t get_elapsed_time_in_ms() {
   return (get_tick_count() * 1'000) / get_frequency();
 }
+
 uint64_t get_elapsed_time_in_s() {
   return get_tick_count() / get_frequency();
 }
@@ -133,12 +136,15 @@ bool set_recurrent_tick(size_t tim, uint32_t tick_period, CallBack callback) {
   setup_next_period(tim, tick_period);
   return true;
 }
+
 bool set_recurrent_micros(size_t tim, uint32_t micros_period, CallBack callback) {
   return set_recurrent_tick(tim, micros_period * freq / 1'000'000, callback);
 }
+
 bool set_recurrent_ms(size_t tim, uint32_t ms_period, CallBack callback) {
   return set_recurrent_tick(tim, ms_period * freq / 1'000, callback);
 }
+
 bool set_recurrent_s(size_t tim, uint32_t s_period, CallBack callback) {
   return set_recurrent_tick(tim, s_period * freq, callback);
 }
@@ -155,12 +161,15 @@ bool set_oneshot_tick(size_t tim, uint32_t tick_duration, CallBack callback) {
   setup_next_period(tim, tick_duration);
   return true;
 }
+
 bool set_oneshot_micros(size_t tim, uint32_t micro_duration, CallBack callback) {
   return set_oneshot_tick(tim, micro_duration * freq / 1'000'000, callback);
 }
+
 bool set_oneshot_ms(size_t tim, uint32_t ms_duration, CallBack callback) {
   return set_oneshot_tick(tim, ms_duration * freq / 1'000, callback);
 }
+
 bool set_oneshot_s(size_t tim, uint32_t s_duration, CallBack callback) {
   return set_oneshot_tick(tim, s_duration * freq, callback);
 }

@@ -3,10 +3,13 @@
 
 #include "graphics/graphics.hpp"
 #include "hardware/framebuffer.hpp"
+#include "hardware/interrupts.hpp"
 #include "hardware/kernel_dt.hpp"
 #include "hardware/system_timer.hpp"
 #include "hardware/timer.hpp"
 #include "hardware/uart.hpp"
+
+#include "task/task_manager.hpp"
 
 #if defined(__GNUC__)
 #define COMPILER_NAME "GCC " __VERSION__
@@ -70,12 +73,9 @@ void draw_timer() {
   painter.draw_text(300, 70, buffer);
 }
 
+extern "C" const char init[];
+
 [[noreturn]] void kmain() {
-  UART log(1000000);  // Set to a High Baud-rate, otherwise UART is THE bottleneck :/
-
-  libk::register_logger(log);
-  libk::set_log_timer(&GenericTimer::get_elapsed_time_in_ms);
-
   LOG_INFO("Kernel built at " __TIME__ " on " __DATE__ " with " COMPILER_NAME " !");
 
   LOG_INFO("Board model: {}", KernelDT::get_board_model());
@@ -84,7 +84,7 @@ void draw_timer() {
   LOG_INFO("Temp: {} °C / {} °C", Device::get_current_temp() / 1000, Device::get_max_temp() / 1000);
 
   FrameBuffer& framebuffer = FrameBuffer::get();
-  if (!framebuffer.init(1920, 1080)) {
+  if (!framebuffer.init(1280, 720)) {
     LOG_CRITICAL("failed to initialize framebuffer");
   }
 
@@ -102,10 +102,22 @@ void draw_timer() {
   painter.set_pen(graphics::Color::BLACK);
   painter.draw_text((fb_width - text_width) / 2, (fb_height - text_height) / 2, text);
 
-  LOG_INFO("Timer setup: {}\r\n", SystemTimer::set_recurrent_ms(1, CHRONO_MS_PERIOD, []() {
-             update_timer();
-             draw_timer();
-           }));
+  TaskManager* task_manager = new TaskManager;
+
+  auto task1 = task_manager->create_task((const elf::Header*)&init);
+  task_manager->wake_task(task1);
+
+  auto task2 = task_manager->create_task((const elf::Header*)&init);
+  task_manager->wake_task(task2);
+
+  auto task3 = task_manager->create_task((const elf::Header*)&init);
+  task_manager->wake_task(task3);
+
+  //  Enter userspace
+  task_manager->schedule();
+  task_manager->get_current_task()->get_saved_state().memory->activate();
+  jump_to_el0(task1->get_saved_state().regs.elr, (uintptr_t)task_manager->get_current_task()->get_saved_state().sp);
+  LOG_CRITICAL("Not in user space");
 
   while (true) {
     libk::wfi();

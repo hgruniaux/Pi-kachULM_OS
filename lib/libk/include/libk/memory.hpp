@@ -49,6 +49,16 @@ class ScopedPointer {
   T* m_data;
 };  // class ScopedPointer
 
+template <class T>
+[[nodiscard]] bool operator==(const ScopedPointer<T>& lhs, std::nullptr_t) {
+  return !lhs;
+}
+
+template <class T>
+[[nodiscard]] bool operator==(const ScopedPointer<T>& lhs, const ScopedPointer<T>& rhs) {
+  return lhs.get() == rhs.get();
+}
+
 template <class T, class... Args>
 [[nodiscard]] ScopedPointer<T> make_scoped(Args&&... args) {
   T* ptr = new T(std::forward<Args>(args)...);
@@ -126,6 +136,11 @@ class SharedPointer {
 template <class T>
 [[nodiscard]] bool operator==(const SharedPointer<T>& lhs, std::nullptr_t) {
   return !lhs;
+}
+
+template <class T>
+[[nodiscard]] bool operator==(const SharedPointer<T>& lhs, const SharedPointer<T>& rhs) {
+  return lhs.get() == rhs.get();
 }
 
 template <class T, class... Args>

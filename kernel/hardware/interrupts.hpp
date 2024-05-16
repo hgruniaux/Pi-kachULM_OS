@@ -63,3 +63,12 @@ extern "C" void jump_to_el1();
  * crash if the assumption is not hold.
  */
 extern "C" void jump_to_el0(uintptr_t elr, uintptr_t stack);
+
+void disable_interrupts();
+void enable_interrupts();
+
+class DisableInterrupts {
+ public:
+  DisableInterrupts() { disable_interrupts(); }
+  ~DisableInterrupts() { enable_interrupts(); }
+};  // class DisableInterrupts

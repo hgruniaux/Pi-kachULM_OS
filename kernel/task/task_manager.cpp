@@ -1,4 +1,6 @@
 #include "task_manager.hpp"
+#include "hardware/interrupts.hpp"
+#include "hardware/system_timer.hpp"
 #include "memory/mem_alloc.hpp"
 #include "pika_syscalls.hpp"
 
@@ -12,9 +14,29 @@ TaskManager::TaskManager() : m_delta_queue(this) {
 
   m_default_syscall_table = create_pika_syscalls();
   m_scheduler = libk::make_scoped<Scheduler>();
+
+  // Select a timer and start the tick clock for the scheduler.
+  bool timer_found = false;
+  for (size_t timer_id = 0; timer_id < SystemTimer::nb_timers; ++timer_id) {
+    if (SystemTimer::is_used(timer_id))
+      continue;
+
+    if (SystemTimer::set_recurrent_ms(timer_id, TICK_TIME, []() { TaskManager::get().tick(); })) {
+      LOG_INFO("System timer {} used for scheduler with tick time {} ms", timer_id, TICK_TIME);
+      timer_found = true;
+      break;
+    }
+  }
+
+  if (!timer_found) {
+    LOG_CRITICAL("Not found an available system timer for the scheduler");
+    return;
+  }
 }
 
 TaskPtr TaskManager::create_task(Task* parent) {
+  DisableInterrupts disable_interrupts;
+
   auto task = libk::make_shared<Task>();
   if (!task)
     return nullptr;
@@ -46,6 +68,8 @@ TaskPtr TaskManager::create_task(Task* parent) {
 }
 
 TaskPtr TaskManager::create_task(const elf::Header* program_image) {
+  DisableInterrupts disable_interrupts;
+
   auto task = create_task();
   if (!task)
     return nullptr;
@@ -90,49 +114,61 @@ TaskPtr TaskManager::create_task(const elf::Header* program_image) {
 void TaskManager::sleep_task(const TaskPtr& task, uint64_t time_in_us) {
   KASSERT(task != nullptr);
   KASSERT(task->get_manager() == this);
+  KASSERT(!task->is_terminated());
+
+  DisableInterrupts disable_interrupts;
 
   if (!task->is_running())
     return;
 
-  LOG_DEBUG("Sleep the task pid={}", task->get_id());
+  const uint64_t ticks_count = time_in_us / 1000 / TICK_TIME;
+  LOG_DEBUG("Sleep the task pid={} for {} us (i.e. {} ticks)", task->get_id(), time_in_us, ticks_count);
 
-  task->m_state = Task::State::INTERRUPTIBLE;
-
-  // FIXME : ajouter convertion us vers ticks
-
-  m_delta_queue.add_task(task, time_in_us);
   m_scheduler->remove_task(task);
+  task->m_state = Task::State::INTERRUPTIBLE;
+  m_delta_queue.add_task(task, ticks_count);
 }
 
 void TaskManager::pause_task(const TaskPtr& task) {
   KASSERT(task != nullptr);
   KASSERT(task->get_manager() == this);
+  KASSERT(!task->is_terminated());
+
+  DisableInterrupts disable_interrupts;
 
   if (!task->is_running())
     return;
 
   LOG_DEBUG("Pause the task pid={}", task->get_id());
 
-  task->m_state = Task::State::UNINTERRUPTIBLE;
   m_scheduler->remove_task(task);
+  task->m_state = Task::State::UNINTERRUPTIBLE;
 }
 
 void TaskManager::wake_task(const TaskPtr& task) {
   KASSERT(task != nullptr);
   KASSERT(task->get_manager() == this);
+  KASSERT(!task->is_terminated());
+
+  DisableInterrupts disable_interrupts;
 
   if (task->is_running())
     return;
 
   LOG_DEBUG("Wake the task pid={}", task->get_id());
 
-  task->m_state = Task::State::RUNNING;
   m_scheduler->add_task(task);
+  task->m_state = Task::State::RUNNING;
 }
 
 void TaskManager::kill_task(const TaskPtr& task, int exit_code) {
   KASSERT(task != nullptr);
   KASSERT(task->get_manager() == this);
+
+  DisableInterrupts disable_interrupts;
+
+  if (task->is_terminated())
+    return;  // already killed
 
   LOG_DEBUG("Kill the task pid={} with status {}", task->get_id(), exit_code);
 
@@ -143,12 +179,15 @@ void TaskManager::kill_task(const TaskPtr& task, int exit_code) {
     kill_task(child, exit_code);
   }
 
-  task->m_state = Task::State::TERMINATED;
   m_scheduler->remove_task(task);
+  task->m_state = Task::State::TERMINATED;
 }
 
 bool TaskManager::set_task_priority(const TaskPtr& task, uint32_t new_priority) {
   KASSERT(task != nullptr);
+  KASSERT(!task->is_terminated());
+
+  DisableInterrupts disable_interrupts;
 
   if (new_priority < Scheduler::MIN_PRIORITY || new_priority > Scheduler::MAX_PRIORITY)
     return false;
@@ -164,10 +203,12 @@ TaskPtr TaskManager::get_current_task() const {
 }
 
 void TaskManager::schedule() {
+  DisableInterrupts disable_interrupts;
   m_scheduler->schedule();
 }
 
 void TaskManager::tick() {
+  DisableInterrupts disable_interrupts;
   m_delta_queue.tick();
   m_scheduler->tick();
 }

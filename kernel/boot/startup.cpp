@@ -10,6 +10,7 @@
 #include "hardware/kernel_dt.hpp"
 #include "hardware/mailbox.hpp"
 #include "hardware/system_timer.hpp"
+#include "hardware/uart.hpp"
 
 // The linker provides the following pointers.
 extern uint64_t __bss_start;
@@ -84,14 +85,19 @@ extern "C" void _startup(uintptr_t dtb) {
     libk::halt();
   }
 
+  // Set up GPIO Function.
+  GPIO::init();
+
+  // Try to initialize UART early as possible.
+  UART log(1000000);  // Set to a High Baud-rate, otherwise UART is THE bottleneck :/
+  libk::register_logger(log);
+
   // Set up the IRQ Manager
   IRQManager::init();
 
   // Set up the System Timer
   SystemTimer::init();
-
-  // Set up GPIO Function.
-  GPIO::init();
+  libk::set_log_timer(&SystemTimer::get_elapsed_time_in_ms);
 
   call_init_array();
   kmain();  // the real kernel entry point

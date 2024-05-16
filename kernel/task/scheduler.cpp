@@ -11,6 +11,7 @@ Scheduler::Scheduler() {
 
 void Scheduler::add_task(const TaskPtr& task) {
   KASSERT(task != nullptr);
+  KASSERT(!task->is_running());
 
   const uint32_t priority = task->get_priority();
   KASSERT(priority >= MIN_PRIORITY && priority <= MAX_PRIORITY);
@@ -19,6 +20,7 @@ void Scheduler::add_task(const TaskPtr& task) {
 
 bool Scheduler::remove_task(const TaskPtr& task) {
   KASSERT(task != nullptr);
+  KASSERT(task->is_running());
 
   const uint32_t priority = task->get_priority();
   KASSERT(priority >= MIN_PRIORITY && priority <= MAX_PRIORITY);
@@ -68,6 +70,8 @@ void Scheduler::update_task_priority(const TaskPtr& task, uint32_t old_priority)
 }
 
 void Scheduler::schedule() {
+  auto old_task = Task::current();
+
   TaskPtr new_task = nullptr;
 
   // Find a new task starting with higher priority tasks.
@@ -80,9 +84,18 @@ void Scheduler::schedule() {
   }
 
   switch_to(new_task);
+
+#if LOG_MIN_LEVEL <= LOG_TRACE_LEVEL
+  sys_pid_t old_task_id = old_task ? old_task->get_id() : UINT16_MAX;
+  sys_pid_t new_task_id = new_task ? new_task->get_id() : UINT16_MAX;
+  if (old_task_id != new_task_id)
+    LOG_TRACE("Scheduler: old={}, new={}", old_task_id, new_task_id);
+#endif
 }
 
 void Scheduler::tick() {
+  auto old_task = Task::current();
+
   // Algorithm overview:
   //   - We have multiple run queues, one per thread priority (currently there are 32 priorities).
   //   - At each tick:
@@ -115,6 +128,16 @@ void Scheduler::tick() {
   }
 
   switch_to(new_task);
+
+#if LOG_MIN_LEVEL <= LOG_TRACE_LEVEL
+  if (new_task == nullptr)
+    return;
+
+  sys_pid_t old_task_id = old_task ? old_task->get_id() : UINT16_MAX;
+  sys_pid_t new_task_id = new_task ? new_task->get_id() : UINT16_MAX;
+  if (old_task_id != new_task_id)
+    LOG_TRACE("Scheduler (tick): old={}, new={}", old_task_id, new_task_id);
+#endif
 }
 
 uint32_t Scheduler::get_current_priority() const {
@@ -139,10 +162,12 @@ void Scheduler::switch_to(const TaskPtr& new_task) {
   if (new_task == nullptr)
     return;  // no new task, nothing to do
 
+  KASSERT(new_task->is_running());
+
   // Enqueue again the old task into the run queue.
-  if (m_current_task != nullptr) {
+  if (m_current_task != nullptr && m_current_task != new_task) {
     const uint32_t current_priority = m_current_task->get_priority();
-    m_run_queue[current_priority].push_front(m_current_task);
+    m_run_queue[current_priority].push_back(m_current_task);
   }
 
   m_elapsed_ticks = 0;  // start a new time slice for the new task
