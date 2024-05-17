@@ -21,28 +21,30 @@ static MetaPtr g_malloc_meta_head = nullptr;
 
 static void split_space(MetaPtr block, size_t size) {
   MetaPtr sub_block;
-  sub_block = block + size;
+  sub_block = block->ptr + size;
   sub_block->is_free = true;
   sub_block->next = block->next;
   sub_block->previous = block;
-  sub_block->size = (block->size - size - META_BLOCK_SIZE);
+  block->size = size;
   sub_block->ptr = sub_block->data;
+  sub_block->size = sub_block->next - sub_block->ptr;
   block->next = sub_block;
 }
 
 static MetaPtr extend_heap(MetaPtr last, size_t size, size_t alignment) {  // alignment is always at least 1
   auto* end = (MetaPtr)KernelMemory::get_heap_end();
-  const auto heap_offset = size + META_BLOCK_SIZE + alignment;
+  const auto next_addr = libk::align_to_next((end+META_BLOCK_SIZE), alignment);
+  const auto heap_offset = (size_t)(next_addr - end) + size;
   auto* brk = (MetaPtr)KernelMemory::change_heap_end(heap_offset);
   if (brk == nullptr) {
     return nullptr;
   }
 
   end->size = size;
-  end->is_free = true;
+  end->is_free = false;
   end->next = nullptr;
   end->previous = last;
-  end->ptr = (void*)(((((uintptr_t)(end->data) - 1) / alignment) * alignment) + alignment);
+  end->ptr = next_addr;
 
   if (last != nullptr)
     last->next = end;
@@ -53,9 +55,11 @@ static MetaPtr extend_heap(MetaPtr last, size_t size, size_t alignment) {  // al
 static MetaPtr find_suitable_block(size_t memory, size_t alignment) {
   MetaPtr block = g_malloc_meta_head;
   while (true) {
-    const auto offset = (((((uintptr_t)(block->ptr) - 1) / alignment) + 1) * alignment) - (uintptr_t)block->ptr;
+    const size_t offset = libk::align_to_next((uintptr_t) block->ptr, alignment) - (uintptr_t)block->ptr;
     if (block->size >= memory + offset && block->is_free) {
-      block->ptr = (MetaPtr)(((((uintptr_t)(block->ptr) - 1) / alignment) + 1) * alignment);
+      block->ptr += offset;
+      block->is_free = false;
+      block->size -= offset;
       return block;
     }
 
@@ -74,11 +78,11 @@ static MetaPtr get_block_addr(VirtualPA addr) {
       return b;
     }
 
-    while (b != nullptr && (uintptr_t)b->ptr < addr) {
+    while (b != nullptr && (uintptr_t)b->ptr + b->size < addr) {
       b = b->next;
     }
 
-    if (b != nullptr && (uintptr_t)b->ptr + b->size <= addr)
+    if (b != nullptr && (uintptr_t)b->ptr > addr)
       return nullptr;
     return b;
   }
@@ -87,15 +91,16 @@ static MetaPtr get_block_addr(VirtualPA addr) {
 
 static inline bool is_addr_valid(VirtualPA addr) {
   if ((g_malloc_meta_head != nullptr) && (MetaPtr)addr > g_malloc_meta_head && addr < KernelMemory::get_heap_end()) {
-    return (addr == (VirtualPA)get_block_addr(addr)->ptr);
+    MetaPtr b = get_block_addr(addr);
+    return (b != nullptr && addr == (VirtualPA)(b->ptr));
   }
 
   return false;
 }
 
 static void merge_block(MetaPtr lhs, MetaPtr rhs) {
+  KASSERT(rhs->is_free);
   if ((lhs != nullptr) && (rhs != nullptr) && (lhs->next == rhs)) {
-    lhs->is_free = lhs->is_free && rhs->is_free;
     lhs->size += rhs->size + META_BLOCK_SIZE;
     lhs->next = rhs->next;
     if (rhs->next != nullptr)
@@ -118,7 +123,6 @@ void* kmalloc(size_t byte_count, size_t alignment) {
     }
 
     g_malloc_meta_head = block;
-    block->is_free = false;
     return block->ptr;
   }
 
@@ -127,7 +131,6 @@ void* kmalloc(size_t byte_count, size_t alignment) {
     return nullptr;
   }
 
-  block->is_free = false;
   if (block->size > byte_count + META_BLOCK_SIZE) {
     split_space(block, byte_count);
     kfree((block->next)->data);
@@ -135,13 +138,18 @@ void* kmalloc(size_t byte_count, size_t alignment) {
 
   return block->ptr;
 
+}
+
 void kfree(void* ptr) {
   if (ptr == nullptr)
     return;
 
-  if (is_addr_valid((VirtualPA)ptr)) {
+  KASSERT(is_addr_valid((VirtualPA)ptr));
+  
     MetaPtr block = get_block_addr((VirtualPA)ptr);
     block->is_free = true;
+    block->size += block->ptr - (block->data)*;
+    block->ptr = block->data;
 
     if (block->next != nullptr && (block->next)->is_free) {
       merge_block(block, block->next);
@@ -150,7 +158,7 @@ void kfree(void* ptr) {
     if (block->previous != nullptr && (block->previous)->is_free) {
       merge_block(block->previous, block);
     }
-  }
+  
 }
 
 #include <new>
