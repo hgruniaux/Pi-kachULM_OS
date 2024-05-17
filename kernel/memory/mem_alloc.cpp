@@ -1,5 +1,6 @@
 #include "mem_alloc.hpp"
 #include "memory.hpp"
+#include "libk/log.hpp"
 
 #include <libk/utils.hpp>
 
@@ -30,6 +31,7 @@ static void split_space(MetaPtr block, size_t size) {
 }
 
 static MetaPtr extend_heap(MetaPtr last, size_t size, size_t alignment) {  // alignment is always at least 1
+  // libk::print("extend_heap");    // Test passage
   auto* end = (MetaPtr)KernelMemory::get_heap_end();
   const auto heap_offset = size + META_BLOCK_SIZE + alignment;
   auto* brk = (MetaPtr)KernelMemory::change_heap_end(heap_offset);
@@ -51,19 +53,19 @@ static MetaPtr extend_heap(MetaPtr last, size_t size, size_t alignment) {  // al
 
 static MetaPtr find_suitable_block(size_t memory, size_t alignment) {
   MetaPtr block = g_malloc_meta_head;
-  while (true) {
+  MetaPtr last = nullptr;
+  while (block!=nullptr) {
     const auto offset = (((((uintptr_t)(block->ptr) - 1) / alignment) + 1) * alignment) - (uintptr_t)block->ptr;
+    // libk::print("loop");   // Test passage
     if (block->size >= memory + offset && block->is_free) {
       block->ptr = (MetaPtr)(((((uintptr_t)(block->ptr) - 1) / alignment) + 1) * alignment);
       return block;
     }
-
-    if (block->next == nullptr)
-      break;
+    last = block;
     block = block->next;
   }
 
-  return extend_heap(block, memory, alignment);
+  return extend_heap(last, memory, alignment);
 }
 
 static MetaPtr get_block_addr(VirtualPA addr) {
