@@ -21,21 +21,22 @@ static MetaPtr g_malloc_meta_head = nullptr;
 
 static void split_space(MetaPtr block, size_t size) {
   MetaPtr sub_block;
-  sub_block = block->ptr + size;
+  uintptr_t next_addr = (uintptr_t)block->ptr + size;
+  sub_block = (MetaPtr)next_addr;
   sub_block->is_free = true;
   sub_block->next = block->next;
   sub_block->previous = block;
   block->size = size;
   sub_block->ptr = sub_block->data;
-  sub_block->size = sub_block->next - sub_block->ptr;
+  sub_block->size = (size_t)sub_block->next - (size_t)sub_block->ptr;
   block->next = sub_block;
 }
 
 static MetaPtr extend_heap(MetaPtr last, size_t size, size_t alignment) {  // alignment is always at least 1
-  auto* end = (MetaPtr)KernelMemory::get_heap_end();
-  const auto next_addr = libk::align_to_next((end+META_BLOCK_SIZE), alignment);
-  const auto heap_offset = (size_t)(next_addr - end) + size;
-  auto* brk = (MetaPtr)KernelMemory::change_heap_end(heap_offset);
+  auto end = (MetaPtr)KernelMemory::get_heap_end();
+  uintptr_t next_addr = libk::align_to_next(((uintptr_t)end+META_BLOCK_SIZE), alignment);
+  auto heap_offset = (size_t)(next_addr - (uintptr_t)end) + size;
+  auto brk = (MetaPtr)KernelMemory::change_heap_end(heap_offset);
   if (brk == nullptr) {
     return nullptr;
   }
@@ -44,7 +45,7 @@ static MetaPtr extend_heap(MetaPtr last, size_t size, size_t alignment) {  // al
   end->is_free = false;
   end->next = nullptr;
   end->previous = last;
-  end->ptr = next_addr;
+  end->ptr = &next_addr;
 
   if (last != nullptr)
     last->next = end;
@@ -57,7 +58,8 @@ static MetaPtr find_suitable_block(size_t memory, size_t alignment) {
   while (true) {
     const size_t offset = libk::align_to_next((uintptr_t) block->ptr, alignment) - (uintptr_t)block->ptr;
     if (block->size >= memory + offset && block->is_free) {
-      block->ptr += offset;
+      auto next_addr = (uintptr_t)block->ptr + offset;
+      block->ptr = &next_addr;
       block->is_free = false;
       block->size -= offset;
       return block;
@@ -121,7 +123,6 @@ void* kmalloc(size_t byte_count, size_t alignment) {
     if (block == nullptr) {
       return nullptr;
     }
-
     g_malloc_meta_head = block;
     return block->ptr;
   }
@@ -133,7 +134,7 @@ void* kmalloc(size_t byte_count, size_t alignment) {
 
   if (block->size > byte_count + META_BLOCK_SIZE) {
     split_space(block, byte_count);
-    kfree((block->next)->data);
+    kfree((block->next)->ptr);
   }
 
   return block->ptr;
@@ -148,7 +149,7 @@ void kfree(void* ptr) {
   
     MetaPtr block = get_block_addr((VirtualPA)ptr);
     block->is_free = true;
-    block->size += block->ptr - (block->data)*;
+    block->size += (uintptr_t)block->ptr - (uintptr_t)block + META_BLOCK_SIZE;
     block->ptr = block->data;
 
     if (block->next != nullptr && (block->next)->is_free) {
