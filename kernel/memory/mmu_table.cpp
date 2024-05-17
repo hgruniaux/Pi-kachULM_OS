@@ -42,7 +42,7 @@ static inline constexpr uint64_t TABLE_MARKER = 0b11;
 enum class EntryKind { Invalid, Table, Page, Block };
 
 static inline void data_sync() {
-  asm volatile("dsb sy");
+  asm volatile("dsb sy" ::: "memory");
 }
 
 static inline uint64_t get_base_address(const MMUTable* tbl) {
@@ -151,7 +151,7 @@ void reload_tlb(const MMUTable* table) {
       break;
     }
   }
-  asm volatile("dsb sy; isb");
+  asm volatile("dsb sy; isb" ::: "memory");
 }
 
 // Prerequisites :

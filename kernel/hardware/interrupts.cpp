@@ -87,34 +87,7 @@ static bool do_userspace_interrupt(Registers& registers) {
   return true;
 }
 
-static bool do_kernelspace_interrupt(Registers& registers) {
-  const uint32_t ec = (registers.esr >> 26) & 0x3F;
-
-  switch (ec) {
-    case 0b100001:
-      LOG_WARNING("Instruction Abort from kernel space at {:#x}.", registers.far);
-      break;
-    case 0b100101:
-      LOG_WARNING("Data Abort from kernel space at {:#x}.", registers.far);
-      break;
-    case 0b100010:
-      LOG_WARNING("PC alignment fault exception from kernel space at {:#x}.", registers.far);
-      break;
-    case 0b100110:
-      LOG_WARNING("SP alignment fault exception from kernel space at {:#x}.", registers.far);
-      break;
-    case 0b101100:
-      LOG_WARNING("Trapped floating-point exception from kernel space.");
-      break;
-    default:
-      LOG_WARNING("Exception with EC={:#b} from kernel space.", ec);
-      break;
-  }
-
-  return false;
-}
-
-static void dump_unhandled_interrupt(InterruptSource source, InterruptKind kind, Registers& registers) {
+[[noreturn]] static void dump_unhandled_interrupt(InterruptSource source, InterruptKind kind, Registers& registers) {
   const char* source_name = nullptr;
   switch (source) {
     case InterruptSource::CURRENT_SP_EL0:
@@ -147,8 +120,36 @@ static void dump_unhandled_interrupt(InterruptSource source, InterruptKind kind,
       break;
   }
 
-  LOG_CRITICAL("Unhandled interrupt, source = {}, kind = {}\nELR_EL1 = {:#x}\nESR_EL1 = {:#x}\nFAR_EL1 = {:#x}",
-               source_name, kind_name, registers.elr, registers.esr, registers.far);
+  LOG_ERROR("Unhandled interrupt, source = {}, kind = {}\r\nELR_EL1 = {:#x}\r\nESR_EL1 = {:#x}\r\nFAR_EL1 = {:#x}",
+            source_name, kind_name, registers.elr, registers.esr, registers.far);
+  libk::panic("Unhandled interrupt");
+}
+
+[[noreturn]] static void do_kernelspace_interrupt(Registers& registers) {
+  const uint32_t ec = (registers.esr >> 26) & 0x3F;
+
+  switch (ec) {
+    case 0b100001:
+      LOG_WARNING("Instruction Abort from kernel space at {:#x}.", registers.far);
+      break;
+    case 0b100101:
+      LOG_WARNING("Data Abort from kernel space at {:#x}.", registers.far);
+      break;
+    case 0b100010:
+      LOG_WARNING("PC alignment fault exception from kernel space at {:#x}.", registers.far);
+      break;
+    case 0b100110:
+      LOG_WARNING("SP alignment fault exception from kernel space at {:#x}.", registers.far);
+      break;
+    case 0b101100:
+      LOG_WARNING("Trapped floating-point exception from kernel space.");
+      break;
+    default:
+      LOG_WARNING("Exception with EC={:#b} from kernel space.", ec);
+      break;
+  }
+
+  dump_unhandled_interrupt(InterruptSource::CURRENT_SP_ELX, InterruptKind::SYNCHRONOUS, registers);
 }
 
 class ContextSwitcher {
@@ -179,6 +180,15 @@ class ContextSwitcher {
 };  // class ContextSwitcher
 
 extern "C" void exception_handler(InterruptSource source, InterruptKind kind, Registers& registers) {
+  if (source == InterruptSource::CURRENT_SP_ELX && kind == InterruptKind::SYNCHRONOUS) {
+    do_kernelspace_interrupt(registers);
+  }
+
+  if (kind == InterruptKind::IRQ) {
+    IRQManager::handle_interrupts();
+    return;
+  }
+
   ContextSwitcher context_switcher(registers);
 
   if (source == InterruptSource::LOWER_AARCH64 && kind == InterruptKind::SYNCHRONOUS) {
@@ -192,16 +202,6 @@ extern "C" void exception_handler(InterruptSource source, InterruptKind kind, Re
     TaskManager& task_manager = TaskManager::get();
     task_manager.kill_task(Task::current(), 1);
     task_manager.schedule();
-    return;
-  }
-
-  if (source == InterruptSource::CURRENT_SP_ELX && kind == InterruptKind::SYNCHRONOUS) {
-    if (do_kernelspace_interrupt(registers))
-      return;
-  }
-
-  if (kind == InterruptKind::IRQ) {
-    IRQManager::handle_interrupts();
     return;
   }
 

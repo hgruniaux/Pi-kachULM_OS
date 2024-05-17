@@ -265,7 +265,7 @@ void inline setup_sctlr() {
          (1 << 1));  // clear A, no alignment check
 
   r |= (1 << 0) |  // set M, enable MMU
-       (1 << 2) |  // set C, enable caching of normal memory
+                   //              (1 << 2) |  // set C, enable caching of normal memory // FIXME Later (Never)
        (1 << 12);  // set I, enable instruction cache
 
   asm volatile("msr sctlr_el1, %0" : : "r"(r));
