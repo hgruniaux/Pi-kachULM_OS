@@ -68,6 +68,21 @@ add_executable(kernel
 
         hardware/timer.hpp
 
+        hardware/system_timer.cpp
+        hardware/system_timer.hpp
+
+        # IRQ
+        hardware/irq/bcm2837_irq_manager.cpp
+        hardware/irq/bcm2837_irq_manager.hpp
+
+        hardware/irq/bcm2711_irq_manager.hpp
+        hardware/irq/bcm2711_irq_manager.cpp
+
+        hardware/irq/irq_lists.hpp
+
+        hardware/irq/irq_manager.cpp
+        hardware/irq/irq_manager.hpp
+
         # Graphics
         graphics/pkfont.hpp
         graphics/pkfont.cpp

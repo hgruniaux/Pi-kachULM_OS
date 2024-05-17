@@ -6,8 +6,11 @@
 
 #include "hardware/device.hpp"
 #include "hardware/gpio.hpp"
+#include "hardware/irq/irq_manager.hpp"
 #include "hardware/kernel_dt.hpp"
 #include "hardware/mailbox.hpp"
+#include "hardware/system_timer.hpp"
+#include "hardware/uart.hpp"
 
 // The linker provides the following pointers.
 extern uint64_t __bss_start;
@@ -62,6 +65,7 @@ extern "C" void init_interrupts_vector_table();
 extern "C" void _startup(uintptr_t dtb) {
   // Erases the BSS section as required.
   zero_bss();
+  call_init_array();
 
   // Set up the Interrupt Vector Table
   init_interrupts_vector_table();
@@ -82,10 +86,20 @@ extern "C" void _startup(uintptr_t dtb) {
     libk::halt();
   }
 
+  // Set up the IRQ Manager
+  IRQManager::init();
+
   // Set up GPIO Function.
   GPIO::init();
 
-  call_init_array();
+  // Try to initialize UART early as possible.
+  UART log(1000000);  // Set to a High Baud-rate, otherwise UART is THE bottleneck :/
+  libk::register_logger(log);
+
+  // Set up the System Timer
+  SystemTimer::init();
+  libk::set_log_timer(&SystemTimer::get_elapsed_time_in_ms);
+
   kmain();  // the real kernel entry point
   call_fini_array();
 }

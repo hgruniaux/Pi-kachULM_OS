@@ -35,7 +35,9 @@ static void pika_sys_sleep(Registers& regs) {
   const auto time_in_us = regs.x0;
 
   if (time_in_us > 0) {
+    set_error(regs, SYS_ERR_OK);
     TaskManager::get().sleep_task(Task::current(), time_in_us);
+    return;
   }
 
   set_error(regs, SYS_ERR_OK);
@@ -58,6 +60,7 @@ static void pika_sys_spawn(Registers& regs) {
 }
 
 static void pika_sys_getpid(Registers& regs) {
+  auto task = Task::current();
   const sys_pid_t pid = Task::current()->get_id();
   regs.x0 = pid;
 }
@@ -161,7 +164,7 @@ SyscallTable* create_pika_syscalls() {
   table->register_syscall(SYS_WAIT_MSG, pika_sys_wait_msg);
 
   table->register_syscall(SYS_DEBUG, [](Registers& regs) {
-    libk::print("Debug: {}", regs.x0);
+    libk::print("Debug: {} from pid={}", regs.x0, Task::current()->get_id());
     set_error(regs, SYS_ERR_OK);
   });
 

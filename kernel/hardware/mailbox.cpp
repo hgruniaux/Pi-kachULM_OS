@@ -37,7 +37,7 @@ static constexpr uint32_t CHANNEL_MASK = (1 << CHANNEL_WIDTH) - 1;
 static uintptr_t mailbox_base;
 
 void init() {
-  mailbox_base = KernelDT::get_device_address("mailbox");
+  mailbox_base = KernelDT::force_get_device_address("mailbox");
 }
 
 uint32_t receive(Channel channel) {

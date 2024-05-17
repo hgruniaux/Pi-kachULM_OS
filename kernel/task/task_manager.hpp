@@ -10,6 +10,9 @@
 
 class TaskManager {
  public:
+  /** Time (in milliseconds) between each tick for the scheduler. */
+  static constexpr uint32_t TICK_TIME = 100;
+
   TaskManager();
 
   [[nodiscard]] static TaskManager& get() { return *g_instance; }

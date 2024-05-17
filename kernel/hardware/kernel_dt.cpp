@@ -8,6 +8,7 @@ static libk::StringView _board_model = "";
 static uint32_t _board_revision = 0;
 static uint64_t _board_serial = 0;
 static Node _alias;
+static Node _symbols;
 static Property _soc_ranges;
 
 bool KernelDT::init(uintptr_t dtb) {
@@ -24,7 +25,12 @@ bool KernelDT::init(uintptr_t dtb) {
     return false;
   }
 
-  _board_model = prop.get_string();
+  const auto board_model = prop.get_string();
+  if (!board_model.has_value()) {
+    return false;
+  }
+
+  _board_model = board_model.get_value();
 
   // Fill _board_revision
   if (!KernelDT::find_property("/system/linux,revision", &prop)) {
@@ -54,6 +60,11 @@ bool KernelDT::init(uintptr_t dtb) {
 
   // Fill _alias
   if (!_dt.find_node("/aliases", &_alias)) {
+    return false;
+  }
+
+  // Fill _symbols
+  if (!_dt.find_node("/__symbols__", &_symbols)) {
     return false;
   }
 
@@ -113,39 +124,63 @@ uint64_t KernelDT::get_board_serial() {
   return _board_serial;
 }
 
-Node KernelDT::get_device_node(libk::StringView device) {
+bool get_device_node_from(libk::StringView device, Node resolver, Node* target) {
   Property prop;
 
-  if (!_alias.find_property(device, &prop)) {
-    libk::panic("[DeviceTree] Unable to resolve device alias.");
+  if (!resolver.find_property(device, &prop)) {
+    return false;
   }
 
-  Node device_node;
-
-  if (!_dt.find_node(prop.get_string(), &device_node)) {
-    libk::panic("[DeviceTree] Unable to resolve device alias.");
+  const auto path = prop.get_string();
+  if (!path.has_value()) {
+    return false;
   }
 
-  return device_node;
+  if (!_dt.find_node(path.get_value(), target)) {
+    return false;
+  }
+
+  return true;
 }
 
-uintptr_t KernelDT::get_device_address(libk::StringView device) {
-  Node dev_node = get_device_node(device);
+bool KernelDT::get_device_node(libk::StringView device, Node* device_node) {
+  if (get_device_node_from(device, _alias, device_node)) {
+    return true;
+  }
+
+  if (get_device_node_from(device, _symbols, device_node)) {
+    return true;
+  }
+
+  return false;
+}
+
+bool KernelDT::get_device_address(libk::StringView device, uintptr_t* device_address) {
+  Node dev_node;
+
+  if (!get_device_node(device, &dev_node)) {
+    return false;
+  };
 
   Property prop;
 
   if (!dev_node.find_property("reg", &prop)) {
-    libk::panic("[DeviceTree] Unable to retrieve device address property.");
+    return false;
   }
 
   size_t index = 0;
   uintptr_t dev_soc_addr = 0;
 
   if (!prop.get_variable_int(&index, &dev_soc_addr, _mem_prop->is_soc_mem_address_u64)) {
-    libk::panic("[DeviceTree] Unable to parse device address.");
+    return false;
   }
 
-  index = 0;
+  *device_address = convert_soc_address(dev_soc_addr);
+  return true;
+}
+
+uintptr_t KernelDT::convert_soc_address(uintptr_t soc_address) {
+  size_t index = 0;
   size_t offset = 0;
   while (index < _soc_ranges.length) {
     uint64_t soc_start = 0;
@@ -161,14 +196,39 @@ uintptr_t KernelDT::get_device_address(libk::StringView device) {
       libk::panic("Unable to parse '/soc/ranges'.");
     }
 
-    if (soc_start <= dev_soc_addr && dev_soc_addr < soc_start + chunk_size) {
-      const size_t dev_offset = dev_soc_addr - soc_start;
+    if (soc_start <= soc_address && soc_address < soc_start + chunk_size) {
+      const size_t dev_offset = soc_address - soc_start;
       return DEVICE_MEMORY + offset + dev_offset;
     }
 
     offset += chunk_size;
   }
 
-  LOG_ERROR("Unable to find corresponding virtual address of {}.", device);
+  LOG_ERROR("Unable to find corresponding virtual address of {:#x}.", soc_address);
   libk::panic("Unable to find virtual address.");
+}
+
+uintptr_t KernelDT::force_get_device_address(libk::StringView device) {
+  uintptr_t device_address;
+  if (!KernelDT::get_device_address(device, &device_address)) {
+    LOG_ERROR("Unable to retrieved {} address.", device);
+    libk::panic("Kernel Device Tree Fatal Error.");
+  }
+
+  return device_address;
+}
+StringList KernelDT::get_board_compatible() {
+  Property prop;
+
+  if (!KernelDT::find_property("/compatible", &prop)) {
+    libk::panic("No 'compatible' field in DeviceTree.");
+  }
+
+  const auto compatible = prop.get_string_list();
+
+  if (!compatible.has_value()) {
+    libk::panic("'compatible' field is not a StringList in this DeviceTree.");
+  }
+
+  return compatible.get_value();
 }

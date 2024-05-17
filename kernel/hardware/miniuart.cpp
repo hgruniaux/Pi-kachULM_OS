@@ -35,14 +35,14 @@ static constexpr int32_t AUX_MU_CNTL_REG = 0x60;
 /** Mini UART Baud rate (size: 16) */
 static constexpr int32_t AUX_MU_BAUD_REG = 0x68;
 
-MiniUART::MiniUART(uint32_t baud_rate) : _mini_uart_base(KernelDT::get_device_address("aux")) {
+MiniUART::MiniUART(uint32_t baud_rate) : _mini_uart_base(KernelDT::force_get_device_address("aux")) {
   // We deactivate Pull Up/Down fot the pins 14 and 15
-  GPIO::set_pull_up_down(GPIO::Pin::BCM14, GPIO::PUD_Mode::Off);
-  GPIO::set_pull_up_down(GPIO::Pin::BCM15, GPIO::PUD_Mode::Off);
+  GPIO::set_pull_up_down(14, GPIO::PUD_Mode::Off);
+  GPIO::set_pull_up_down(15, GPIO::PUD_Mode::Off);
 
   // Pin 14 and 15 must be in mode Alt5
-  GPIO::set_mode(GPIO::Pin::BCM14, GPIO::Mode::ALT5);
-  GPIO::set_mode(GPIO::Pin::BCM15, GPIO::Mode::ALT5);
+  GPIO::set_mode(14, GPIO::Mode::ALT5);
+  GPIO::set_mode(15, GPIO::Mode::ALT5);
 
   // Enable Mini UART (this also enables access to its registers)
   libk::write32(_mini_uart_base + AUX_ENABLES, 1);

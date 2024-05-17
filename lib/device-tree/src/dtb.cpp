@@ -1,5 +1,4 @@
 #include "dtb/dtb.hpp"
-#include "dtb/node.hpp"
 #include <libk/string_view.hpp>
 
 bool DeviceTree::find_node(libk::StringView path, Node* node) const {
@@ -16,7 +15,7 @@ bool DeviceTree::find_node(libk::StringView path, Node* node) const {
   }
 
   while (begin < path.get_length()) {
-    const auto* next_delim = path.find('/', begin);
+    const auto* next_delim = libk::strchrnul(path.get_data() + begin, '/');
     const size_t node_name_length = next_delim - path.begin() - begin;
 
     // Next node name is in path[0] ... path[node_name_length]
