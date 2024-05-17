@@ -75,7 +75,7 @@ static MetaPtr get_block_addr(VirtualPA addr) {
       return b;
     }
 
-    while (b != nullptr && (uintptr_t)b->ptr < addr) {
+    while (b != nullptr && (uintptr_t)(b->next) <= addr) {
       b = b->next;
     }
 
@@ -87,7 +87,7 @@ static MetaPtr get_block_addr(VirtualPA addr) {
 }
 
 static inline bool is_addr_valid(VirtualPA addr) {
-  if ((g_malloc_meta_head != nullptr) && (MetaPtr)addr > g_malloc_meta_head && addr < KernelMemory::get_heap_end()) {
+  if ((g_malloc_meta_head != nullptr) && (MetaPtr)addr >= g_malloc_meta_head && addr < KernelMemory::get_heap_end()) {
     return (addr == (VirtualPA)get_block_addr(addr)->ptr);
   }
 
@@ -97,7 +97,7 @@ static inline bool is_addr_valid(VirtualPA addr) {
 static void merge_block(MetaPtr lhs, MetaPtr rhs) {
   if ((lhs != nullptr) && (rhs != nullptr) && (lhs->next == rhs)) {
     lhs->is_free = lhs->is_free && rhs->is_free;
-    lhs->size += rhs->size + META_BLOCK_SIZE;
+    lhs->size += (uintptr_t)rhs->next - (uintptr_t)rhs;
     lhs->next = rhs->next;
     if (rhs->next != nullptr)
       (rhs->next)->previous = lhs;
