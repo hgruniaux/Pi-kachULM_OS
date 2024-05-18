@@ -1,7 +1,7 @@
 #include "boot/mmu_utils.hpp"
 
 // Force init_data to be in the .data segment (and not .bss)
-MMUInitData _init_data = {0x1, {}, {}, 0x2, 0x3, 0x4, 0x5, 0x6};
+MMUInitData _init_data = {0x1, {}, {}, 0x2, 0x3, 0x4, 0x5};
 
 void zero_pages(VirtualPA pages, size_t nb_pages) {
   auto* const page_ptr = (uint64_t*)pages;
