@@ -16,11 +16,11 @@ void* kmalloc(size_t byte_count, size_t alignment) {
   const long offset = target_ptr - heap_end + byte_count;
   const uintptr_t new_end = KernelMemory::change_heap_end(offset);
 
-  LOG_INFO("We need {} aligned on {}", byte_count, alignment);
-  LOG_INFO("Heap End: {:#x}", heap_end);
-  LOG_INFO("Target Pointer: {:#x}", target_ptr);
-  LOG_INFO("Offset: {}", offset);
-  LOG_INFO("New Heap End: {:#x}", new_end);
+//  LOG_INFO("We need {} aligned on {}", byte_count, alignment);
+//  LOG_INFO("Heap End: {:#x}", heap_end);
+//  LOG_INFO("Target Pointer: {:#x}", target_ptr);
+//  LOG_INFO("Offset: {}", offset);
+//  LOG_INFO("New Heap End: {:#x}", new_end);
 
   libk::bzero((void*)heap_end, new_end - heap_end);
 

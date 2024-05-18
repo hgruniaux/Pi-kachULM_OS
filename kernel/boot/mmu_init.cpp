@@ -134,25 +134,9 @@ void inline setup_memory_mapping(MMUTable* tbl, const DeviceTree& dt, const MMUI
 }
 
 void inline setup_vc_mapping(MMUTable* tbl, const DeviceTree& dt, MMUInitData* prop) {
-  uint64_t mmio_base_start = std::numeric_limits<uint64_t>::max();
-
   Property tmp_prop;
-  enforce(dt.find_property("/soc/ranges", &tmp_prop));
 
   size_t index = 0;
-  while (index < tmp_prop.length) {
-    uint64_t memory_chunk_start = 0;
-
-    enforce(tmp_prop.get_variable_int(&index, nullptr, prop->mem_prop.is_soc_mem_address_u64));
-    enforce(tmp_prop.get_variable_int(&index, &memory_chunk_start, prop->mem_prop.is_arm_mem_address_u64));
-    enforce(tmp_prop.get_variable_int(&index, nullptr, prop->mem_prop.is_soc_mem_size_u64));
-
-    if (memory_chunk_start < mmio_base_start) {
-      mmio_base_start = memory_chunk_start;
-    }
-  }
-
-  index = 0;
   enforce(dt.find_property("/memreserve", &tmp_prop));
 
   uint64_t vc_start;
@@ -161,10 +145,7 @@ void inline setup_vc_mapping(MMUTable* tbl, const DeviceTree& dt, MMUInitData* p
   uint64_t vc_size;
   enforce(tmp_prop.get_variable_int(&index, &vc_size, false));
 
-  const uint64_t final_vc_size = libk::min(vc_size, mmio_base_start - vc_start);
-
-  prop->vc_offset = vc_start;
-  enforce(map_range(tbl, VC_MEMORY, VC_MEMORY + final_vc_size - PAGE_SIZE, vc_start, vc_memory));
+  enforce(map_range(tbl, VC_MEMORY + vc_start, VC_MEMORY + vc_start + vc_size - PAGE_SIZE, vc_start, vc_memory));
 }
 
 void inline setup_device_mapping(MMUTable* tbl, const DeviceTree& dt, const DeviceMemoryProperties& prop) {
