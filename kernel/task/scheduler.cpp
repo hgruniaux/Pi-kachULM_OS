@@ -86,8 +86,8 @@ void Scheduler::schedule() {
   switch_to(new_task);
 
 #if LOG_MIN_LEVEL <= LOG_TRACE_LEVEL
-  sys_pid_t old_task_id = old_task ? old_task->get_id() : UINT16_MAX;
-  sys_pid_t new_task_id = new_task ? new_task->get_id() : UINT16_MAX;
+  const auto old_task_id = old_task ? old_task->get_id() : UINT16_MAX;
+  const auto new_task_id = new_task ? new_task->get_id() : UINT16_MAX;
   if (old_task_id != new_task_id)
     LOG_TRACE("Scheduler: old={}, new={}", old_task_id, new_task_id);
 #endif
@@ -133,8 +133,8 @@ void Scheduler::tick() {
   if (new_task == nullptr)
     return;
 
-  sys_pid_t old_task_id = old_task ? old_task->get_id() : UINT16_MAX;
-  sys_pid_t new_task_id = new_task ? new_task->get_id() : UINT16_MAX;
+  const auto old_task_id = old_task ? old_task->get_id() : UINT16_MAX;
+  const auto new_task_id = new_task ? new_task->get_id() : UINT16_MAX;
   if (old_task_id != new_task_id)
     LOG_TRACE("Scheduler (tick): old={}, new={}", old_task_id, new_task_id);
 #endif

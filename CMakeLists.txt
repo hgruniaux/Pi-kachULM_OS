@@ -16,10 +16,10 @@ set(CMAKE_C_EXTENSIONS ON)
 add_compile_options(-Wall -Wextra)
 
 # Tell the compiler that we are in a freestanding environment.
-add_compile_options(-ffreestanding -nostdlib -fno-builtin -mno-outline-atomics)
+add_compile_options(-ffreestanding -nostdlib -fno-builtin -mno-outline-atomics -mgeneral-regs-only)
 
 # Disable exceptions and RTTI in C++
-set(EXTRA_CXX_FLAGS -fno-exceptions -fno-rtti -mgeneral-regs-only)
+set(EXTRA_CXX_FLAGS -fno-exceptions -fno-rtti)
 add_compile_options("$<$<COMPILE_LANGUAGE:CXX>:${EXTRA_CXX_FLAGS}>")
 
 # Use relative paths in __FILE__ macros and debug information.

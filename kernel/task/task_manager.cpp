@@ -3,6 +3,7 @@
 #include "hardware/system_timer.hpp"
 #include "memory/mem_alloc.hpp"
 #include "pika_syscalls.hpp"
+#include "wm/window_manager.hpp"
 
 #include <libk/log.hpp>
 
@@ -49,11 +50,13 @@ TaskPtr TaskManager::create_task(Task* parent) {
     parent->m_children.push_back(task);
   }
 
+  libk::bzero(&task->m_saved_state, sizeof(task->m_saved_state));
+
   // Create a process virtual memory view and allocate its stack.
   const auto stack_size = MemoryChunk::get_page_byte_size() * 2;
   auto memory = libk::make_shared<ProcessMemory>(stack_size);
   task->m_saved_state.memory = memory;
-  task->m_saved_state.sp = (void*)task->m_saved_state.memory->get_stack_start();
+  task->m_saved_state.sp = task->m_saved_state.memory->get_stack_start();
 
   // Set process unique ID.
   task->m_id = m_next_available_pid++;
@@ -107,7 +110,7 @@ TaskPtr TaskManager::create_task(const elf::Header* program_image) {
 
   // Set the entry point of the process.
   const auto entry_addr = program_image->entry_addr;
-  task->m_saved_state.regs.elr = entry_addr;
+  task->m_saved_state.pc = entry_addr;
   return task;
 }
 
@@ -180,14 +183,19 @@ void TaskManager::kill_task(const TaskPtr& task, int exit_code) {
   }
 
   m_scheduler->remove_task(task);
+
+  // Destroy the windows.
+  auto& window_manager = WindowManager::get();
+  for (auto* window : task->m_windows) {
+    window_manager.destroy_window(window);
+  }
+
   task->m_state = Task::State::TERMINATED;
 }
 
 bool TaskManager::set_task_priority(const TaskPtr& task, uint32_t new_priority) {
   KASSERT(task != nullptr);
   KASSERT(!task->is_terminated());
-
-  DisableIRQs disable_interrupts;
 
   if (new_priority < Scheduler::MIN_PRIORITY || new_priority > Scheduler::MAX_PRIORITY)
     return false;
@@ -203,12 +211,10 @@ TaskPtr TaskManager::get_current_task() const {
 }
 
 void TaskManager::schedule() {
-  DisableIRQs disable_interrupts;
   m_scheduler->schedule();
 }
 
 void TaskManager::tick() {
-  DisableIRQs disable_interrupts;
   m_delta_queue.tick();
   m_scheduler->tick();
 }

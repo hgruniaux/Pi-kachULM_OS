@@ -114,10 +114,21 @@ add_executable(kernel
         task/delta_queue.hpp
         task/delta_queue.cpp
 
+        # Window manager
+        wm/geometry.hpp
+
+        wm/window_manager.cpp
+        wm/window_manager.hpp
+
+        wm/window.cpp
+        wm/window.hpp
+
+        wm/message_queue.cpp
+        wm/message_queue.hpp
+
         # Embed init ELF file inside the kernel
         ${CMAKE_CURRENT_BINARY_DIR}/init_elf.c
-        task/message_queue.hpp
-        task/message_queue.cpp
+        hardware/regs.hpp
 )
 
 target_include_directories(kernel PUBLIC .)

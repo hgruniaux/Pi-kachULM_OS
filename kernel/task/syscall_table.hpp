@@ -2,40 +2,10 @@
 
 #include <cstddef>
 #include <cstdint>
+#include "hardware/regs.hpp"
 
 struct Registers {
-  uint64_t x0;
-  uint64_t x1;
-  uint64_t x2;
-  uint64_t x3;
-  uint64_t x4;
-  uint64_t x5;
-  uint64_t x6;
-  uint64_t x7;
-  uint64_t x8;
-  uint64_t x9;
-  uint64_t x10;
-  uint64_t x11;
-  uint64_t x12;
-  uint64_t x13;
-  uint64_t x14;
-  uint64_t x15;
-  uint64_t x16;
-  uint64_t x17;
-  uint64_t x18;
-  uint64_t x19;
-  uint64_t x20;
-  uint64_t x21;
-  uint64_t x22;
-  uint64_t x23;
-  uint64_t x24;
-  uint64_t x25;
-  uint64_t x26;
-  uint64_t x27;
-  uint64_t x28;
-  uint64_t x29;
-  uint64_t x30;  // the link pointer (store the return address)
-  uint64_t xzr;  // always zero
+  GPRegisters gp_regs;
 
   uint64_t elr;   // Exception Link Register
   uint64_t spsr;  // Saved Program Status Register
@@ -67,12 +37,12 @@ using SyscallCallback = void (*)(Registers&);
  *
  * #define SYS_EXIT 152
  * table->register_syscall(SYS_EXIT, [](Registers& regs) {
- *    // The first argument of the syscall is in x0 by convention.
+ *    // The first argument of the sys is in x0 by convention.
  *    const auto exit_code = regs.x0;
  *
  *    // kill the current process...
  *
- *    // The return value of the syscall is stored in x0 by convention.
+ *    // The return value of the sys is stored in x0 by convention.
  *    regs.x0 = 0; // no error
  * });
  *
@@ -99,7 +69,7 @@ class SyscallTable {
   static constexpr size_t MAX_ID = 512;
 
   /**
-   * Calls the kernel callback for the given syscall @a id.
+   * Calls the kernel callback for the given sys @a id.
    * This effectively dispatch the call using the previously registered mapping.
    */
   void call_syscall(id_t id, Registers& registers);
@@ -111,21 +81,21 @@ class SyscallTable {
   void set_unknown_callback(SyscallCallback callback);
 
   /**
-   * Registers a syscall handler for the given syscall @a id.
+   * Registers a sys handler for the given sys @a id.
    *
    * Each time a userspace application will do a system call with the
-   * identifier @a id, @a callback will be called to handle the syscall.
+   * identifier @a id, @a callback will be called to handle the sys.
    * It is the responsibility of the callback to correctly set the
    * registers values to be returned to the user.
    *
-   * If the requested syscall has an already registered handler, the
+   * If the requested sys has an already registered handler, the
    * function returns false and nothing more is done (@a callback is ignored).
    * Otherwise, the function returns true and @a callback is correctly registered.
    */
   bool register_syscall(id_t id, SyscallCallback callback);
 
   /**
-   * Unregisters a previously registered syscall handler for @a id.
+   * Unregisters a previously registered sys handler for @a id.
    *
    * If no handler was registered for @a id before, the function does nothing.
    */

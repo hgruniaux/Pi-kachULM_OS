@@ -2,20 +2,23 @@
 
 #include <cstdint>
 #include <libk/memory.hpp>
+#include "hardware/regs.hpp"
 #include "memory/process_memory.hpp"
-#include "task/message_queue.hpp"
 #include "task/syscall_table.hpp"
 
 struct TaskSavedState {
-  Registers regs;
+  GPRegisters gp_regs;
+  FPURegisters fpu_regs;
   libk::SharedPointer<ProcessMemory> memory;
-  void* sp;  // stack pointer
+  uint64_t pc;  // program counter
+  uint64_t sp;  // stack pointer
 
   void save(const Registers& current_regs);
   void restore(Registers& current_regs);
 };  // struct TaskSavedState
 
 class TaskManager;
+class Window;
 
 /**
  * Represents a runnable task in the system. This can be a user process, a thread, etc.
@@ -84,18 +87,18 @@ class Task {
   /** Gets the task virtual memory. */
   [[nodiscard]] libk::SharedPointer<ProcessMemory> get_memory() const { return m_saved_state.memory; }
 
-  [[nodiscard]] MessageQueue& get_message_queue() { return m_message_queue; }
-  [[nodiscard]] const MessageQueue& get_message_queue() const { return m_message_queue; }
-
   /** Forward to `get_syscall_table()->call_syscall(id, registers)`. */
   void call_syscall(uint32_t id, Registers& registers) { m_syscall_table->call_syscall(id, registers); }
-  /** Gets the task syscall table. */
+  /** Gets the task sys table. */
   [[nodiscard]] SyscallTable* get_syscall_table() { return m_syscall_table; }
   [[nodiscard]] const SyscallTable* get_syscall_table() const { return m_syscall_table; }
   void set_syscall_table(SyscallTable* table) {
     KASSERT(table != nullptr);
     m_syscall_table = table;
   }
+
+  void register_window(Window* window);
+  void unregister_window(Window* window);
 
  private:
   friend class TaskManager;
@@ -111,8 +114,8 @@ class Task {
   Task* m_parent = nullptr;  // not a SharedPointer to avoid cyclic dependencies
   libk::LinkedList<libk::SharedPointer<Task>> m_children;
 
-  // Message system
-  MessageQueue m_message_queue;
+  // Living windows created by this task.
+  libk::LinkedList<Window*> m_windows;
 
   libk::LinkedList<MemoryChunk> m_mapped_chunks;
 };  // class Task

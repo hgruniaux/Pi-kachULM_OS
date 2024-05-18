@@ -2,7 +2,7 @@
 
 #include <libk/string.hpp>
 
-bool MessageQueue::enqueue(const sys_msg_t& msg) {
+bool MessageQueue::enqueue(const sys_message_t& msg) {
   if (is_full())
     return false;
 
@@ -13,7 +13,7 @@ bool MessageQueue::enqueue(const sys_msg_t& msg) {
   return true;
 }
 
-bool MessageQueue::dequeue(sys_msg_t& msg) {
+bool MessageQueue::dequeue(sys_message_t& msg) {
   if (is_empty())
     return false;
 
@@ -24,7 +24,7 @@ bool MessageQueue::dequeue(sys_msg_t& msg) {
   return true;
 }
 
-bool MessageQueue::peek(sys_msg_t& msg) {
+bool MessageQueue::peek(sys_message_t& msg) {
   if (is_empty())
     return false;
 
