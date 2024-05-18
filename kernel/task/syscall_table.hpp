@@ -133,5 +133,5 @@ class SyscallTable {
 
  private:
   SyscallCallback m_unknown_callback = nullptr;
-  SyscallCallback m_entries[MAX_ID];
+  SyscallCallback m_entries[MAX_ID] = {nullptr};
 };  // class SyscallTable
