@@ -1,7 +1,6 @@
 #pragma once
 
 #include <sys/window.h>
-#include <libk/spinlock.hpp>
 #include "task/wait_list.hpp"
 
 class MessageQueue {
@@ -30,7 +29,6 @@ class MessageQueue {
   bool block_task_until_not_empty(const libk::SharedPointer<Task>& task);
 
  private:
-  libk::SpinLock m_lock;
   WaitList m_wait_list;
   size_t m_pending_count = 0;
   sys_message_t m_queue[MAX_PENDING_MESSAGES];

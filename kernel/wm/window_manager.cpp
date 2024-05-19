@@ -370,11 +370,15 @@ void WindowManager::draw_windows(libk::LinkedList<Window*>::Iterator it, const R
 void WindowManager::draw_windows() {
   m_screen_buffer = FrameBuffer::get().get_buffer();
 
-#if 1
+#if 0
   draw_background({0, 0, m_screen_width, m_screen_height});
   draw_windows(m_windows.begin(), {0, 0, m_screen_width, m_screen_height});
 #else
   draw_background({0, 0, m_screen_width, m_screen_height});
+
+  auto it = m_windows.begin();
+  while (it.has_next())
+    ++it;
 
   for (auto& window : std::ranges::reverse_view(m_windows)) {
     draw_window(window, {0, 0, m_screen_width, m_screen_height});
