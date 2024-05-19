@@ -50,6 +50,7 @@ VirtualAddress HeapManager::change_heap_end(long byte_offset) {
       }
     }
 
+    zero_pages(_heap_va_end, 1);
     _heap_va_end += PAGE_SIZE;
   }
 
@@ -58,6 +59,7 @@ VirtualAddress HeapManager::change_heap_end(long byte_offset) {
 
     const VirtualPA va_to_del = _heap_va_end - PAGE_SIZE;
     PhysicalPA pa_to_del;
+    zero_pages(va_to_del, 1);
 
     switch (_heap_kind) {
       case Kind::Process: {

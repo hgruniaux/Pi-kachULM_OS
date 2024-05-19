@@ -103,6 +103,7 @@ VirtualPA memory_impl::allocate_pages_section(const size_t nb_pages, PhysicalPA*
       return 0;
     }
 
+    zero_pages(_custom_pages, 1);
     _custom_pages += PAGE_SIZE;
   }
 
@@ -112,8 +113,12 @@ VirtualPA memory_impl::allocate_pages_section(const size_t nb_pages, PhysicalPA*
   return section_start;
 }
 
-void memory_impl::free_section(size_t nb_pages, VirtualPA kernel_va) {
+void memory_impl::free_section(size_t nb_pages, VirtualPA kernel_va, PhysicalPA* pages_ptr) {
   if (!unmap_range(&_tbl, kernel_va, kernel_va + (nb_pages - 1) * PAGE_SIZE)) {
     libk::panic("Failed to free a custom memory chunk!");
+  }
+
+  for (size_t page_id = 0; page_id < nb_pages; ++page_id) {
+    _page_alloc.free_page(pages_ptr[page_id]);
   }
 }
