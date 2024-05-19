@@ -59,7 +59,7 @@ void MemoryChunk::free() {
   KASSERT(_proc.is_empty());
 
   // Free the kernel memory
-  memory_impl::free_section(_nb_pages, _kernel_va);
+  memory_impl::free_section(_nb_pages, _kernel_va, _pas);
 
   // Free the array & invalidate object.
   delete[] _pas;
