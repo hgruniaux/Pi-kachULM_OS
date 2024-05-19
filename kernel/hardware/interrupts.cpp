@@ -161,10 +161,10 @@ class ContextSwitcher {
     if (current_task == m_old_task)
       return;
 
-    if (m_old_task != nullptr)
-      m_old_task->get_saved_state().save(m_regs);
-
     if (current_task != nullptr) {
+      if (m_old_task != nullptr)
+        m_old_task->get_saved_state().save(m_regs);
+
       // Do context switch.
       current_task->get_saved_state().restore(m_regs);
       LOG_TRACE("Context switch to pid={} from pid={}", current_task->get_id(),
@@ -184,12 +184,12 @@ extern "C" void exception_handler(InterruptSource source, InterruptKind kind, Re
     do_kernelspace_interrupt(registers);
   }
 
+  ContextSwitcher context_switcher(registers);
+
   if (kind == InterruptKind::IRQ) {
     IRQManager::handle_interrupts();
     return;
   }
-
-  ContextSwitcher context_switcher(registers);
 
   if (source == InterruptSource::LOWER_AARCH64 && kind == InterruptKind::SYNCHRONOUS) {
     if (do_userspace_interrupt(registers))
@@ -206,18 +206,4 @@ extern "C" void exception_handler(InterruptSource source, InterruptKind kind, Re
   }
 
   dump_unhandled_interrupt(source, kind, registers);
-}
-
-static int interrupt_disable_level = 0;
-
-void disable_irqs() {
-  asm volatile("msr DAIFSet, #2");
-  interrupt_disable_level++;
-}
-
-void enable_irqs() {
-  interrupt_disable_level--;
-  if (interrupt_disable_level == 0) {
-    asm volatile("msr DAIFClr, #2");
-  }
 }

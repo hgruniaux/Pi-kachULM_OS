@@ -11,6 +11,7 @@ void _start() {
 
 int main() {
   sys_pid_t pid = sys_getpid();
+  sys_debug(pid);
   if (pid == 0) {
     while (1)
       continue;

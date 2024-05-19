@@ -63,12 +63,3 @@ extern "C" void jump_to_el1();
  * crash if the assumption is not hold.
  */
 extern "C" void jump_to_el0(uintptr_t elr, uintptr_t stack);
-
-void disable_irqs();
-void enable_irqs();
-
-class DisableIRQs {
- public:
-  DisableIRQs() { disable_irqs(); }
-  ~DisableIRQs() { enable_irqs(); }
-};  // class DisableIRQs

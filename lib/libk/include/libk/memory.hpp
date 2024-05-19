@@ -118,7 +118,7 @@ class SharedPointer {
     m_block->ref_count++;
   }
 
-  [[nodiscard]] T* get() const { return m_block->data; }
+  [[nodiscard]] T* get() const { return m_block != nullptr ? m_block->data : nullptr; }
   [[nodiscard]] operator bool() const { return m_block != nullptr; }
   [[nodiscard]] bool operator!() const { return m_block == nullptr; }
   [[nodiscard]] T& operator*() const { return *m_block->data; }

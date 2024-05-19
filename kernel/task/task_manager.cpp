@@ -35,8 +35,6 @@ TaskManager::TaskManager() : m_delta_queue(this) {
 }
 
 TaskPtr TaskManager::create_task(Task* parent) {
-  DisableIRQs disable_interrupts;
-
   auto task = libk::make_shared<Task>();
   if (!task)
     return nullptr;
@@ -68,8 +66,6 @@ TaskPtr TaskManager::create_task(Task* parent) {
 }
 
 TaskPtr TaskManager::create_task(const elf::Header* program_image) {
-  DisableIRQs disable_interrupts;
-
   auto task = create_task();
   if (!task)
     return nullptr;
@@ -116,8 +112,6 @@ void TaskManager::sleep_task(const TaskPtr& task, uint64_t time_in_us) {
   KASSERT(task->get_manager() == this);
   KASSERT(!task->is_terminated());
 
-  DisableIRQs disable_interrupts;
-
   if (!task->is_running())
     return;
 
@@ -134,8 +128,6 @@ void TaskManager::pause_task(const TaskPtr& task) {
   KASSERT(task->get_manager() == this);
   KASSERT(!task->is_terminated());
 
-  DisableIRQs disable_interrupts;
-
   if (!task->is_running())
     return;
 
@@ -150,8 +142,6 @@ void TaskManager::wake_task(const TaskPtr& task) {
   KASSERT(task->get_manager() == this);
   KASSERT(!task->is_terminated());
 
-  DisableIRQs disable_interrupts;
-
   if (task->is_running())
     return;
 
@@ -164,8 +154,6 @@ void TaskManager::wake_task(const TaskPtr& task) {
 void TaskManager::kill_task(const TaskPtr& task, int exit_code) {
   KASSERT(task != nullptr);
   KASSERT(task->get_manager() == this);
-
-  DisableIRQs disable_interrupts;
 
   if (task->is_terminated())
     return;  // already killed
@@ -187,8 +175,6 @@ bool TaskManager::set_task_priority(const TaskPtr& task, uint32_t new_priority) 
   KASSERT(task != nullptr);
   KASSERT(!task->is_terminated());
 
-  DisableIRQs disable_interrupts;
-
   if (new_priority < Scheduler::MIN_PRIORITY || new_priority > Scheduler::MAX_PRIORITY)
     return false;
 
@@ -203,12 +189,10 @@ TaskPtr TaskManager::get_current_task() const {
 }
 
 void TaskManager::schedule() {
-  DisableIRQs disable_interrupts;
   m_scheduler->schedule();
 }
 
 void TaskManager::tick() {
-  DisableIRQs disable_interrupts;
   m_delta_queue.tick();
   m_scheduler->tick();
 }
