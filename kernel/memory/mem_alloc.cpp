@@ -19,9 +19,9 @@ constexpr size_t META_BLOCK_SIZE = offsetof(MetaBlock, data);
 
 static MetaPtr g_malloc_meta_head = nullptr;
 
-static void split_space(MetaPtr block, size_t size) {
+static void split_space(MetaPtr block, size_t bytes_count) {
   MetaPtr sub_block;
-  uintptr_t next_addr = (uintptr_t)block->ptr + size;
+  uintptr_t next_addr = (uintptr_t)block->ptr + bytes_count;
   
   KASSERT(next_addr <= KernelMemory::get_heap_end());
 
@@ -29,9 +29,9 @@ static void split_space(MetaPtr block, size_t size) {
   sub_block->is_free = true;
   sub_block->next = block->next;
   sub_block->previous = block;
-  block->size = size;
-  sub_block->ptr = sub_block->data;
-  sub_block->size = (size_t)sub_block->next - (size_t)sub_block->ptr;
+  sub_block->size = block->size - bytes_count - META_BLOCK_SIZE;
+  block->size = bytes_count;
+  sub_block->ptr = (void*)sub_block->data;
   block->next = sub_block;
 }
 
@@ -83,9 +83,23 @@ static MetaPtr get_block_addr(VirtualPA addr) {
       return b;
     }
 
+    // LOG_INFO("Getting block for addr {}", addr);
+    // LOG_INFO("Heap end at addr {}", KernelMemory::get_heap_end());
+
     while (b != nullptr && (uintptr_t)b->ptr + b->size < addr) {
+      // if (b->next==nullptr)
+      // {
+      //   LOG_INFO("Last block infos = {}, {}", (VirtualPA)b->ptr, b->size);
+      // }
+      
       b = b->next;
     }
+    
+    // if (b==nullptr)
+    // {
+    //   LOG_INFO("Not matching block found");
+    // }
+    
 
     if (b != nullptr && (uintptr_t)b->ptr > addr)
       return nullptr;
@@ -99,7 +113,7 @@ static inline bool is_addr_valid(VirtualPA addr) {
     MetaPtr b = get_block_addr(addr);
     return (b != nullptr && addr == (VirtualPA)(b->ptr));
   }
-  
+
   // LOG_INFO("Unbounded addr {}", addr);
   // LOG_INFO("Heap end at addr {}", KernelMemory::get_heap_end());
   return false;
@@ -139,6 +153,7 @@ void* kmalloc(size_t byte_count, size_t alignment) {
 
   if (block->size > byte_count + META_BLOCK_SIZE) {
     split_space(block, byte_count);
+    // LOG_INFO("Free addr {}", (VirtualPA)(block->next)->ptr);
     kfree((block->next)->ptr);
   }
 
@@ -150,19 +165,24 @@ void kfree(void* ptr) {
   if (ptr == nullptr)
     return;
 
+  // if(!is_addr_valid((VirtualPA)ptr)) {
+  //   LOG_INFO("Unvalid addr {}",(VirtualPA)ptr); }
+
   KASSERT(is_addr_valid((VirtualPA)ptr));
   
     MetaPtr block = get_block_addr((VirtualPA)ptr);
     block->is_free = true;
-    block->size += (uintptr_t)block->ptr - (uintptr_t)block + META_BLOCK_SIZE;
     block->ptr = block->data;
+    block->size += (size_t)((uintptr_t)ptr - (uintptr_t)block->ptr);
 
     if (block->next != nullptr && (block->next)->is_free) {
+      // LOG_INFO("Merging to right");
       merge_block(block, block->next);
     }
 
     if (block->previous != nullptr && (block->previous)->is_free) {
       merge_block(block->previous, block);
+      // LOG_INFO("Merging to left");
     }
   
 }
