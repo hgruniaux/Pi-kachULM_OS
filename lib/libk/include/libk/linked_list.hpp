@@ -176,11 +176,18 @@ class LinkedList {
 
   using Iterator = BaseIterator<false>;
   using ConstIterator = BaseIterator<false>;
+  using ReverseIterator = std::reverse_iterator<Iterator>;
+  using ConstReverseIterator = std::reverse_iterator<ConstIterator>;
 
   [[nodiscard]] Iterator begin() { return Iterator(m_head); }
   [[nodiscard]] ConstIterator begin() const { return Iterator(m_head); }
   [[nodiscard]] Iterator end() { return Iterator(nullptr); }
   [[nodiscard]] ConstIterator end() const { return Iterator(nullptr); }
+
+  [[nodiscard]] ReverseIterator rbegin() { return std::make_reverse_iterator(Iterator(m_tail)); }
+  [[nodiscard]] ConstReverseIterator rbegin() const { return std::make_reverse_iterator(Iterator(m_tail)); }
+  [[nodiscard]] ReverseIterator rend() { return std::make_reverse_iterator(Iterator(nullptr)); }
+  [[nodiscard]] ConstReverseIterator rend() const { return std::make_reverse_iterator(Iterator(nullptr)); }
 
   void insert_before(Iterator it, const T& data) {
     Node* node = new Node{data};

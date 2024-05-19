@@ -80,6 +80,8 @@ static sys_error_t reallocate_framebuffer(sys_window_t* window, uint32_t width, 
   window->width = width;
   window->height = height;
   window->pitch = width;
+
+  __syscall2(SYS_WINDOW_SET_FRAMEBUFFER, window->kernel_handle, (sys_word_t)window->framebuffer);
   return SYS_ERR_OK;
 }
 
@@ -202,6 +204,7 @@ void sys_window_clear(sys_window_t* window) {
 
 static void draw_window_frame(sys_window_t* window) {}
 
+#if 0
 sys_error_t sys_window_present(sys_window_t* window) {
   assert(window != NULL && window->framebuffer != NULL);
 
@@ -214,3 +217,4 @@ sys_error_t sys_window_present(sys_window_t* window) {
   return __syscall5(SYS_WINDOW_PRESENT, window->kernel_handle, (sys_word_t)window->framebuffer, window->width,
                     window->height, window->pitch);
 }
+#endif

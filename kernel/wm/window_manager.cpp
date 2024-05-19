@@ -1,10 +1,13 @@
 #include "wm/window_manager.hpp"
+#include "graphics/graphics.hpp"
 #include "hardware/framebuffer.hpp"
 #include "hardware/timer.hpp"
+#include "libk/log.hpp"
 #include "task/task.hpp"
 #include "wm/window.hpp"
 
 #include <algorithm>
+#include <ranges>
 
 WindowManager* WindowManager::g_instance = nullptr;
 
@@ -15,6 +18,8 @@ WindowManager::WindowManager() {
   auto& fb = FrameBuffer::get();
   m_screen_width = fb.get_width();
   m_screen_height = fb.get_height();
+  m_screen_pitch = fb.get_pitch();
+  m_screen_buffer = fb.get_buffer();
   m_depth_buffer = new uint8_t[m_screen_width * m_screen_height];
   libk::bzero(m_depth_buffer, sizeof(uint8_t) * m_screen_width * m_screen_height);
 }
@@ -35,6 +40,10 @@ Window* WindowManager::create_window(const libk::SharedPointer<Task>& task) {
   task->register_window(window);
   ++m_window_count;
   m_windows.push_back(window);
+
+  if (m_focus_window == nullptr)
+    focus_window(window);
+
   return window;
 }
 
@@ -48,10 +57,7 @@ void WindowManager::destroy_window(Window* window) {
 
   if (m_focus_window == window) {
     // Unfocus the window.
-    if (!m_windows.is_empty())
-      m_focus_window = *m_windows.begin();
-    else
-      m_focus_window = nullptr;
+    unfocus_window(window);
   }
 
   --m_window_count;
@@ -86,40 +92,40 @@ void WindowManager::set_window_geometry(Window* window, Rect rect) {
   KASSERT(is_valid(window));
 
   // Enforce constraints on window size.
-  rect.w = libk::clamp(rect.w, Window::MIN_WIDTH, Window::MAX_WIDTH);
-  rect.h = libk::clamp(rect.h, Window::MIN_HEIGHT, Window::MAX_HEIGHT);
+  rect.set_width(libk::clamp(rect.width(), Window::MIN_WIDTH, Window::MAX_WIDTH));
+  rect.set_height(libk::clamp(rect.height(), Window::MIN_HEIGHT, Window::MAX_HEIGHT));
 
   // Handle special values.
-  if (rect.x == SYS_POS_DEFAULT) {
-    rect.x = 50;
-  } else if (rect.x == SYS_POS_CENTERED) {
-    rect.x = m_screen_width / 2 - rect.w / 2;
+  if (rect.x1 == SYS_POS_DEFAULT) {
+    rect.x1 = 50;
+  } else if (rect.x1 == SYS_POS_CENTERED) {
+    rect.x1 = m_screen_width / 2 - rect.width() / 2;
   }
 
-  if (rect.y == SYS_POS_DEFAULT) {
-    rect.y = 50;
-  } else if (rect.x == SYS_POS_CENTERED) {
-    rect.y = m_screen_height / 2 - rect.h / 2;
+  if (rect.y1 == SYS_POS_DEFAULT) {
+    rect.y1 = 50;
+  } else if (rect.x1 == SYS_POS_CENTERED) {
+    rect.y1 = m_screen_height / 2 - rect.height() / 2;
   }
 
   // Enforce constraints on window position.
-  rect.x = libk::clamp(rect.x, INT16_MIN, INT16_MAX);
-  rect.y = libk::clamp(rect.y, INT16_MIN, INT16_MAX);
+  rect.x1 = (libk::clamp(rect.x(), INT16_MIN, INT16_MAX));
+  rect.y1 = (libk::clamp(rect.y(), INT16_MIN, INT16_MAX));
 
   const auto old_rect = window->get_geometry();
 
   window->set_geometry(rect);
 
-  const bool moved = old_rect.x != rect.x || old_rect.y != rect.y;
-  const bool resized = old_rect.w != rect.w || old_rect.h != rect.h;
+  const bool moved = old_rect.x() != rect.x() || old_rect.y() != rect.y();
+  const bool resized = old_rect.width() != rect.width() || old_rect.height() != rect.height();
 
   // Send move and resize messages.
   if (moved) {
     sys_message_t message;
     libk::bzero(&message, sizeof(sys_message_t));
     message.id = SYS_MSG_MOVE;
-    message.param1 = rect.x;
-    message.param2 = rect.y;
+    message.param1 = rect.x();
+    message.param2 = rect.y();
     post_message(window, message);
   }
 
@@ -127,97 +133,9 @@ void WindowManager::set_window_geometry(Window* window, Rect rect) {
     sys_message_t message;
     libk::bzero(&message, sizeof(sys_message_t));
     message.id = SYS_MSG_RESIZE;
-    message.param1 = rect.w;
-    message.param2 = rect.h;
+    message.param1 = rect.width();
+    message.param2 = rect.height();
     post_message(window, message);
-  }
-
-  draw_background(old_rect);
-}
-
-[[gnu::hot]] void WindowManager::blit_image_with_resize(const uint32_t* src,
-                                                        uint32_t src_width,
-                                                        uint32_t src_height,
-                                                        uint32_t src_pitch,
-                                                        uint32_t src_depth,
-                                                        uint32_t* dst,
-                                                        uint32_t dst_width,
-                                                        uint32_t dst_height,
-                                                        uint32_t dst_pitch) {
-  for (uint32_t x = 0; x < dst_width; ++x) {
-    for (uint32_t y = 0; y < dst_height; ++y) {
-      if (m_depth_buffer[x + m_screen_width * y] > src_depth)
-        continue;
-
-      const uint32_t src_x = x * (src_width / dst_width);
-      const uint32_t src_y = y * (src_height / dst_height);
-      dst[x + dst_pitch * y] = src[src_x + src_pitch * src_y];
-      m_depth_buffer[x + m_screen_width * y] = src_depth;
-    }
-  }
-}
-
-[[gnu::hot]] void WindowManager::blit_image(const uint32_t* src,
-                                            uint32_t src_width,
-                                            uint32_t src_height,
-                                            uint32_t src_pitch,
-                                            uint32_t src_depth,
-                                            uint32_t* dst,
-                                            uint32_t dst_pitch) {
-  for (uint32_t x = 0; x < src_width; ++x) {
-    for (uint32_t y = 0; y < src_height; ++y) {
-      if (m_depth_buffer[x + m_screen_width * y] > src_depth)
-        continue;
-
-      dst[x + dst_pitch * y] = src[x + src_pitch * y];
-      m_depth_buffer[x + m_screen_width * y] = src_depth;
-    }
-  }
-}
-
-void WindowManager::present_window(Window* window,
-                                   const uint32_t* framebuffer,
-                                   uint32_t w,
-                                   uint32_t h,
-                                   uint32_t pitch) {
-  KASSERT(is_valid(window));
-  KASSERT(framebuffer != nullptr);
-
-  // Do not present anything if the window is invisible.
-  if (!window->is_visible())
-    return;
-
-  // TODO: Handle window clipping
-  const uint32_t window_x = libk::max(0, window->m_geometry.x);
-  const uint32_t window_y = libk::max(0, window->m_geometry.y);
-
-  auto& screen_framebuffer = FrameBuffer::get();
-  const auto screen_pitch = screen_framebuffer.get_pitch();
-  auto* target_screen_buffer = &screen_framebuffer.get_buffer()[window_x + screen_pitch * window_y];
-
-  const bool has_framebuffer_correct_size = (window->m_geometry.w == w && window->m_geometry.h == h);
-  if (!has_framebuffer_correct_size) {
-    // The framebuffer has different size as the window. It needs to be resized
-    // before blitting it to the screen.
-    blit_image_with_resize(framebuffer, w, h, pitch, window->m_depth, target_screen_buffer, window->m_geometry.w,
-                           window->m_geometry.h, screen_pitch);
-  } else {
-    blit_image(framebuffer, w, h, pitch, window->m_depth, target_screen_buffer, screen_pitch);
-  }
-}
-
-void WindowManager::draw_background(const Rect& rect) {
-  auto& screen_framebuffer = FrameBuffer::get();
-  const auto screen_pitch = screen_framebuffer.get_pitch();
-  auto* target_screen_buffer = screen_framebuffer.get_buffer();
-
-  for (uint32_t x = rect.left(); x < rect.right(); ++x) {
-    for (uint32_t y = rect.top(); y < rect.bottom(); ++y) {
-      if (m_depth_buffer[x + m_screen_width * y] > 0)
-        continue;
-
-      target_screen_buffer[x + screen_pitch * y] = 0xffffff;
-    }
   }
 }
 
@@ -237,7 +155,12 @@ void WindowManager::focus_window(Window* window) {
   post_message(window, message);
 
   m_focus_window = window;
+
   // TODO: Move focus window to front
+  auto it = std::find(m_windows.begin(), m_windows.end(), window);
+  KASSERT(it != m_windows.end());
+  m_windows.erase(it);
+  m_windows.push_front(window);
 }
 
 void WindowManager::unfocus_window(Window* window) {
@@ -285,13 +208,13 @@ void WindowManager::mosaic_layout() {
 
   const size_t nb_rows = libk::div_round_up(m_window_count, nb_columns);
 
-  const uint32_t window_width = m_screen_width / nb_columns;
-  const uint32_t window_height = m_screen_height / nb_rows;
+  const int32_t window_width = m_screen_width / nb_columns;
+  const int32_t window_height = m_screen_height / nb_rows;
 
-  uint32_t i = 0, j = 0;
+  int32_t i = 0, j = 0;
   for (auto* window : m_windows) {
-    const auto x = (int32_t)(i * window_width);
-    const auto y = (int32_t)(j * window_height);
+    const auto x = i * window_width;
+    const auto y = j * window_height;
     set_window_geometry(window, {x, y, window_width, window_height});
 
     ++i;
@@ -300,4 +223,163 @@ void WindowManager::mosaic_layout() {
       ++j;
     }
   }
+}
+
+void WindowManager::update() {
+  const auto start = GenericTimer::get_elapsed_time_in_micros();
+
+  // Avoid too frequent updates...
+  // We aim for 60 Hz, so one update per 16 ms.
+  if (start - m_last_update < 16000)
+    return;
+  m_last_update = start;
+
+  draw_windows();
+  const auto end = GenericTimer::get_elapsed_time_in_micros();
+  LOG_DEBUG("Window manager update done in {} ms", (end - start) / 1000);
+}
+
+void WindowManager::draw_background(const Rect& rect) {
+  // TODO: replace this by an optimized function
+  for (int32_t x = rect.left(); x < rect.right(); ++x) {
+    for (int32_t y = rect.top(); y < rect.bottom(); ++y) {
+      m_screen_buffer[x + m_screen_pitch * y] = 0xffffff;
+    }
+  }
+}
+
+void WindowManager::fill_rect(const Rect& rect, uint32_t color) {
+  // TODO: replace this by an optimized function
+  for (int32_t x = rect.left(); x < rect.right(); ++x) {
+    for (int32_t y = rect.top(); y < rect.bottom(); ++y) {
+      m_screen_buffer[x + m_screen_pitch * y] = color;
+    }
+  }
+}
+
+void WindowManager::draw_window(Window* window, const Rect& dst_rect) {
+  const Rect& src_rect = window->m_geometry;
+  if (!src_rect.intersects(dst_rect))
+    return;
+
+  const uint32_t* framebuffer = window->get_framebuffer();
+  const uint32_t framebuffer_pitch = window->get_geometry().width();
+
+  // If the window has no registered framebuffer, then just fill with black.
+  if (framebuffer == nullptr) {
+    // TODO: replace this by an optimized function
+    for (int32_t x = dst_rect.left(); x < dst_rect.right(); ++x) {
+      for (int32_t y = dst_rect.top(); y < dst_rect.bottom(); ++y) {
+        m_screen_buffer[x + m_screen_pitch * y] = 0;
+      }
+    }
+
+    return;
+  }
+
+  uint32_t x1 = 0, x2 = src_rect.width();
+  uint32_t y1 = 0, y2 = src_rect.height();
+
+  // Do clipping to avoid drawing outside the destination rect.
+  if (src_rect.left() < dst_rect.left())
+    x1 = dst_rect.left() - src_rect.left();
+  if (src_rect.top() < dst_rect.top())
+    y1 = dst_rect.top() - src_rect.top();
+  if (src_rect.right() > dst_rect.right())
+    x2 = x1 + dst_rect.right() - libk::max(src_rect.left(), dst_rect.left());
+  if (src_rect.bottom() > dst_rect.bottom())
+    y2 = y1 + dst_rect.bottom() - libk::max(src_rect.top(), dst_rect.top());
+
+  if (x1 == x2 || y1 == y2)
+    return;
+
+  // Blit the framebuffer into the screen.
+  // TODO: Maybe use DMA to do the blit for better performances.
+  // FIXME: avoid changing virtual memory view here
+  window->get_task()->get_saved_state().memory->activate();
+  for (uint32_t src_x = x1, dst_x = src_rect.x() + x1; src_x < x2; ++src_x, dst_x++) {
+    for (uint32_t src_y = y1, dst_y = src_rect.y() + y1; src_y < y2; ++src_y, dst_y++) {
+      const auto color = framebuffer[src_x + framebuffer_pitch * src_y];
+      m_screen_buffer[dst_x + m_screen_pitch * dst_y] = color;
+    }
+  }
+}
+
+void WindowManager::draw_windows(libk::LinkedList<Window*>::Iterator it, const Rect& dst_rect) {
+  KASSERT(dst_rect.left() >= 0 && dst_rect.right() <= m_screen_width && dst_rect.top() >= 0 &&
+          dst_rect.bottom() <= m_screen_height);
+
+  if (!dst_rect.has_surface())
+    return;
+
+  if (it == m_windows.end()) {
+    // No more windows, we hit the background image!
+    // draw_background(dst_rect);
+    return;  // end of recursion
+  }
+
+  Rect src_rect = (*it)->m_geometry;
+
+  // Draw the current window (into the destination rectangle):
+  if (!((src_rect.right() < dst_rect.left()) || (src_rect.left() > dst_rect.right()) ||
+        (src_rect.top() > dst_rect.bottom()) || (src_rect.bottom() < dst_rect.top())))
+    ;
+
+  draw_window(*it, dst_rect);
+
+  // Recursively draw the windows behind:
+  // dst_rect:
+  //  |---------------------------------------------------------|
+  //  |               |         TOP           |                 |
+  //  |               |                       |                 |
+  //  |               |-----------------------|                 |
+  //  |               |                       |                 |
+  //  |     LEFT      |        CENTER         |      RIGHT      |
+  //  |               |       src_rect        |                 |
+  //  |               |-----------------------|                 |
+  //  |               |                       |                 |
+  //  |               |        BOTTOM         |                 |
+  //  |               |                       |                 |
+  //  |---------------------------------------------------------|
+
+  if (src_rect.right() > dst_rect.right())
+    src_rect.set_right(dst_rect.right());
+  if (src_rect.left() < dst_rect.left())
+    src_rect.set_left(dst_rect.left());
+  if (src_rect.bottom() > dst_rect.bottom())
+    src_rect.set_bottom(dst_rect.bottom());
+  if (src_rect.top() < dst_rect.top())
+    src_rect.set_top(dst_rect.top());
+
+  const Rect left = Rect::from_edges(dst_rect.left(), dst_rect.top(), src_rect.left(), dst_rect.bottom());
+  const Rect top = Rect::from_edges(src_rect.left(), dst_rect.top(), src_rect.right(), src_rect.top());
+  const Rect right = Rect::from_edges(src_rect.right(), dst_rect.top(), dst_rect.right(), dst_rect.bottom());
+  const Rect bottom = Rect::from_edges(src_rect.left(), src_rect.bottom(), src_rect.right(), dst_rect.bottom());
+
+  // get the next visible window (windows are sorted from front to back).
+  do {
+    it++;
+  } while (it != m_windows.end() && !(*it)->is_visible());
+
+  draw_windows(it, left);
+  draw_windows(it, top);
+  draw_windows(it, right);
+  draw_windows(it, bottom);
+}
+
+void WindowManager::draw_windows() {
+  m_screen_buffer = FrameBuffer::get().get_buffer();
+
+#if 1
+  draw_background({0, 0, m_screen_width, m_screen_height});
+  draw_windows(m_windows.begin(), {0, 0, m_screen_width, m_screen_height});
+#else
+  draw_background({0, 0, m_screen_width, m_screen_height});
+
+  for (auto& window : std::ranges::reverse_view(m_windows)) {
+    draw_window(window, {0, 0, m_screen_width, m_screen_height});
+  }
+#endif
+
+  FrameBuffer::get().present();
 }

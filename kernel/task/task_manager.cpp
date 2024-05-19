@@ -16,6 +16,7 @@ TaskManager::TaskManager() : m_delta_queue(this) {
   m_default_syscall_table = create_pika_syscalls();
   m_scheduler = libk::make_scoped<Scheduler>();
 
+#if 0
   // Select a timer and start the tick clock for the scheduler.
   bool timer_found = false;
   for (size_t timer_id = 0; timer_id < SystemTimer::nb_timers; ++timer_id) {
@@ -33,6 +34,7 @@ TaskManager::TaskManager() : m_delta_queue(this) {
     LOG_CRITICAL("Not found an available system timer for the scheduler");
     return;
   }
+#endif
 }
 
 TaskPtr TaskManager::create_task(Task* parent) {

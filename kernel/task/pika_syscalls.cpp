@@ -52,6 +52,9 @@ static void pika_sys_sleep(Registers& regs) {
 }
 
 static void pika_sys_yield(Registers& regs) {
+  // FIXME: remove this
+  WindowManager::get().update();
+
   TaskManager::get().schedule();
   set_error(regs, SYS_ERR_OK);
 }
@@ -190,7 +193,7 @@ static void pika_sys_window_get_visibility(Registers& regs) {
 
   bool* is_visible = (bool*)regs.gp_regs.x1;
   if (is_visible != nullptr) {
-    if (check_ptr(regs, is_visible, true))
+    if (!check_ptr(regs, is_visible, true))
       return;
 
     *is_visible = window->is_visible();
@@ -225,28 +228,28 @@ static void pika_sys_window_get_geometry(Registers& regs) {
     if (!check_ptr(regs, x, true))
       return;
 
-    *x = geometry.x;
+    *x = geometry.x();
   }
 
   if (y != nullptr) {
     if (!check_ptr(regs, y, true))
       return;
 
-    *y = geometry.y;
+    *y = geometry.y();
   }
 
   if (width != nullptr) {
     if (!check_ptr(regs, width, true))
       return;
 
-    *width = geometry.x;
+    *width = geometry.width();
   }
 
   if (height != nullptr) {
     if (!check_ptr(regs, height, true))
       return;
 
-    *height = geometry.x;
+    *height = geometry.height();
   }
 
   set_error(regs, SYS_ERR_OK);
@@ -259,14 +262,14 @@ static void pika_sys_window_set_geometry(Registers& regs) {
 
   const int32_t x = (int32_t)regs.gp_regs.x1;
   const int32_t y = (int32_t)regs.gp_regs.x2;
-  const uint32_t width = regs.gp_regs.x3;
-  const uint32_t height = regs.gp_regs.x4;
+  const int32_t width = regs.gp_regs.x3;
+  const int32_t height = regs.gp_regs.x4;
 
-  WindowManager::get().set_window_geometry(window, {x, y, width, height});
+  WindowManager::get().set_window_geometry(window, Rect::from_pos_and_size(x, y, width, height));
   set_error(regs, SYS_ERR_OK);
 }
 
-static void pika_sys_window_present(Registers& regs) {
+static void pika_sys_window_set_framebuffer(Registers& regs) {
   auto* window = (Window*)regs.gp_regs.x0;
   if (!check_window(regs, window))
     return;
@@ -275,10 +278,7 @@ static void pika_sys_window_present(Registers& regs) {
   if (!check_ptr(regs, (void*)framebuffer))
     return;
 
-  const uint32_t width = regs.gp_regs.x2;
-  const uint32_t height = regs.gp_regs.x3;
-  const uint32_t pitch = regs.gp_regs.x4;
-  WindowManager::get().present_window(window, framebuffer, width, height, pitch);
+  window->set_framebuffer(framebuffer);
   set_error(regs, SYS_ERR_OK);
 }
 
@@ -314,7 +314,7 @@ SyscallTable* create_pika_syscalls() {
   table->register_syscall(SYS_WINDOW_SET_VISIBILITY, pika_sys_window_set_visibility);
   table->register_syscall(SYS_WINDOW_GET_GEOMETRY, pika_sys_window_get_geometry);
   table->register_syscall(SYS_WINDOW_SET_GEOMETRY, pika_sys_window_set_geometry);
-  table->register_syscall(SYS_WINDOW_PRESENT, pika_sys_window_present);
+  table->register_syscall(SYS_WINDOW_SET_FRAMEBUFFER, pika_sys_window_set_framebuffer);
 
   return table;
 }

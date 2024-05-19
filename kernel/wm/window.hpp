@@ -8,10 +8,10 @@
 
 class Window {
  public:
-  static constexpr uint32_t MIN_WIDTH = 25;
-  static constexpr uint32_t MIN_HEIGHT = 25;
-  static constexpr uint32_t MAX_WIDTH = UINT16_MAX;
-  static constexpr uint32_t MAX_HEIGHT = UINT16_MAX;
+  static constexpr int32_t MIN_WIDTH = 25;
+  static constexpr int32_t MIN_HEIGHT = 25;
+  static constexpr int32_t MAX_WIDTH = UINT16_MAX;
+  static constexpr int32_t MAX_HEIGHT = UINT16_MAX;
   static constexpr size_t MAX_TITLE_LENGTH = 255;
 
   Window(const libk::SharedPointer<Task>& task);
@@ -37,13 +37,17 @@ class Window {
   [[nodiscard]] MessageQueue& get_message_queue() { return m_message_queue; }
   [[nodiscard]] const MessageQueue& get_message_queue() const { return m_message_queue; }
 
+  [[nodiscard]] const uint32_t* get_framebuffer() const { return m_framebuffer; }
+  void set_framebuffer(const uint32_t* framebuffer) { m_framebuffer = framebuffer; }
+
  private:
   friend class WindowManager;
   libk::SharedPointer<Task> m_task;  // the task that owns this window
   MessageQueue m_message_queue;
   libk::StringView m_title;  // allocated by the Window, owned pointer
+  uint64_t m_last_updated = 0;
   Rect m_geometry;
-  uint8_t m_depth;
+  const uint32_t* m_framebuffer = nullptr;
   bool m_visible : 1 = false;
   bool m_focus : 1 = false;
 };  // class Window

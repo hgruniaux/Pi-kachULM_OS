@@ -1,4 +1,5 @@
 #include <stddef.h>
+#include <stdlib.h>
 #include <sys/syscall.h>
 #include <sys/window.h>
 
@@ -14,6 +15,12 @@ uint32_t* framebuffer;
 
 int main() {
   sys_pid_t pid = sys_getpid();
+  srand(pid);
+
+  int n = 50;
+  while (n-- > 0)
+    rand();
+
   sys_debug(pid);
   if (pid == 0) {
     while (true)
@@ -22,10 +29,14 @@ int main() {
 
   const uint32_t width = 600;
   const uint32_t height = 400;
-  int32_t x = 50;
-  int32_t y = 50;
+  int32_t x = rand() % 500;
+  int32_t y = rand() % 500;
+  sys_debug(x);
+  sys_debug(y);
 
-  sys_window_t* window = sys_window_create("My Window", x, y, width, 400, SYS_WF_DEFAULT);
+  char title[] = "Window  ";
+  title[8] = '0' + pid;
+  sys_window_t* window = sys_window_create(title, x, y, width, 400, SYS_WF_DEFAULT);
   if (window == NULL)
     return 1;
 
@@ -46,11 +57,13 @@ int main() {
     }
   }
 
+  sys_window_set_geometry(window, x, y, width, height);
+
   bool should_close = false;
   sys_word_t i = 10;
   while (!should_close) {
-    x += pid;
-    y += pid * 2;
+    x += (rand() % 20) - 10;
+    y += (rand() % 20) - 10;
     sys_window_set_geometry(window, x, y, width, height);
 
     sys_message_t message;
@@ -63,16 +76,11 @@ int main() {
           // Framebuffer is reallocated when the window is resized.
           framebuffer = sys_window_get_framebuffer(window, &pitch);
           break;
-        case SYS_MSG_REPAINT:
-          sys_window_present(window);
-          break;
         default:
           break;
       }
     }
 
-    sys_debug(i++);
-    sys_window_present(window);
     sys_yield();
   }
 

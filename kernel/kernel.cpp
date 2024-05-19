@@ -55,8 +55,11 @@ extern "C" const char init[];
   auto task1 = task_manager->create_task((const elf::Header*)&init);
   task_manager->wake_task(task1);
 
-  auto task2 = task_manager->create_task((const elf::Header*)&init);
-  task_manager->wake_task(task2);
+  int count = 4;
+  while (count-- > 0) {
+    auto task = task_manager->create_task((const elf::Header*)&init);
+    task_manager->wake_task(task);
+  }
 
   enable_fpu_and_neon();
   //  Enter userspace

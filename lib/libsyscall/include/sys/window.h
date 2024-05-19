@@ -66,7 +66,6 @@ sys_error_t sys_window_get_client_area(sys_window_t* __w,
                                        uint32_t* __width,
                                        uint32_t* __height);
 void sys_window_clear(sys_window_t* __w);
-sys_error_t sys_window_present(sys_window_t* __w);
 
 __SYS_EXTERN_C_END
 
