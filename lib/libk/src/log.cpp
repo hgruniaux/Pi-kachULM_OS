@@ -73,7 +73,7 @@ void vlog(LogLevel level,
   }
 
   if (level >= LogLevel::CRITICAL) {
-    panic("A critical log message was emitted");
+    panic("A critical log message was emitted", source_location);
   }
 }
 
