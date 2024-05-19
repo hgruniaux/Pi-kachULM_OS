@@ -22,7 +22,7 @@ static MetaPtr g_malloc_meta_head = nullptr;
 static void split_space(MetaPtr block, size_t bytes_count) {
   MetaPtr sub_block;
   uintptr_t next_addr = (uintptr_t)block->ptr + bytes_count;
-  
+
   KASSERT(next_addr <= KernelMemory::get_heap_end());
 
   sub_block = (MetaPtr)next_addr;
@@ -91,15 +91,15 @@ static MetaPtr get_block_addr(VirtualPA addr) {
       // {
       //   LOG_INFO("Last block infos = {}, {}", (VirtualPA)b->ptr, b->size);
       // }
-      
+
       b = b->next;
     }
-    
+
     // if (b==nullptr)
     // {
     //   LOG_INFO("Not matching block found");
     // }
-    
+
 
     if (b != nullptr && (uintptr_t)b->ptr > addr)
       return nullptr;
@@ -169,7 +169,7 @@ void kfree(void* ptr) {
   //   LOG_INFO("Unvalid addr {}",(VirtualPA)ptr); }
 
   KASSERT(is_addr_valid((VirtualPA)ptr));
-  
+
     MetaPtr block = get_block_addr((VirtualPA)ptr);
     block->is_free = true;
     block->ptr = block->data;
@@ -184,7 +184,7 @@ void kfree(void* ptr) {
       merge_block(block->previous, block);
       // LOG_INFO("Merging to left");
     }
-  
+
 }
 
 #include <new>

@@ -55,8 +55,6 @@ struct MMUInitData {
 
   PhysicalPA kernel_start;
   PhysicalPA kernel_stop;
-
-  size_t vc_offset;
 };
 
 extern MMUInitData _init_data asm("_init_data");
