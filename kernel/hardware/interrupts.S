@@ -124,7 +124,6 @@ interrupts_vector_table:
 .global exception_handler
 
 exception_entry:
-    msr daifset, #2
     // Space for the stack already reserved in the macro KERNEL_ENTRY
     // Likewise, x0 and x1 were already saved.
     stp x2, x3, [sp, #16 * 1]
@@ -182,7 +181,6 @@ exception_entry:
     ldr x30, [sp, #16 * 15]
     add sp, sp, #SIZEOF_REGISTERS
 
-    msr daifclr, #2
     eret
 
 // Registers the interrupts' vector table to the CPU.

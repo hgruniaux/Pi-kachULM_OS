@@ -50,7 +50,7 @@ static bool do_dispatch_userspace_interrupt(Registers& registers) {
   const auto far = registers.far;
   const auto pc = registers.elr;
   switch (ec) {
-      // Handle AArch64 sys
+      // Handle AArch64 syscall
     case 0b010101:  // SVC instruction execution in AArch64 state.
       return do_syscall(registers);
     case 0b100000:
@@ -167,9 +167,8 @@ class ContextSwitcher {
 
       // Do context switch.
       current_task->get_saved_state().restore(m_regs);
-      if (current_task != m_old_task)
-        LOG_TRACE("Context switch to pid={} from pid={}", current_task->get_id(),
-                  m_old_task ? m_old_task->get_id() : UINT16_MAX);
+      LOG_TRACE("Context switch to pid={} from pid={}", current_task->get_id(),
+                m_old_task ? m_old_task->get_id() : UINT16_MAX);
     } else {
       LOG_CRITICAL("No more available tasks to run... The process pid=0 should never exit.");
     }
@@ -207,18 +206,4 @@ extern "C" void exception_handler(InterruptSource source, InterruptKind kind, Re
   }
 
   dump_unhandled_interrupt(source, kind, registers);
-}
-
-static int interrupt_disable_level = 0;
-
-void disable_irqs() {
-  // asm volatile("msr DAIFSet, #2");
-  interrupt_disable_level++;
-}
-
-void enable_irqs() {
-  interrupt_disable_level--;
-  if (interrupt_disable_level == 0) {
-    // asm volatile("msr DAIFClr, #2");
-  }
 }

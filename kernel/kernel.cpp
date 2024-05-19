@@ -67,8 +67,5 @@ extern "C" const char init[];
   task_manager->get_current_task()->get_saved_state().memory->activate();
   jump_to_el0(task1->get_saved_state().pc, (uintptr_t)task_manager->get_current_task()->get_saved_state().sp);
   LOG_CRITICAL("Not in user space");
-
-  while (true) {
-    libk::wfi();
-  }
+  libk::halt();
 }
