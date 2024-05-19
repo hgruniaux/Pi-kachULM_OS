@@ -20,6 +20,7 @@ constexpr size_t META_BLOCK_SIZE = offsetof(MetaBlock, data);
 static MetaPtr g_malloc_meta_head = nullptr;
 
 static void split_space(MetaPtr block, size_t bytes_count) {
+  KASSERT(block != nullptr);
   MetaPtr sub_block;
   uintptr_t next_addr = (uintptr_t)block->ptr + bytes_count;
 
@@ -31,16 +32,16 @@ static void split_space(MetaPtr block, size_t bytes_count) {
   sub_block->previous = block;
   sub_block->size = block->size - bytes_count - META_BLOCK_SIZE;
   block->size = bytes_count;
-  sub_block->ptr = (void*)sub_block->data;
+  sub_block->ptr = sub_block->data;
   block->next = sub_block;
 }
 
 static MetaPtr extend_heap(MetaPtr last, size_t size, size_t alignment) {  // alignment is always at least 1
   auto end = (MetaPtr)KernelMemory::get_heap_end();
-  uintptr_t next_addr = libk::align_to_next(((uintptr_t)end+META_BLOCK_SIZE), alignment);
-  auto heap_offset = (size_t)(next_addr - (uintptr_t)end) + size;
-  auto brk = (MetaPtr)KernelMemory::change_heap_end(heap_offset);
-  if (brk == nullptr) {
+  uintptr_t next_addr = libk::align_to_next((uintptr_t)end + META_BLOCK_SIZE, alignment);
+  auto heap_offset = next_addr - (uintptr_t)end + size;
+  auto brk = KernelMemory::change_heap_end(heap_offset);
+  if (brk == 0) {
     return nullptr;
   }
 
@@ -58,8 +59,8 @@ static MetaPtr extend_heap(MetaPtr last, size_t size, size_t alignment) {  // al
 
 static MetaPtr find_suitable_block(size_t memory, size_t alignment) {
   MetaPtr block = g_malloc_meta_head;
-  while (true) {
-    const size_t offset = libk::align_to_next((uintptr_t) block->ptr, alignment) - (uintptr_t)block->ptr;
+  while (block != nullptr && block->next != nullptr) {
+    const size_t offset = libk::align_to_next((uintptr_t)block->ptr, alignment) - (uintptr_t)block->ptr;
     if (block->size >= memory + offset && block->is_free) {
       auto next_addr = (uintptr_t)block->ptr + offset;
       block->ptr = (void*)next_addr;
@@ -68,18 +69,16 @@ static MetaPtr find_suitable_block(size_t memory, size_t alignment) {
       return block;
     }
 
-    if (block->next == nullptr)
-      break;
     block = block->next;
   }
 
   return extend_heap(block, memory, alignment);
 }
 
-static MetaPtr get_block_addr(VirtualPA addr) {
+static MetaPtr get_block_addr(VirtualAddress addr) {
   if (addr < KernelMemory::get_heap_end()) {
     MetaPtr b = g_malloc_meta_head;
-    if (b->ptr == (MetaPtr)addr) {
+    if (b != nullptr && (VirtualAddress)b->ptr == addr) {
       return b;
     }
 
@@ -89,7 +88,7 @@ static MetaPtr get_block_addr(VirtualPA addr) {
     while (b != nullptr && (uintptr_t)b->ptr + b->size < addr) {
       // if (b->next==nullptr)
       // {
-      //   LOG_INFO("Last block infos = {}, {}", (VirtualPA)b->ptr, b->size);
+      //   LOG_INFO("Last block infos = {}, {}", (VirtualAddress)b->ptr, b->size);
       // }
 
       b = b->next;
@@ -100,7 +99,6 @@ static MetaPtr get_block_addr(VirtualPA addr) {
     //   LOG_INFO("Not matching block found");
     // }
 
-
     if (b != nullptr && (uintptr_t)b->ptr > addr)
       return nullptr;
     return b;
@@ -108,10 +106,13 @@ static MetaPtr get_block_addr(VirtualPA addr) {
   return nullptr;
 }
 
-static inline bool is_addr_valid(VirtualPA addr) {
-  if ((g_malloc_meta_head != nullptr) && (MetaPtr)addr > g_malloc_meta_head && addr < KernelMemory::get_heap_end()) {
+static inline bool is_addr_valid(VirtualAddress addr) {
+  if (g_malloc_meta_head == nullptr)
+    return false;
+
+  if (addr > (VirtualAddress)g_malloc_meta_head && addr < KernelMemory::get_heap_end()) {
     MetaPtr b = get_block_addr(addr);
-    return (b != nullptr && addr == (VirtualPA)(b->ptr));
+    return (b != nullptr && addr == (VirtualAddress)b->ptr);
   }
 
   // LOG_INFO("Unbounded addr {}", addr);
@@ -120,13 +121,15 @@ static inline bool is_addr_valid(VirtualPA addr) {
 }
 
 static void merge_block(MetaPtr lhs, MetaPtr rhs) {
+  KASSERT(lhs != nullptr);
+  KASSERT(rhs != nullptr);
+  KASSERT(lhs->next == rhs);
   KASSERT(rhs->is_free);
-  if ((lhs != nullptr) && (rhs != nullptr) && (lhs->next == rhs)) {
-    lhs->size += rhs->size + META_BLOCK_SIZE;
-    lhs->next = rhs->next;
-    if (rhs->next != nullptr)
-      (rhs->next)->previous = lhs;
-  }
+
+  lhs->size += rhs->size + META_BLOCK_SIZE;
+  lhs->next = rhs->next;
+  if (rhs->next != nullptr)
+    (rhs->next)->previous = lhs;
 }
 
 void* kmalloc(size_t byte_count, size_t alignment) {
@@ -153,38 +156,36 @@ void* kmalloc(size_t byte_count, size_t alignment) {
 
   if (block->size > byte_count + META_BLOCK_SIZE) {
     split_space(block, byte_count);
-    // LOG_INFO("Free addr {}", (VirtualPA)(block->next)->ptr);
+    // LOG_INFO("Free addr {}", (VirtualAddress)(block->next)->ptr);
     kfree((block->next)->ptr);
   }
 
   return block->ptr;
-
 }
 
 void kfree(void* ptr) {
   if (ptr == nullptr)
     return;
 
-  // if(!is_addr_valid((VirtualPA)ptr)) {
-  //   LOG_INFO("Unvalid addr {}",(VirtualPA)ptr); }
+  // if(!is_addr_valid((VirtualAddress)ptr)) {
+  //   LOG_INFO("Unvalid addr {}",(VirtualAddress)ptr); }
 
-  KASSERT(is_addr_valid((VirtualPA)ptr));
+  KASSERT(is_addr_valid((VirtualAddress)ptr));
 
-    MetaPtr block = get_block_addr((VirtualPA)ptr);
-    block->is_free = true;
-    block->ptr = block->data;
-    block->size += (size_t)((uintptr_t)ptr - (uintptr_t)block->ptr);
+  MetaPtr block = get_block_addr((VirtualAddress)ptr);
+  block->is_free = true;
+  block->ptr = block->data;
+  block->size += (uintptr_t)ptr - (uintptr_t)block->ptr;
 
-    if (block->next != nullptr && (block->next)->is_free) {
-      // LOG_INFO("Merging to right");
-      merge_block(block, block->next);
-    }
+  if (block->next != nullptr && (block->next)->is_free) {
+    // LOG_INFO("Merging to right");
+    merge_block(block, block->next);
+  }
 
-    if (block->previous != nullptr && (block->previous)->is_free) {
-      merge_block(block->previous, block);
-      // LOG_INFO("Merging to left");
-    }
-
+  if (block->previous != nullptr && (block->previous)->is_free) {
+    merge_block(block->previous, block);
+    // LOG_INFO("Merging to left");
+  }
 }
 
 #include <new>
