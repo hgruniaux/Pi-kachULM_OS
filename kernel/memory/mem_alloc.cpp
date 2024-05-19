@@ -22,6 +22,9 @@ static MetaPtr g_malloc_meta_head = nullptr;
 static void split_space(MetaPtr block, size_t size) {
   MetaPtr sub_block;
   uintptr_t next_addr = (uintptr_t)block->ptr + size;
+  
+  KASSERT(next_addr <= KernelMemory::get_heap_end());
+
   sub_block = (MetaPtr)next_addr;
   sub_block->is_free = true;
   sub_block->next = block->next;
@@ -45,7 +48,7 @@ static MetaPtr extend_heap(MetaPtr last, size_t size, size_t alignment) {  // al
   end->is_free = false;
   end->next = nullptr;
   end->previous = last;
-  end->ptr = &next_addr;
+  end->ptr = (void*)next_addr;
 
   if (last != nullptr)
     last->next = end;
@@ -59,7 +62,7 @@ static MetaPtr find_suitable_block(size_t memory, size_t alignment) {
     const size_t offset = libk::align_to_next((uintptr_t) block->ptr, alignment) - (uintptr_t)block->ptr;
     if (block->size >= memory + offset && block->is_free) {
       auto next_addr = (uintptr_t)block->ptr + offset;
-      block->ptr = &next_addr;
+      block->ptr = (void*)next_addr;
       block->is_free = false;
       block->size -= offset;
       return block;
@@ -96,7 +99,9 @@ static inline bool is_addr_valid(VirtualPA addr) {
     MetaPtr b = get_block_addr(addr);
     return (b != nullptr && addr == (VirtualPA)(b->ptr));
   }
-
+  
+  // LOG_INFO("Unbounded addr {}", addr);
+  // LOG_INFO("Heap end at addr {}", KernelMemory::get_heap_end());
   return false;
 }
 
