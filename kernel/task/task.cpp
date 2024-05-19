@@ -7,6 +7,7 @@ void TaskSavedState::save(const Registers& current_regs) {
   gp_regs = current_regs.gp_regs;
   fpu_regs.save();
   pc = current_regs.elr;
+
   // Save the stack pointer.
   asm volatile("mrs %0, SP_EL0" : "=r"(sp));
 }
@@ -15,10 +16,17 @@ void TaskSavedState::restore(Registers& current_regs) {
   current_regs.gp_regs = gp_regs;
   fpu_regs.restore();
   current_regs.elr = pc;
-  // FIXME: Force EL0.
-  // current_regs.spsr &= ~(0b111ull);
+
+  if (is_kernel) {
+    current_regs.spsr &= ~0b1111ull;
+    current_regs.spsr |= 0b0100;
+  } else {
+    current_regs.spsr &= ~0b1111ull;
+  }
+
   // Restore the stack pointer.
   asm volatile("msr SP_EL0, %0" : : "r"(sp));
+
   if (memory)
     memory->activate();
 }

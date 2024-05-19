@@ -137,6 +137,7 @@ class LinkedList {
     BaseIterator() = default;
 
     [[nodiscard]] bool has_next() const { return m_node->next != nullptr; }
+    [[nodiscard]] bool has_previous() const { return m_node->previous != nullptr; }
 
     element_type& operator*() const { return m_node->data; }
     element_type* operator->() const { return &(m_node->data); }

@@ -34,11 +34,12 @@ class Scheduler {
   [[nodiscard]] TaskPtr find_higher_priority_task_than_current();
   void switch_to(const libk::SharedPointer<Task>& new_task);
 
+  [[nodiscard]] static uint64_t get_time_slice_for_priority(uint32_t priority);
+
   static Scheduler* g_instance;
   TaskPtr m_current_task = nullptr;
 
   static constexpr uint32_t TIME_SLICE = 10;
-  uint32_t m_elapsed_ticks = 0;
 
   static constexpr uint32_t PRIORITY_COUNT = MAX_PRIORITY - MIN_PRIORITY + 1;
   libk::LinkedList<TaskPtr> m_run_queue[PRIORITY_COUNT];

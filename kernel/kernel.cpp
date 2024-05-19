@@ -9,6 +9,7 @@
 #include "hardware/timer.hpp"
 #include "hardware/uart.hpp"
 
+#include "sys/syscall.h"
 #include "task/task_manager.hpp"
 #include "wm/window_manager.hpp"
 
@@ -54,6 +55,13 @@ extern "C" const char init[];
 
   auto task1 = task_manager->create_task((const elf::Header*)&init);
   task_manager->wake_task(task1);
+
+  auto task = task_manager->create_kernel_task([]() {
+    while (true) {
+      WindowManager::get().update();
+    }
+  });
+  task_manager->wake_task(task);
 
   int count = 4;
   while (count-- > 0) {

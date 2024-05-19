@@ -202,16 +202,16 @@ bool WindowManager::post_message(Window* window, sys_message_t message) {
 
 void WindowManager::mosaic_layout() {
   // Let nb_columns be ceil(sqrt(m_window_count)).
-  size_t nb_columns = libk::isqrt(m_window_count);  // isqrt returns the floor value
-  if (nb_columns * nb_columns != m_window_count)
+  int nb_columns = libk::isqrt(m_window_count);  // isqrt returns the floor value
+  if ((size_t)(nb_columns) * (size_t)(nb_columns) != m_window_count)
     nb_columns += 1;  // convert it into ceil(sqrt(...))
 
-  const size_t nb_rows = libk::div_round_up(m_window_count, nb_columns);
+  const int nb_rows = (int)libk::div_round_up(m_window_count, nb_columns);
 
-  const int32_t window_width = m_screen_width / nb_columns;
-  const int32_t window_height = m_screen_height / nb_rows;
+  const int window_width = m_screen_width / nb_columns;
+  const int window_height = m_screen_height / nb_rows;
 
-  int32_t i = 0, j = 0;
+  int i = 0, j = 0;
   for (auto* window : m_windows) {
     const auto x = i * window_width;
     const auto y = j * window_height;
@@ -321,10 +321,6 @@ void WindowManager::draw_windows(libk::LinkedList<Window*>::Iterator it, const R
   Rect src_rect = (*it)->m_geometry;
 
   // Draw the current window (into the destination rectangle):
-  if (!((src_rect.right() < dst_rect.left()) || (src_rect.left() > dst_rect.right()) ||
-        (src_rect.top() > dst_rect.bottom()) || (src_rect.bottom() < dst_rect.top())))
-    ;
-
   draw_window(*it, dst_rect);
 
   // Recursively draw the windows behind:
@@ -376,12 +372,16 @@ void WindowManager::draw_windows() {
 #else
   draw_background({0, 0, m_screen_width, m_screen_height});
 
+  if (m_windows.is_empty())
+    return;
+
   auto it = m_windows.begin();
   while (it.has_next())
     ++it;
 
-  for (auto& window : std::ranges::reverse_view(m_windows)) {
-    draw_window(window, {0, 0, m_screen_width, m_screen_height});
+  while (it != m_windows.end()) {
+    draw_window(*it, {0, 0, m_screen_width, m_screen_height});
+    --it;
   }
 #endif
 

@@ -120,15 +120,17 @@ static bool do_userspace_interrupt(Registers& registers) {
       break;
   }
 
-  LOG_ERROR("Unhandled interrupt, source = {}, kind = {}\r\nELR_EL1 = {:#x}\r\nESR_EL1 = {:#x}\r\nFAR_EL1 = {:#x}",
-            source_name, kind_name, registers.elr, registers.esr, registers.far);
-  libk::panic("Unhandled interrupt");
+  LOG_CRITICAL("Unhandled interrupt, source = {}, kind = {}\r\nELR_EL1 = {:#x}\r\nESR_EL1 = {:#x}\r\nFAR_EL1 = {:#x}",
+               source_name, kind_name, registers.elr, registers.esr, registers.far);
 }
 
-[[noreturn]] static void do_kernelspace_interrupt(Registers& registers) {
+static bool do_kernelspace_interrupt(Registers& registers) {
   const uint32_t ec = (registers.esr >> 26) & 0x3F;
 
   switch (ec) {
+      // Handle AArch64 syscall
+    case 0b010101:  // SVC instruction execution in AArch64 state.
+      return do_syscall(registers);
     case 0b100001:
       LOG_WARNING("Instruction Abort from kernel space at {:#x}.", registers.far);
       break;
@@ -149,7 +151,7 @@ static bool do_userspace_interrupt(Registers& registers) {
       break;
   }
 
-  dump_unhandled_interrupt(InterruptSource::CURRENT_SP_ELX, InterruptKind::SYNCHRONOUS, registers);
+  return false;
 }
 
 class ContextSwitcher {
@@ -157,13 +159,17 @@ class ContextSwitcher {
   ContextSwitcher(Registers& regs) : m_regs(regs) { m_old_task = Task::current(); }
 
   ~ContextSwitcher() {
+    if (m_old_task != nullptr && m_old_task->is_marked_to_be_killed())
+      TaskManager::get().kill_task(m_old_task);
+
     auto current_task = Task::current();
     if (current_task == m_old_task)
       return;
 
     if (current_task != nullptr) {
-      if (m_old_task != nullptr)
+      if (m_old_task != nullptr && !m_old_task->is_terminated()) {
         m_old_task->get_saved_state().save(m_regs);
+      }
 
       // Do context switch.
       current_task->get_saved_state().restore(m_regs);
@@ -180,11 +186,13 @@ class ContextSwitcher {
 };  // class ContextSwitcher
 
 extern "C" void exception_handler(InterruptSource source, InterruptKind kind, Registers& registers) {
-  if (source == InterruptSource::CURRENT_SP_ELX && kind == InterruptKind::SYNCHRONOUS) {
-    do_kernelspace_interrupt(registers);
-  }
-
   ContextSwitcher context_switcher(registers);
+
+  if ((source == InterruptSource::CURRENT_SP_ELX || source == InterruptSource::CURRENT_SP_EL0) &&
+      kind == InterruptKind::SYNCHRONOUS) {
+    if (do_kernelspace_interrupt(registers))
+      return;
+  }
 
   if (kind == InterruptKind::IRQ) {
     IRQManager::handle_interrupts();

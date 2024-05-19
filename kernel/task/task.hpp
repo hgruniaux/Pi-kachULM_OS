@@ -12,6 +12,7 @@ struct TaskSavedState {
   libk::SharedPointer<ProcessMemory> memory;
   uint64_t pc;  // program counter
   uint64_t sp;  // stack pointer
+  bool is_kernel;
 
   void save(const Registers& current_regs);
   void restore(Registers& current_regs);
@@ -97,11 +98,23 @@ class Task {
     m_syscall_table = table;
   }
 
+  [[nodiscard]] bool is_marked_to_be_killed() const { return m_marked_kill; }
+  void mark_to_be_killed() { m_marked_kill = true; }
+
   void register_window(Window* window);
   void unregister_window(Window* window);
 
+  [[nodiscard]] bool can_preempt() const { return m_preempt_count == 0; }
+  void disable_preempt() { m_preempt_count++; }
+  void enable_preempt() {
+    m_preempt_count--;
+    KASSERT(m_preempt_count >= 0);
+  }
+
  private:
   friend class TaskManager;
+  friend class Scheduler;
+
   id_t m_id;
   State m_state = State::INTERRUPTIBLE;
   uint32_t m_priority = 0;
@@ -109,6 +122,10 @@ class Task {
   const char* m_name = nullptr;
   SyscallTable* m_syscall_table = nullptr;
   TaskManager* m_manager = nullptr;
+  uint64_t m_elapsed_ticks = 0;
+  bool m_is_kernel = false;    // it is a kernel stack (in EL1)?
+  bool m_marked_kill = false;  // is the task marked to be called at the next context switch?
+  int m_preempt_count = 0;
 
   // Parent-children relationship.
   Task* m_parent = nullptr;  // not a SharedPointer to avoid cyclic dependencies

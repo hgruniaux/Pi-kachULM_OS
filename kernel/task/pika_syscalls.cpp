@@ -52,9 +52,6 @@ static void pika_sys_sleep(Registers& regs) {
 }
 
 static void pika_sys_yield(Registers& regs) {
-  // FIXME: remove this
-  WindowManager::get().update();
-
   TaskManager::get().schedule();
   set_error(regs, SYS_ERR_OK);
 }
