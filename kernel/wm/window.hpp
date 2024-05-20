@@ -2,6 +2,7 @@
 
 #include <libk/memory.hpp>
 #include <libk/string_view.hpp>
+#include "graphics/graphics.hpp"
 #include "task/task.hpp"
 #include "wm/geometry.hpp"
 #include "wm/message_queue.hpp"
@@ -32,22 +33,54 @@ class Window {
   [[nodiscard]] bool has_focus() const { return m_focus; }
 
   [[nodiscard]] Rect get_geometry() const { return m_geometry; }
-  void set_geometry(const Rect& rect) { m_geometry = rect; }
+  void set_geometry(const Rect& rect);
 
   [[nodiscard]] MessageQueue& get_message_queue() { return m_message_queue; }
   [[nodiscard]] const MessageQueue& get_message_queue() const { return m_message_queue; }
 
+  // Graphics functions:
+  [[nodiscard]] uint32_t* get_framebuffer() { return m_framebuffer; }
   [[nodiscard]] const uint32_t* get_framebuffer() const { return m_framebuffer; }
-  void set_framebuffer(const uint32_t* framebuffer) { m_framebuffer = framebuffer; }
+  [[nodiscard]] uint32_t get_framebuffer_pitch() const { return m_framebuffer_pitch; }
+  void clear(uint32_t argb = 0x000000);
+  void draw_line(uint32_t x1, uint32_t y1, uint32_t x2, uint32_t y2, uint32_t argb);
+  void draw_rect(uint32_t x, uint32_t y, uint32_t width, uint32_t height, uint32_t argb);
+  void fill_rect(uint32_t x, uint32_t y, uint32_t width, uint32_t height, uint32_t argb);
+  void draw_text(uint32_t x, uint32_t y, const char* text, uint32_t argb);
+  // Draw the window frame decoration (title bar + borders).
+  void draw_frame();
+
+ private:
+  void reallocate_framebuffer();
 
  private:
   friend class WindowManager;
-  libk::SharedPointer<Task> m_task;  // the task that owns this window
+
+  // The task that owns this window. A window is always owned by a unique task.
+  // When the task is killed, all child windows are destroyed.
+  libk::SharedPointer<Task> m_task;
+
+  // The window-specific message queue (messages from the keyboard driver,
+  // the window manager, users, etc.).
   MessageQueue m_message_queue;
-  libk::StringView m_title;  // allocated by the Window, owned pointer
-  uint64_t m_last_updated = 0;
+
+  // The window allocates the title pointer on the kernel side.
+  // It is free when the window is destroyed or when the title is modified.
+  libk::StringView m_title;
+
+  // The window size and position (relative to the screen).
   Rect m_geometry;
-  const uint32_t* m_framebuffer = nullptr;
-  bool m_visible : 1 = false;
-  bool m_focus : 1 = false;
+
+  // The framebuffer is allocated on the kernel side. It is updated each time
+  // the window geometry changes. The size of the framebuffer is the same
+  // as the window size (see m_geometry variable).
+  uint32_t* m_framebuffer = nullptr;
+  uint32_t m_framebuffer_pitch = 0;
+
+  graphics::Painter m_painter;
+
+  // Some flags about the window:
+  bool m_has_frame : 1 = true;  // should we draw the window frame (title bar + borders)?
+  bool m_visible : 1 = false;   // the window is currently visible?
+  bool m_focus : 1 = false;     // the window currently has the focus (receives keyboard inputs)?
 };  // class Window

@@ -95,5 +95,5 @@ class FrameBuffer {
   uint32_t m_height = 0;       // in pixels
   uint32_t m_pitch = 0;        // length of a row, in pixels (this may be greater than the frame width)
   bool m_is_screen0 = true;    // display screen when using double buffering
-  bool m_use_double_buffering = true;
+  bool m_use_double_buffering = false;
 };  // class FrameBuffer

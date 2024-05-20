@@ -16,12 +16,11 @@ WindowManager::WindowManager() {
   g_instance = this;
 
   auto& fb = FrameBuffer::get();
+  m_screen_buffer = fb.get_buffer();
   m_screen_width = fb.get_width();
   m_screen_height = fb.get_height();
   m_screen_pitch = fb.get_pitch();
   m_screen_buffer = fb.get_buffer();
-  m_depth_buffer = new uint8_t[m_screen_width * m_screen_height];
-  libk::bzero(m_depth_buffer, sizeof(uint8_t) * m_screen_width * m_screen_height);
 }
 
 [[nodiscard]] bool WindowManager::is_valid(Window* window) const {
@@ -32,10 +31,13 @@ WindowManager::WindowManager() {
   return it != m_windows.end();
 }
 
-Window* WindowManager::create_window(const libk::SharedPointer<Task>& task) {
+Window* WindowManager::create_window(const libk::SharedPointer<Task>& task, uint32_t flags) {
   Window* window = new Window(task);
   if (window == nullptr)
     return nullptr;
+
+  if ((flags & SYS_WF_NO_FRAME) != 0)
+    window->m_has_frame = false;
 
   task->register_window(window);
   ++m_window_count;
@@ -44,6 +46,7 @@ Window* WindowManager::create_window(const libk::SharedPointer<Task>& task) {
   if (m_focus_window == nullptr)
     focus_window(window);
 
+  m_dirty = true;
   return window;
 }
 
@@ -62,6 +65,8 @@ void WindowManager::destroy_window(Window* window) {
 
   --m_window_count;
   delete window;
+
+  m_dirty = true;
 }
 
 void WindowManager::set_window_visibility(Window* window, bool visible) {
@@ -86,6 +91,8 @@ void WindowManager::set_window_visibility(Window* window, bool visible) {
   libk::bzero(&message, sizeof(sys_message_t));
   message.id = visible ? SYS_MSG_SHOW : SYS_MSG_HIDE;
   post_message(window, message);
+
+  m_dirty = true;
 }
 
 void WindowManager::set_window_geometry(Window* window, Rect rect) {
@@ -137,6 +144,8 @@ void WindowManager::set_window_geometry(Window* window, Rect rect) {
     message.param2 = rect.height();
     post_message(window, message);
   }
+
+  m_dirty = true;
 }
 
 void WindowManager::focus_window(Window* window) {
@@ -155,12 +164,14 @@ void WindowManager::focus_window(Window* window) {
   post_message(window, message);
 
   m_focus_window = window;
+  m_focus_window->m_focus = true;
 
   // TODO: Move focus window to front
   auto it = std::find(m_windows.begin(), m_windows.end(), window);
   KASSERT(it != m_windows.end());
   m_windows.erase(it);
   m_windows.push_front(window);
+  m_dirty = true;
 }
 
 void WindowManager::unfocus_window(Window* window) {
@@ -168,6 +179,8 @@ void WindowManager::unfocus_window(Window* window) {
     return;
 
   if (m_focus_window != nullptr) {
+    m_focus_window->m_focus = false;
+
     // Send focus out messsage.
     sys_message_t message;
     libk::bzero(&message, sizeof(sys_message_t));
@@ -201,6 +214,9 @@ bool WindowManager::post_message(Window* window, sys_message_t message) {
 }
 
 void WindowManager::mosaic_layout() {
+  if (m_window_count == 0)
+    return;
+
   // Let nb_columns be ceil(sqrt(m_window_count)).
   int nb_columns = libk::isqrt(m_window_count);  // isqrt returns the floor value
   if ((size_t)(nb_columns) * (size_t)(nb_columns) != m_window_count)
@@ -215,7 +231,7 @@ void WindowManager::mosaic_layout() {
   for (auto* window : m_windows) {
     const auto x = i * window_width;
     const auto y = j * window_height;
-    set_window_geometry(window, {x, y, window_width, window_height});
+    set_window_geometry(window, Rect::from_pos_and_size(x, y, window_width, window_height));
 
     ++i;
     if (i >= nb_columns) {
@@ -226,26 +242,22 @@ void WindowManager::mosaic_layout() {
 }
 
 void WindowManager::update() {
-  const auto start = GenericTimer::get_elapsed_time_in_micros();
+  if (GenericTimer::get_elapsed_time_in_ms() > 1000)
+    mosaic_layout();
 
-  // Avoid too frequent updates...
-  // We aim for 60 Hz, so one update per 16 ms.
-  if (start - m_last_update < 16000)
+  if (!m_dirty)
     return;
-  m_last_update = start;
 
+  const auto start = GenericTimer::get_elapsed_time_in_micros();
   draw_windows();
   const auto end = GenericTimer::get_elapsed_time_in_micros();
+
+  m_dirty = false;
   LOG_DEBUG("Window manager update done in {} ms", (end - start) / 1000);
 }
 
 void WindowManager::draw_background(const Rect& rect) {
-  // TODO: replace this by an optimized function
-  for (int32_t x = rect.left(); x < rect.right(); ++x) {
-    for (int32_t y = rect.top(); y < rect.bottom(); ++y) {
-      m_screen_buffer[x + m_screen_pitch * y] = 0xffffff;
-    }
-  }
+  fill_rect(rect, 0xffffff);
 }
 
 void WindowManager::fill_rect(const Rect& rect, uint32_t color) {
@@ -262,20 +274,11 @@ void WindowManager::draw_window(Window* window, const Rect& dst_rect) {
   if (!src_rect.intersects(dst_rect))
     return;
 
+  window->draw_frame();
+
   const uint32_t* framebuffer = window->get_framebuffer();
   const uint32_t framebuffer_pitch = window->get_geometry().width();
-
-  // If the window has no registered framebuffer, then just fill with black.
-  if (framebuffer == nullptr) {
-    // TODO: replace this by an optimized function
-    for (int32_t x = dst_rect.left(); x < dst_rect.right(); ++x) {
-      for (int32_t y = dst_rect.top(); y < dst_rect.bottom(); ++y) {
-        m_screen_buffer[x + m_screen_pitch * y] = 0;
-      }
-    }
-
-    return;
-  }
+  KASSERT(framebuffer != nullptr);
 
   uint32_t x1 = 0, x2 = src_rect.width();
   uint32_t y1 = 0, y2 = src_rect.height();
@@ -295,13 +298,20 @@ void WindowManager::draw_window(Window* window, const Rect& dst_rect) {
 
   // Blit the framebuffer into the screen.
   // TODO: Maybe use DMA to do the blit for better performances.
-  // FIXME: avoid changing virtual memory view here
-  window->get_task()->get_saved_state().memory->activate();
   for (uint32_t src_x = x1, dst_x = src_rect.x() + x1; src_x < x2; ++src_x, dst_x++) {
     for (uint32_t src_y = y1, dst_y = src_rect.y() + y1; src_y < y2; ++src_y, dst_y++) {
       const auto color = framebuffer[src_x + framebuffer_pitch * src_y];
       m_screen_buffer[dst_x + m_screen_pitch * dst_y] = color;
     }
+  }
+
+  // Draw the focus border to inform the user what window has the focus.
+  if (window->has_focus()) {
+    graphics::Painter painter(m_screen_buffer, m_screen_width, m_screen_height, m_screen_pitch);
+    painter.set_clipping(dst_rect.x1, dst_rect.y1, dst_rect.x2, dst_rect.y2);
+    const auto window_rect = window->get_geometry();
+    painter.draw_rect(window_rect.x() - 1, window_rect.y() - 1, window_rect.width() + 2, window_rect.height() + 2,
+                      0xAA6BA4B8);
   }
 }
 
@@ -364,8 +374,6 @@ void WindowManager::draw_windows(libk::LinkedList<Window*>::Iterator it, const R
 }
 
 void WindowManager::draw_windows() {
-  m_screen_buffer = FrameBuffer::get().get_buffer();
-
 #if 0
   draw_background({0, 0, m_screen_width, m_screen_height});
   draw_windows(m_windows.begin(), {0, 0, m_screen_width, m_screen_height});
@@ -384,6 +392,4 @@ void WindowManager::draw_windows() {
     --it;
   }
 #endif
-
-  FrameBuffer::get().present();
 }

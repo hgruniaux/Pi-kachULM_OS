@@ -5,9 +5,6 @@
 #include "hardware/framebuffer.hpp"
 #include "hardware/interrupts.hpp"
 #include "hardware/kernel_dt.hpp"
-#include "hardware/system_timer.hpp"
-#include "hardware/timer.hpp"
-#include "hardware/uart.hpp"
 
 #include "sys/syscall.h"
 #include "task/task_manager.hpp"
@@ -51,6 +48,8 @@ extern "C" const char init[];
   painter.draw_text((fb_width - text_width) / 2, (fb_height - text_height) / 2, text);
 
   WindowManager* window_manager = new WindowManager;
+  (void)window_manager;  // unused here, but we need to instance it.
+
   TaskManager* task_manager = new TaskManager;
 
   auto task1 = task_manager->create_task((const elf::Header*)&init);
@@ -59,6 +58,7 @@ extern "C" const char init[];
   auto task = task_manager->create_kernel_task([]() {
     while (true) {
       WindowManager::get().update();
+      sys_usleep(63333);
     }
   });
   task_manager->wake_task(task);

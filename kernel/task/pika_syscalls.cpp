@@ -158,7 +158,8 @@ static void pika_sys_wait_msg(Registers& regs) {
 }
 
 static void pika_sys_window_create(Registers& regs) {
-  auto* window = WindowManager::get().create_window(Task::current());
+  const auto flags = regs.gp_regs.x0;
+  auto* window = WindowManager::get().create_window(Task::current(), flags);
   regs.gp_regs.x0 = (sys_word_t)window;
 }
 
@@ -266,16 +267,81 @@ static void pika_sys_window_set_geometry(Registers& regs) {
   set_error(regs, SYS_ERR_OK);
 }
 
-static void pika_sys_window_set_framebuffer(Registers& regs) {
+static void pika_sys_gfx_clear(Registers& regs) {
   auto* window = (Window*)regs.gp_regs.x0;
   if (!check_window(regs, window))
     return;
 
-  const uint32_t* framebuffer = (const uint32_t*)regs.gp_regs.x1;
-  if (!check_ptr(regs, (void*)framebuffer))
+  const uint32_t argb = regs.gp_regs.x1;
+  window->clear(argb);
+  set_error(regs, SYS_ERR_OK);
+}
+
+static void unpack_couple(uint64_t reg, uint32_t& fst, uint32_t& snd) {
+  fst = reg & UINT32_MAX;
+  snd = (reg >> 32) & UINT32_MAX;
+}
+
+static void pika_sys_gfx_draw_line(Registers& regs) {
+  auto* window = (Window*)regs.gp_regs.x0;
+  if (!check_window(regs, window))
     return;
 
-  window->set_framebuffer(framebuffer);
+  uint32_t x0, y0, x1, y1;
+  unpack_couple(regs.gp_regs.x1, x0, y0);
+  unpack_couple(regs.gp_regs.x2, x1, y1);
+
+  const uint32_t argb = regs.gp_regs.x3;
+
+  window->draw_line(x0, y0, x1, y1, argb);
+  set_error(regs, SYS_ERR_OK);
+}
+
+static void pika_sys_gfx_draw_rect(Registers& regs) {
+  auto* window = (Window*)regs.gp_regs.x0;
+  if (!check_window(regs, window))
+    return;
+
+  uint32_t x, y, width, height;
+  unpack_couple(regs.gp_regs.x1, x, y);
+  unpack_couple(regs.gp_regs.x2, width, height);
+
+  const uint32_t argb = regs.gp_regs.x3;
+
+  window->draw_rect(x, y, width, height, argb);
+  set_error(regs, SYS_ERR_OK);
+}
+
+static void pika_sys_gfx_fill_rect(Registers& regs) {
+  auto* window = (Window*)regs.gp_regs.x0;
+  if (!check_window(regs, window))
+    return;
+
+  uint32_t x, y, width, height;
+  unpack_couple(regs.gp_regs.x1, x, y);
+  unpack_couple(regs.gp_regs.x2, width, height);
+
+  const uint32_t argb = regs.gp_regs.x3;
+
+  window->fill_rect(x, y, width, height, argb);
+  set_error(regs, SYS_ERR_OK);
+}
+
+static void pika_sys_gfx_draw_text(Registers& regs) {
+  auto* window = (Window*)regs.gp_regs.x0;
+  if (!check_window(regs, window))
+    return;
+
+  uint32_t x, y;
+  unpack_couple(regs.gp_regs.x1, x, y);
+
+  const char* text = (const char*)regs.gp_regs.x2;
+  if (!check_ptr(regs, (void*)text))
+    return;
+
+  const uint32_t argb = regs.gp_regs.x3;
+
+  window->draw_text(x, y, text, argb);
   set_error(regs, SYS_ERR_OK);
 }
 
@@ -311,7 +377,13 @@ SyscallTable* create_pika_syscalls() {
   table->register_syscall(SYS_WINDOW_SET_VISIBILITY, pika_sys_window_set_visibility);
   table->register_syscall(SYS_WINDOW_GET_GEOMETRY, pika_sys_window_get_geometry);
   table->register_syscall(SYS_WINDOW_SET_GEOMETRY, pika_sys_window_set_geometry);
-  table->register_syscall(SYS_WINDOW_SET_FRAMEBUFFER, pika_sys_window_set_framebuffer);
+
+  // Window graphics calls.
+  table->register_syscall(SYS_GFX_CLEAR, pika_sys_gfx_clear);
+  table->register_syscall(SYS_GFX_DRAW_LINE, pika_sys_gfx_draw_line);
+  table->register_syscall(SYS_GFX_DRAW_RECT, pika_sys_gfx_draw_rect);
+  table->register_syscall(SYS_GFX_FILL_RECT, pika_sys_gfx_fill_rect);
+  table->register_syscall(SYS_GFX_DRAW_TEXT, pika_sys_gfx_draw_text);
 
   return table;
 }

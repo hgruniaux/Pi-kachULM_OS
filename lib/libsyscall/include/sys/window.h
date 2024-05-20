@@ -28,7 +28,6 @@ enum {
   /* Window messages. */
   SYS_MSG_SHOW,
   SYS_MSG_HIDE,
-  SYS_MSG_REPAINT,
   SYS_MSG_CLOSE,
   SYS_MSG_MOVE,
   SYS_MSG_RESIZE,
@@ -38,34 +37,47 @@ enum {
 
 enum { SYS_WF_DEFAULT = 0x0, SYS_WF_NO_FRAME = 0x1 };
 
-sys_window_t* sys_window_create(const char* __title,
-                                int32_t __x,
-                                int32_t __y,
-                                uint32_t __width,
-                                uint32_t __height,
-                                uint32_t __flags);
-void sys_window_destroy(sys_window_t* __w);
+/* Window creation and destruction API. */
+sys_window_t* sys_window_create(const char* title,
+                                int32_t x,
+                                int32_t y,
+                                uint32_t width,
+                                uint32_t height,
+                                uint32_t flags);
+void sys_window_destroy(sys_window_t* window);
 
-sys_bool_t sys_poll_message(sys_window_t* __w, sys_message_t* __msg);
-void sys_poll_all_messages(sys_window_t* __w);
-void sys_wait_message(sys_window_t* __w, sys_message_t* __msg);
+/* Window message queue API. */
+sys_bool_t sys_poll_message(sys_window_t* window, sys_message_t* msg);
+void sys_poll_all_messages(sys_window_t* window);
+void sys_wait_message(sys_window_t* window, sys_message_t* msg);
 
-sys_error_t sys_window_set_title(sys_window_t* __w, const char* __title);
-sys_error_t sys_window_set_visibility(sys_window_t* __w, sys_bool_t __v);
-sys_error_t sys_window_set_geometry(sys_window_t* __w, int32_t __x, int32_t __y, uint32_t __width, uint32_t __height);
-sys_error_t sys_window_get_geometry(sys_window_t* __w,
-                                    uint32_t* __x,
-                                    uint32_t* __y,
-                                    uint32_t* __width,
-                                    uint32_t* __height);
+/* Window title (UTF-8 encoded) API. */
+sys_error_t sys_window_set_title(sys_window_t* window, const char* title);
 
-uint32_t* sys_window_get_framebuffer(sys_window_t* __w, uint32_t* __pitch);
-sys_error_t sys_window_get_client_area(sys_window_t* __w,
-                                       uint32_t* __x,
-                                       uint32_t* __y,
-                                       uint32_t* __width,
-                                       uint32_t* __height);
-void sys_window_clear(sys_window_t* __w);
+/* Window visibility (hidden or shown) API. */
+sys_error_t sys_window_set_visibility(sys_window_t* window, sys_bool_t visible);
+sys_error_t sys_window_get_visibility(sys_window_t* window, sys_bool_t* visible);
+
+/* Window geometry (position and size) API. */
+sys_error_t sys_window_set_geometry(sys_window_t* window, int32_t x, int32_t y, uint32_t width, uint32_t height);
+sys_error_t sys_window_get_geometry(sys_window_t* window, uint32_t* x, uint32_t* y, uint32_t* width, uint32_t* height);
+
+/* Window graphics API. */
+sys_error_t sys_gfx_clear(sys_window_t* window, uint32_t argb);
+sys_error_t sys_gfx_draw_line(sys_window_t* window, uint32_t x0, uint32_t y0, uint32_t x1, uint32_t y2, uint32_t argb);
+sys_error_t sys_gfx_draw_rect(sys_window_t* window,
+                              uint32_t x,
+                              uint32_t y,
+                              uint32_t width,
+                              uint32_t height,
+                              uint32_t argb);
+sys_error_t sys_gfx_fill_rect(sys_window_t* window,
+                              uint32_t x,
+                              uint32_t y,
+                              uint32_t width,
+                              uint32_t height,
+                              uint32_t argb);
+sys_error_t sys_gfx_draw_text(sys_window_t* window, uint32_t x, uint32_t y, const char* text, uint32_t argb);
 
 __SYS_EXTERN_C_END
 

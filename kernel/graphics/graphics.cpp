@@ -69,7 +69,7 @@ void Painter::draw_pixel(uint32_t x, uint32_t y) {
   const uint32_t result_red = (src_alpha * src_red + (255 - src_alpha) * dst_red) / 255;
   const uint32_t result_green = (src_alpha * src_green + (255 - src_alpha) * dst_green) / 255;
   const uint32_t result_blue = (src_alpha * src_blue + (255 - src_alpha) * dst_blue) / 255;
-  m_buffer[x + m_pitch * y] = (0xff << 24) | (result_red << 16) | (result_green << 8) | result_blue;
+  m_buffer[x + m_pitch * y] = (0x00 << 24) | (result_red << 16) | (result_green << 8) | result_blue;
 }
 
 void Painter::draw_line(uint32_t x0, uint32_t y0, uint32_t x1, uint32_t y1) {
@@ -115,10 +115,10 @@ void Painter::draw_rect(uint32_t x, uint32_t y, uint32_t w, uint32_t h) {
 }
 
 [[gnu::hot]] void Painter::draw_rect(uint32_t x, uint32_t y, uint32_t w, uint32_t h, Color color) {
-  draw_line(x, y, x + w, y, color);          // top edge
-  draw_line(x, y + h, x + w, y + h, color);  // bottom edge
-  draw_line(x, y, x, y + h, color);          // left edge
-  draw_line(x + w, y, x + w, y + h, color);  // right edge
+  draw_line(x, y, x + w - 1, y, color);                  // top edge
+  draw_line(x, y + h - 1, x + w - 1, y + h - 1, color);  // bottom edge
+  draw_line(x, y, x, y + h - 1, color);                  // left edge
+  draw_line(x + w - 1, y, x + w - 1, y + h - 1, color);  // right edge
 }
 
 void Painter::fill_rect(uint32_t x, uint32_t y, uint32_t w, uint32_t h) {
@@ -129,8 +129,8 @@ void Painter::fill_rect(uint32_t x, uint32_t y, uint32_t w, uint32_t h) {
   // Early clipping
   x = max(m_clipping.x_min, x);
   y = max(m_clipping.y_min, y);
-  w = min(m_clipping.x_max - m_clipping.x_min, w);
-  h = min(m_clipping.y_max - m_clipping.y_min, h);
+  w = min(m_clipping.x_max - m_clipping.x_min + 1, w);
+  h = min(m_clipping.y_max - m_clipping.y_min + 1, h);
 
   for (uint32_t i = x; i < (x + w); ++i) {
     for (uint32_t j = y; j < (y + h); ++j) {

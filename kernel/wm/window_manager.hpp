@@ -17,7 +17,7 @@ class WindowManager {
 
   [[nodiscard]] bool is_valid(Window* window) const;
 
-  Window* create_window(const libk::SharedPointer<Task>& task);
+  Window* create_window(const libk::SharedPointer<Task>& task, uint32_t flags);
   void destroy_window(Window* window);
 
   void set_window_visibility(Window* window, bool visible);
@@ -47,11 +47,9 @@ class WindowManager {
   size_t m_window_count = 0;
 
   uint64_t m_last_update = 0;
+  bool m_dirty = true;  // true when the windows need to be redrawn/updated.
 
   uint32_t* m_screen_buffer;
   size_t m_screen_pitch;
   int32_t m_screen_width, m_screen_height;
-
-  // The depth buffer, same size as the screen.
-  uint8_t* m_depth_buffer;
 };  // class WindowManager

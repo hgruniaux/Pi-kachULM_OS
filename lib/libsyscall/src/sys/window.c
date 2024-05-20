@@ -9,12 +9,8 @@ struct __sys_window_t {
   sys_word_t kernel_handle;
   uint32_t flags;
 
-  // The saved window title.
+  // The saved window title (UTF-8 encoded).
   char* title;
-
-  // The userspace framebuffer.
-  uint32_t* framebuffer;
-  uint32_t width, height, pitch;
 };  // struct __sys_window_t
 
 sys_window_t* sys_window_create(const char* title,
@@ -32,7 +28,7 @@ sys_window_t* sys_window_create(const char* title,
   memset(window, 0, sizeof(sys_window_t));
   window->flags = flags;
 
-  window->kernel_handle = __syscall0(SYS_WINDOW_CREATE);
+  window->kernel_handle = __syscall1(SYS_WINDOW_CREATE, flags);
   if (window->kernel_handle == 0)
     goto error;  // kernel_handle is 0 only in case of error.
 
@@ -59,7 +55,6 @@ void sys_window_destroy(sys_window_t* window) {
     return;
 
   free(window->title);
-  free(window->framebuffer);
 
   // Free the window inside the kernel.
   if (window->kernel_handle == 0)
@@ -68,27 +63,10 @@ void sys_window_destroy(sys_window_t* window) {
   free(window);
 }
 
-static sys_error_t reallocate_framebuffer(sys_window_t* window, uint32_t width, uint32_t height) {
-  assert(window != NULL);
-
-  uint32_t* new_framebuffer = (uint32_t*)malloc(sizeof(uint32_t) * width * height);
-  if (new_framebuffer == NULL)
-    return SYS_ERR_OUT_OF_MEM;
-
-  free(window->framebuffer);
-  window->framebuffer = new_framebuffer;
-  window->width = width;
-  window->height = height;
-  window->pitch = width;
-
-  __syscall2(SYS_WINDOW_SET_FRAMEBUFFER, window->kernel_handle, (sys_word_t)window->framebuffer);
-  return SYS_ERR_OK;
-}
-
 static sys_error_t handle_message(sys_window_t* window, sys_message_t* msg) {
+  (void)window;
+
   switch (msg->id) {
-    case SYS_MSG_RESIZE:
-      return reallocate_framebuffer(window, msg->param1, msg->param2);
     default:
       break;
   }
@@ -122,8 +100,9 @@ void sys_wait_message(sys_window_t* window, sys_message_t* msg) {
 sys_error_t sys_window_set_title(sys_window_t* window, const char* title) {
   assert(window != NULL && title != NULL);
 
+  // Update the local (userspace) copy of the window title.
   free(window->title);
-  size_t title_length = strlen(title) + 1 /* include NUL terminator */;
+  const size_t title_length = strlen(title) + 1 /* include NUL terminator */;
   window->title = (char*)malloc(sizeof(char) * title_length);
   if (window->title == NULL)
     return SYS_ERR_OUT_OF_MEM;
@@ -135,8 +114,12 @@ sys_error_t sys_window_set_title(sys_window_t* window, const char* title) {
 
 sys_error_t sys_window_set_visibility(sys_window_t* window, sys_bool_t visible) {
   assert(window != NULL);
-
   return __syscall2(SYS_WINDOW_SET_VISIBILITY, window->kernel_handle, visible);
+}
+
+sys_error_t sys_window_get_visibility(sys_window_t* window, sys_bool_t* visible) {
+  assert(window != NULL);
+  return __syscall2(SYS_WINDOW_GET_VISIBILITY, window->kernel_handle, (sys_word_t)visible);
 }
 
 sys_error_t sys_window_set_geometry(sys_window_t* window, int32_t x, int32_t y, uint32_t width, uint32_t height) {
@@ -152,69 +135,48 @@ sys_error_t sys_window_get_geometry(sys_window_t* window, uint32_t* x, uint32_t*
                     (sys_word_t)height);
 }
 
-uint32_t* sys_window_get_framebuffer(sys_window_t* window, uint32_t* pitch) {
+sys_error_t sys_gfx_clear(sys_window_t* window, uint32_t argb) {
+  assert(window != NULL);
+  return __syscall2(SYS_GFX_CLEAR, window->kernel_handle, argb);
+}
+
+sys_error_t sys_gfx_draw_line(sys_window_t* window, uint32_t x0, uint32_t y0, uint32_t x1, uint32_t y1, uint32_t argb) {
   assert(window != NULL);
 
-  if (pitch != NULL)
-    *pitch = window->pitch;
-
-  return window->framebuffer;
+  const uint64_t param1 = (uint64_t)x0 | ((uint64_t)y0 << 32);
+  const uint64_t param2 = (uint64_t)x1 | ((uint64_t)y1 << 32);
+  return __syscall4(SYS_GFX_DRAW_LINE, window->kernel_handle, param1, param2, argb);
 }
 
-enum { FRAME_THICKNESS = 1, TITLE_BAR_HEIGHT = 20 };
-
-sys_error_t sys_window_get_client_area(sys_window_t* window,
-                                       uint32_t* x,
-                                       uint32_t* y,
-                                       uint32_t* width,
-                                       uint32_t* height) {
+sys_error_t sys_gfx_draw_rect(sys_window_t* window,
+                              uint32_t x,
+                              uint32_t y,
+                              uint32_t width,
+                              uint32_t height,
+                              uint32_t argb) {
   assert(window != NULL);
 
-  // First retrieve the window geometry.
-  sys_error_t error = sys_window_get_geometry(window, x, y, width, height);
-  if (!SYS_IS_OK(error))
-    return error;
-
-  if ((window->flags & SYS_WF_NO_FRAME) != 0) {
-    // If we do not need to draw a window frame, then the client area is the same
-    // as the window geometry. So no need to update the values here.
-    return SYS_ERR_OK;
-  }
-
-  // Otherwise, the client area is the window geometry minus the area needed to
-  // draw the window frame (borders + title bar).
-  if (x != NULL)
-    *x += FRAME_THICKNESS;
-  if (y != NULL)
-    *y += TITLE_BAR_HEIGHT + FRAME_THICKNESS;
-  if (width != NULL)
-    *width -= FRAME_THICKNESS * 2;
-  if (height != NULL)
-    *height -= TITLE_BAR_HEIGHT + FRAME_THICKNESS * 2;
-
-  return SYS_ERR_OK;
+  const uint64_t param1 = (uint64_t)x | ((uint64_t)y << 32);
+  const uint64_t param2 = (uint64_t)width | ((uint64_t)height << 32);
+  return __syscall4(SYS_GFX_DRAW_RECT, window->kernel_handle, param1, param2, argb);
 }
 
-void sys_window_clear(sys_window_t* window) {
-  assert(window != NULL && window->framebuffer != NULL);
+sys_error_t sys_gfx_fill_rect(sys_window_t* window,
+                              uint32_t x,
+                              uint32_t y,
+                              uint32_t width,
+                              uint32_t height,
+                              uint32_t argb) {
+  assert(window != NULL);
 
-  size_t framebuffer_size = sizeof(uint32_t) * window->height * window->pitch;
-  memset(window->framebuffer, 0, framebuffer_size);
+  const uint64_t param1 = (uint64_t)x | ((uint64_t)y << 32);
+  const uint64_t param2 = (uint64_t)width | ((uint64_t)height << 32);
+  return __syscall4(SYS_GFX_FILL_RECT, window->kernel_handle, param1, param2, argb);
 }
 
-static void draw_window_frame(sys_window_t* window) {}
+sys_error_t sys_gfx_draw_text(sys_window_t* window, uint32_t x, uint32_t y, const char* text, uint32_t argb) {
+  assert(window != NULL);
 
-#if 0
-sys_error_t sys_window_present(sys_window_t* window) {
-  assert(window != NULL && window->framebuffer != NULL);
-
-  // Draw the window frame.
-  if ((window->flags & SYS_WF_NO_FRAME) == 0) {
-    draw_window_frame(window);
-  }
-
-  // Send the updated framebuffer to the kernel.
-  return __syscall5(SYS_WINDOW_PRESENT, window->kernel_handle, (sys_word_t)window->framebuffer, window->width,
-                    window->height, window->pitch);
+  const uint64_t param1 = (uint64_t)x | ((uint64_t)y << 32);
+  return __syscall4(SYS_GFX_DRAW_TEXT, window->kernel_handle, param1, (sys_word_t)text, argb);
 }
-#endif

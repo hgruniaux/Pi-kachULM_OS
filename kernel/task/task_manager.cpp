@@ -73,10 +73,14 @@ TaskPtr TaskManager::create_task_common(bool is_kernel, Task* parent) {
   task->m_syscall_table = m_default_syscall_table;
 
   m_tasks.push_back(task);
-  if (is_kernel)
+
+#if LOG_MIN_LEVEL <= LOG_TRACE_LEVEL
+  if (is_kernel) {
     LOG_TRACE("Create a new kernel task with pid={}", task->get_id());
-  else
+  } else {
     LOG_TRACE("Create a new task with pid={}", task->get_id());
+  }
+#endif
 
   return task;
 }

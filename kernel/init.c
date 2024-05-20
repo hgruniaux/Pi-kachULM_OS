@@ -10,9 +10,6 @@ void _start() {
   sys_exit(exit_code);
 }
 
-uint32_t pitch;
-uint32_t* framebuffer;
-
 int main() {
   sys_pid_t pid = sys_getpid();
   srand(pid);
@@ -27,45 +24,32 @@ int main() {
       sys_yield();
   }
 
-  const uint32_t width = 600;
+  const uint32_t width = 500;
   const uint32_t height = 400;
-  int32_t x = rand() % 500;
-  int32_t y = rand() % 500;
+  int32_t x = 40 + (pid - 2) * 300;
+  int32_t y = 40 + pid * 40;
   sys_debug(x);
   sys_debug(y);
 
-  char title[] = "Window  ";
-  title[8] = '0' + pid;
-  sys_window_t* window = sys_window_create(title, x, y, width, 400, SYS_WF_DEFAULT);
+  char title[] = "Window 0";
+  title[7] = '0' + pid;
+  sys_window_t* window = sys_window_create(title, x, y, width, height, SYS_WF_DEFAULT);
   if (window == NULL)
     return 1;
-
-  sys_window_set_visibility(window, true);
-  framebuffer = sys_window_get_framebuffer(window, &pitch);
 
   uint32_t color;
   static uint32_t colors[] = {0x5695EA, 0x174C0A, 0xDA9213, 0xFA2D72};
 
-  if (pid > 0 && pid <= (sizeof(colors) / sizeof(colors[0])))
-    color = colors[pid - 1];
+  if (pid > 1 && (pid - 2) <= (sizeof(colors) / sizeof(colors[0])))
+    color = colors[pid - 2];
   else
     color = 0;
 
-  for (uint32_t x = 0; x < width; ++x) {
-    for (uint32_t y = 0; y < height; ++y) {
-      framebuffer[x + pitch * y] = color;
-    }
-  }
-
-  sys_window_set_geometry(window, x, y, width, height);
+  sys_gfx_clear(window, color);
+  sys_window_set_visibility(window, true);
 
   bool should_close = false;
-  sys_word_t i = 10;
   while (!should_close) {
-    x += (rand() % 20) - 10;
-    y += (rand() % 20) - 10;
-    sys_window_set_geometry(window, x, y, width, height);
-
     sys_message_t message;
     while (sys_poll_message(window, &message)) {
       switch (message.id) {
@@ -73,15 +57,14 @@ int main() {
           should_close = true;
           break;
         case SYS_MSG_RESIZE:
-          // Framebuffer is reallocated when the window is resized.
-          framebuffer = sys_window_get_framebuffer(window, &pitch);
+          sys_gfx_clear(window, color);
           break;
         default:
           break;
       }
     }
 
-    sys_yield();
+    sys_usleep(500000);
   }
 
   sys_window_destroy(window);

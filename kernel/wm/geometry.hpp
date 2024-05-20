@@ -53,7 +53,7 @@ struct Rect {
   }
 
   void set_width(uint32_t width) { x2 = x1 + (int32_t)width; }
-  void set_height(uint32_t height) { x2 = x1 + (int32_t)height; }
+  void set_height(uint32_t height) { y2 = y1 + (int32_t)height; }
 
   bool intersects(const Rect& r) const {
     if (is_null() || r.is_null())

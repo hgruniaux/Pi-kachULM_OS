@@ -177,6 +177,7 @@ void kfree(void* ptr) {
   block->ptr = block->data;
   block->size += (uintptr_t)ptr - (uintptr_t)block->ptr;
 
+#if 0
   if (block->next != nullptr && (block->next)->is_free) {
     // LOG_INFO("Merging to right");
     merge_block(block, block->next);
@@ -186,6 +187,7 @@ void kfree(void* ptr) {
     merge_block(block->previous, block);
     // LOG_INFO("Merging to left");
   }
+#endif
 }
 
 #include <new>
