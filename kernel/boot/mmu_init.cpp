@@ -54,7 +54,7 @@ static inline constexpr PagesAttributes vc_memory = {.sh = Shareability::OuterSh
                                                      .exec = ExecutionPermission::NeverExecute,
                                                      .rw = ReadWritePermission::ReadWrite,
                                                      .access = Accessibility::Privileged,
-                                                     .type = MemoryType::Device_nGRE};
+                                                     .type = MemoryType::Device_nGnRnE};
 
 DeviceMemoryProperties inline get_memory_properties(const DeviceTree& dt) {
   Property tmp_prop;
@@ -133,7 +133,7 @@ void inline setup_memory_mapping(MMUTable* tbl, const DeviceTree& dt, const MMUI
   }
 }
 
-void inline setup_vc_mapping(MMUTable* tbl, const DeviceTree& dt, MMUInitData* prop) {
+void inline setup_vc_mapping(MMUTable* tbl, const DeviceTree& dt) {
   Property tmp_prop;
 
   size_t index = 0;
@@ -301,7 +301,7 @@ extern "C" void mmu_init(uintptr_t dtb) {
   enforce(dt.is_status_okay());
   init_data->mem_prop = get_memory_properties(dt);
   setup_memory_mapping(&tbl, dt, init_data);
-  setup_vc_mapping(&tbl, dt, init_data);
+  setup_vc_mapping(&tbl, dt);
   setup_device_mapping(&tbl, dt, init_data->mem_prop);
   setup_stack_mapping(&tbl);
 

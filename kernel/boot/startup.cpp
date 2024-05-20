@@ -5,6 +5,7 @@
  */
 
 #include "hardware/device.hpp"
+#include "hardware/dma/dma_controller.hpp"
 #include "hardware/gpio.hpp"
 #include "hardware/irq/irq_manager.hpp"
 #include "hardware/kernel_dt.hpp"
@@ -76,7 +77,9 @@ extern "C" void _startup(uintptr_t dtb) {
   }
 
   // Set up the Kernel memory management
-  KernelMemory::init();
+  if (!KernelMemory::init()) {
+    libk::halt();
+  }
 
   // Set up the VC-ARM Mailbox
   MailBox::init();
@@ -99,6 +102,10 @@ extern "C" void _startup(uintptr_t dtb) {
   // Set up the System Timer
   SystemTimer::init();
   libk::set_log_timer(&SystemTimer::get_elapsed_time_in_ms);
+
+  if (!DMA::init()) {
+    LOG_ERROR("Unable to initialise the DMA Controller.");
+  }
 
   kmain();  // the real kernel entry point
   call_fini_array();
