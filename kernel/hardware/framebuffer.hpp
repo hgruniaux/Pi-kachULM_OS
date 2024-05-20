@@ -80,6 +80,8 @@ class FrameBuffer {
   [[nodiscard]] uint32_t get_height() const { return m_height; }
   /** @brief Gets the framebuffer pitch, in pixels. */
   [[nodiscard]] uint32_t get_pitch() const { return m_pitch; }
+  /** @brief Gets the framebuffer size, in bytes. */
+  [[nodiscard]] uint32_t get_byte_size() const { return m_buffer_size * sizeof(uint32_t); }
 
  private:
   // Private constructor so there can be only once instance of Framebuffer

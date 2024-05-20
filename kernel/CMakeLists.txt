@@ -40,6 +40,12 @@ add_executable(kernel
         memory/process_memory.hpp
         memory/process_memory.cpp
 
+        memory/buffer.hpp
+        memory/buffer.cpp
+
+        memory/contiguous_page_alloc.hpp
+        memory/contiguous_page_alloc.cpp
+
         # Hardware
         hardware/interrupts.hpp
         hardware/interrupts.cpp
@@ -68,20 +74,33 @@ add_executable(kernel
 
         hardware/timer.hpp
 
-        hardware/system_timer.cpp
         hardware/system_timer.hpp
+        hardware/system_timer.cpp
 
         # IRQ
-        hardware/irq/bcm2837_irq_manager.cpp
         hardware/irq/bcm2837_irq_manager.hpp
+        hardware/irq/bcm2837_irq_manager.cpp
 
         hardware/irq/bcm2711_irq_manager.hpp
         hardware/irq/bcm2711_irq_manager.cpp
 
         hardware/irq/irq_lists.hpp
 
-        hardware/irq/irq_manager.cpp
         hardware/irq/irq_manager.hpp
+        hardware/irq/irq_manager.cpp
+
+        # DMA
+        hardware/dma/dma_impl.hpp
+        hardware/dma/dma_impl.cpp
+
+        hardware/dma/channel.hpp
+        hardware/dma/channel.cpp
+
+        hardware/dma/request.hpp
+        hardware/dma/request.cpp
+
+        hardware/dma/dma_controller.hpp
+        hardware/dma/dma_controller.cpp
 
         # Graphics
         graphics/pkfont.hpp
@@ -119,17 +138,6 @@ add_executable(kernel
 
         # Embed init ELF file inside the kernel
         ${CMAKE_CURRENT_BINARY_DIR}/init_elf.c
-
-        # Filesystem
-        fs/filesystem.hpp
-        fs/filesystem.cpp
-        fs/fat/ff.c
-        fs/fat/ff.h
-        fs/fat/ffconf.h
-        fs/fat/ffsystem.cpp
-        fs/fat/ffunicode.c
-        fs/fat/ramdisk.cpp
-        fs/fat/ramdisk.hpp
 )
 
 target_include_directories(kernel PUBLIC .)

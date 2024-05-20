@@ -55,7 +55,7 @@ static inline constexpr PagesAttributes vc_memory = {.sh = Shareability::OuterSh
                                                      .exec = ExecutionPermission::NeverExecute,
                                                      .rw = ReadWritePermission::ReadWrite,
                                                      .access = Accessibility::Privileged,
-                                                     .type = MemoryType::Device_nGRE};
+                                                     .type = MemoryType::Device_nGnRnE};
 
 DeviceMemoryProperties inline get_memory_properties(const DeviceTree& dt) {
   Property tmp_prop;

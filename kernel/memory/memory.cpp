@@ -13,11 +13,15 @@ static HeapManager& get_heap_manager() {
   return builder;
 }
 
-void KernelMemory::init() {
-  memory_impl::init();
+bool KernelMemory::init() {
+  if (!memory_impl::init()) {
+    return false;
+  }
 
   /* Set up the page builder */
   get_heap_manager() = HeapManager(HeapManager::Kind::Kernel, memory_impl::get_kernel_tbl());
+
+  return true;
 }
 
 VirtualPA KernelMemory::get_heap_start() {

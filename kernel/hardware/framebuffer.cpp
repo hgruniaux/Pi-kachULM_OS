@@ -101,7 +101,7 @@ bool FrameBuffer::init(uint32_t width, uint32_t height) {
   LOG_INFO("Framebuffer of size {}x{} allocated (requested {}x{})", m_width, m_height, width, height);
 
   // Dump some debugging information in case of something is not working as intended.
-  LOG_DEBUG("Framebuffer at {:#x} of size {} bytes (pitch = {})", m_buffer, m_buffer_size, m_pitch);
+  LOG_DEBUG("Framebuffer at {:#x} of size {} bytes (pitch = {})", m_buffer, message.allocate_tag.buffer.response.size, m_pitch);
   LOG_DEBUG("Framebuffer pixel order: {} (0 = BGR, 1 = RGB)", message.set_pixel_order_tag.buffer);
   LOG_DEBUG("Framebuffer depth: {}", message.set_depth_tag.buffer);
 
