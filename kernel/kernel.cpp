@@ -63,7 +63,7 @@ extern "C" const char init[];
   });
   task_manager->wake_task(task);
 
-  int count = 4;
+  int count = 3;
   while (count-- > 0) {
     auto task = task_manager->create_task((const elf::Header*)&init);
     task_manager->wake_task(task);

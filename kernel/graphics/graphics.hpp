@@ -96,40 +96,40 @@ class Painter {
   void clear(Color clear_color = make_color(0, 0, 0));
 
   // Pixel drawing functions:
-  void draw_pixel(uint32_t x, uint32_t y);
-  void draw_pixel(uint32_t x, uint32_t y, Color color);
+  void draw_pixel(int32_t x, int32_t y);
+  void draw_pixel(int32_t x, int32_t y, Color color);
 
   // Line drawing functions:
-  void draw_line(uint32_t x0, uint32_t y0, uint32_t x1, uint32_t y1);
-  void draw_line(uint32_t x0, uint32_t y0, uint32_t x1, uint32_t y1, Color color);
+  void draw_line(int32_t x0, int32_t y0, int32_t x1, int32_t y1);
+  void draw_line(int32_t x0, int32_t y0, int32_t x1, int32_t y1, Color color);
 
   // Rectangle drawing functions:
-  void draw_rect(uint32_t x, uint32_t y, uint32_t w, uint32_t h);
-  void draw_rect(uint32_t x, uint32_t y, uint32_t w, uint32_t h, Color color);
-  void fill_rect(uint32_t x, uint32_t y, uint32_t w, uint32_t h);
-  void fill_rect(uint32_t x, uint32_t y, uint32_t w, uint32_t h, Color color);
+  void draw_rect(int32_t x, int32_t y, int32_t w, int32_t h);
+  void draw_rect(int32_t x, int32_t y, int32_t w, int32_t h, Color color);
+  void fill_rect(int32_t x, int32_t y, int32_t w, int32_t h);
+  void fill_rect(int32_t x, int32_t y, int32_t w, int32_t h, Color color);
 
   // Text drawing functions:
-  uint32_t draw_text(uint32_t x, uint32_t y, const char* text);
-  uint32_t draw_text(uint32_t x, uint32_t y, const char* text, Color color);
-  uint32_t draw_text(uint32_t x, uint32_t y, uint32_t w, const char* text);
-  uint32_t draw_text(uint32_t x, uint32_t y, uint32_t w, const char* text, Color color);
+  uint32_t draw_text(int32_t x, int32_t y, const char* text);
+  uint32_t draw_text(int32_t x, int32_t y, const char* text, Color color);
+  uint32_t draw_text(int32_t x, int32_t y, int32_t w, const char* text);
+  uint32_t draw_text(int32_t x, int32_t y, int32_t w, const char* text, Color color);
 
   // Clipping functions:
   void revert_clipping();
-  void set_clipping(uint32_t x_min, uint8_t y_min, uint32_t x_max, uint32_t y_max);
+  void set_clipping(int32_t x_min, int32_t y_min, int32_t x_max, int32_t y_max);
 
  private:
   /** @brief Implements the Painter constructor. */
   void create(uint32_t* buffer, uint32_t width, uint32_t height, uint32_t pitch);
   /** @brief Used internally by draw_text() to draw a glyph alpha map. */
-  void draw_alpha_map(uint32_t x, uint32_t y, const uint8_t* alpha_map, uint32_t w, uint32_t h, Color color);
+  void draw_alpha_map(int32_t x, int32_t y, const uint8_t* alpha_map, uint32_t w, uint32_t h, Color color);
 
   struct BBox {
-    uint32_t x_min;
-    uint32_t y_min;
-    uint32_t x_max;
-    uint32_t y_max;
+    int32_t x_min;
+    int32_t y_min;
+    int32_t x_max;
+    int32_t y_max;
   };  // struct BBox
 
   PKFont m_font;

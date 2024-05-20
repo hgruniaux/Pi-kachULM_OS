@@ -1,4 +1,6 @@
 #include "graphics/graphics.hpp"
+#include <libk/utils.hpp>
+#include <utility>
 #include "hardware/framebuffer.hpp"
 
 extern const uint8_t firacode_16_pkf[100];
@@ -6,16 +8,6 @@ extern const uint8_t firacode_16_pkf[100];
 namespace graphics {
 [[gnu::always_inline, nodiscard]] static inline int32_t abs(int32_t x) {
   return x < 0 ? -x : x;
-}
-
-template <class T>
-[[gnu::always_inline, nodiscard]] static inline T min(T x, T y) {
-  return (x < y) ? x : y;
-}
-
-template <class T>
-[[gnu::always_inline, nodiscard]] static inline T max(T x, T y) {
-  return (x < y) ? y : x;
 }
 
 Painter::Painter() : m_font(firacode_16_pkf) {
@@ -44,11 +36,11 @@ void Painter::create(uint32_t* buffer, uint32_t width, uint32_t height, uint32_t
   }
 }
 
-void Painter::draw_pixel(uint32_t x, uint32_t y) {
+void Painter::draw_pixel(int32_t x, int32_t y) {
   draw_pixel(x, y, m_pen);
 }
 
-[[gnu::hot]] void Painter::draw_pixel(uint32_t x, uint32_t y, Color color) {
+[[gnu::hot]] void Painter::draw_pixel(int32_t x, int32_t y, Color color) {
   // Clipping
   if (x < m_clipping.x_min || x > m_clipping.x_max)
     return;
@@ -72,65 +64,66 @@ void Painter::draw_pixel(uint32_t x, uint32_t y) {
   m_buffer[x + m_pitch * y] = (0x00 << 24) | (result_red << 16) | (result_green << 8) | result_blue;
 }
 
-void Painter::draw_line(uint32_t x0, uint32_t y0, uint32_t x1, uint32_t y1) {
+void Painter::draw_line(int32_t x0, int32_t y0, int32_t x1, int32_t y1) {
   draw_line(x0, y0, x1, y1, m_pen);
 }
 
-[[gnu::hot]] void Painter::draw_line(uint32_t x0, uint32_t y0, uint32_t x1, uint32_t y1, Color color) {
+[[gnu::hot]] void Painter::draw_line(int32_t x1, int32_t y1, int32_t x2, int32_t y2, Color color) {
   // See https://en.wikipedia.org/wiki/Bresenham's_line_algorithm
 
-  const int32_t dx = abs((int32_t)x1 - (int32_t)x0);
-  const int32_t sx = x0 < x1 ? 1 : -1;
-  const int32_t dy = -abs((int32_t)y1 - (int32_t)y0);
-  const int32_t sy = y0 < y1 ? 1 : -1;
-  int32_t err = dx + dy;
+  const auto dx = x2 - x1;
+  const auto dy = y2 - y1;
 
-  while (true) {
-    draw_pixel(x0, y0, color);
-    if (x0 == x1 && y0 == y1)
-      break;
+  // If both of the differences are 0 there will be a division by 0 below.
+  if (dx == 0 && dy == 0) {
+    draw_pixel(x1, y1, color);
+    return;
+  }
 
-    const int32_t e2 = 2 * err;
-
-    if (e2 >= dy) {
-      if (x0 == x1)
-        break;
-
-      err += dy;
-      x0 += sx;
+  if (abs(dx) > abs(dy)) {
+    if (x1 > x2) {
+      std::swap(x1, x2);
+      std::swap(y1, y2);
     }
 
-    if (e2 <= dx) {
-      if (y0 == y1)
-        break;
+    for (auto x = x1; x <= x2; ++x) {
+      const auto y = dy * (x - x1) / dx + y1;
+      draw_pixel(x, y, color);
+    }
+  } else {
+    if (y1 > y2) {
+      std::swap(x1, x2);
+      std::swap(y1, y2);
+    }
 
-      err += dx;
-      y0 += sy;
+    for (auto y = y1; y <= y2; ++y) {
+      const auto x = dx * (y - y1) / dy + x1;
+      draw_pixel(x, y, color);
     }
   }
 }
 
-void Painter::draw_rect(uint32_t x, uint32_t y, uint32_t w, uint32_t h) {
+void Painter::draw_rect(int32_t x, int32_t y, int32_t w, int32_t h) {
   draw_rect(x, y, w, h, m_pen);
 }
 
-[[gnu::hot]] void Painter::draw_rect(uint32_t x, uint32_t y, uint32_t w, uint32_t h, Color color) {
+[[gnu::hot]] void Painter::draw_rect(int32_t x, int32_t y, int32_t w, int32_t h, Color color) {
   draw_line(x, y, x + w - 1, y, color);                  // top edge
   draw_line(x, y + h - 1, x + w - 1, y + h - 1, color);  // bottom edge
   draw_line(x, y, x, y + h - 1, color);                  // left edge
   draw_line(x + w - 1, y, x + w - 1, y + h - 1, color);  // right edge
 }
 
-void Painter::fill_rect(uint32_t x, uint32_t y, uint32_t w, uint32_t h) {
+void Painter::fill_rect(int32_t x, int32_t y, int32_t w, int32_t h) {
   fill_rect(x, y, w, h, m_pen);
 }
 
-[[gnu::hot]] void Painter::fill_rect(uint32_t x, uint32_t y, uint32_t w, uint32_t h, Color color) {
+[[gnu::hot]] void Painter::fill_rect(int32_t x, int32_t y, int32_t w, int32_t h, Color color) {
   // Early clipping
-  x = max(m_clipping.x_min, x);
-  y = max(m_clipping.y_min, y);
-  w = min(m_clipping.x_max - m_clipping.x_min + 1, w);
-  h = min(m_clipping.y_max - m_clipping.y_min + 1, h);
+  x = libk::max(m_clipping.x_min, x);
+  y = libk::max(m_clipping.y_min, y);
+  w = libk::min(m_clipping.x_max - m_clipping.x_min + 1, w);
+  h = libk::min(m_clipping.y_max - m_clipping.y_min + 1, h);
 
   for (uint32_t i = x; i < (x + w); ++i) {
     for (uint32_t j = y; j < (y + h); ++j) {
@@ -139,21 +132,21 @@ void Painter::fill_rect(uint32_t x, uint32_t y, uint32_t w, uint32_t h) {
   }
 }
 
-uint32_t Painter::draw_text(uint32_t x, uint32_t y, const char* text) {
-  return draw_text(x, y, UINT32_MAX, text, m_pen);
+uint32_t Painter::draw_text(int32_t x, int32_t y, const char* text) {
+  return draw_text(x, y, INT32_MAX, text, m_pen);
 }
 
-uint32_t Painter::draw_text(uint32_t x, uint32_t y, const char* text, Color color) {
-  return draw_text(x, y, UINT32_MAX, text, color);
+uint32_t Painter::draw_text(int32_t x, int32_t y, const char* text, Color color) {
+  return draw_text(x, y, INT32_MAX, text, color);
 }
 
-uint32_t Painter::draw_text(uint32_t x, uint32_t y, uint32_t w, const char* text) {
+uint32_t Painter::draw_text(int32_t x, int32_t y, int32_t w, const char* text) {
   return draw_text(x, y, w, text, m_pen);
 }
 
-uint32_t Painter::draw_text(uint32_t x, uint32_t y, uint32_t w, const char* text, Color color) {
-  uint32_t current_x = x;
-  uint32_t current_y = y;
+uint32_t Painter::draw_text(int32_t x, int32_t y, int32_t w, const char* text, Color color) {
+  auto current_x = x;
+  auto current_y = y;
 
   const uint32_t char_width = m_font.get_char_width();
   const uint32_t char_height = m_font.get_char_height();
@@ -203,8 +196,8 @@ uint32_t Painter::draw_text(uint32_t x, uint32_t y, uint32_t w, const char* text
   return current_x;
 }
 
-[[gnu::hot]] void Painter::draw_alpha_map(uint32_t x,
-                                          uint32_t y,
+[[gnu::hot]] void Painter::draw_alpha_map(int32_t x,
+                                          int32_t y,
                                           const uint8_t* alpha_map,
                                           uint32_t w,
                                           uint32_t h,
@@ -227,10 +220,10 @@ void Painter::revert_clipping() {
   m_clipping.y_max = m_height - 1;
 }
 
-void Painter::set_clipping(uint32_t x_min, uint8_t y_min, uint32_t x_max, uint32_t y_max) {
-  m_clipping.x_min = max<uint32_t>(0, x_min);  // maybe unnecessary?
-  m_clipping.y_min = max<uint32_t>(0, y_min);  // maybe unnecessary?
-  m_clipping.x_max = min(m_width - 1, x_max);
-  m_clipping.y_max = min(m_height - 1, y_max);
+void Painter::set_clipping(int32_t x_min, int32_t y_min, int32_t x_max, int32_t y_max) {
+  m_clipping.x_min = libk::max<int32_t>(0, x_min);  // maybe unnecessary?
+  m_clipping.y_min = libk::max<int32_t>(0, y_min);  // maybe unnecessary?
+  m_clipping.x_max = libk::min<int32_t>(m_width - 1, x_max);
+  m_clipping.y_max = libk::min<int32_t>(m_height - 1, y_max);
 }
 }  // namespace graphics

@@ -227,22 +227,33 @@ void WindowManager::mosaic_layout() {
   const int window_width = m_screen_width / nb_columns;
   const int window_height = m_screen_height / nb_rows;
 
+  int current_idx = 0;
   int i = 0, j = 0;
   for (auto* window : m_windows) {
     const auto x = i * window_width;
     const auto y = j * window_height;
-    set_window_geometry(window, Rect::from_pos_and_size(x, y, window_width, window_height));
+
+    int32_t width = window_width;
+    // If we are the last window, take all the remaining place in the last row.
+    const bool is_last = (current_idx + 1) == m_window_count;
+    if (is_last) {
+      width = (nb_columns - i) * window_width;
+    }
+
+    set_window_geometry(window, Rect::from_pos_and_size(x, y, width, window_height));
 
     ++i;
     if (i >= nb_columns) {
       i = 0;
       ++j;
     }
+
+    ++current_idx;
   }
 }
 
 void WindowManager::update() {
-  if (GenericTimer::get_elapsed_time_in_ms() > 1000)
+  if (GenericTimer::get_elapsed_time_in_ms() > 2000 && GenericTimer::get_elapsed_time_in_ms() < 3000)
     mosaic_layout();
 
   if (!m_dirty)
@@ -253,7 +264,7 @@ void WindowManager::update() {
   const auto end = GenericTimer::get_elapsed_time_in_micros();
 
   m_dirty = false;
-  LOG_DEBUG("Window manager update done in {} ms", (end - start) / 1000);
+  LOG_DEBUG("Window manager update done in {} ms for {} window(s)", (end - start) / 1000, m_window_count);
 }
 
 void WindowManager::draw_background(const Rect& rect) {
@@ -374,7 +385,7 @@ void WindowManager::draw_windows(libk::LinkedList<Window*>::Iterator it, const R
 }
 
 void WindowManager::draw_windows() {
-#if 0
+#if 1
   draw_background({0, 0, m_screen_width, m_screen_height});
   draw_windows(m_windows.begin(), {0, 0, m_screen_width, m_screen_height});
 #else
