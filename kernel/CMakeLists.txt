@@ -116,6 +116,8 @@ add_executable(kernel
 
         # Window manager
         wm/geometry.hpp
+        wm/pika_icon.hpp
+        wm/pika_icon.cpp
 
         wm/window_manager.cpp
         wm/window_manager.hpp
@@ -129,6 +131,7 @@ add_executable(kernel
         # Embed init ELF file inside the kernel
         ${CMAKE_CURRENT_BINARY_DIR}/init_elf.c
         hardware/regs.hpp
+        wm/pika_icon.hpp
 )
 
 target_include_directories(kernel PUBLIC .)

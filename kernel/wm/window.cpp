@@ -1,9 +1,6 @@
-// Author: Hubert Gruniaux
-// Date: 5/16/24
-// The following code is released in the public domain (where applicable).
-
 #include "window.hpp"
 #include "memory/mem_alloc.hpp"
+#include "pika_icon.hpp"
 
 Window::Window(const libk::SharedPointer<Task>& task) : m_task(task) {
   KASSERT(task != nullptr);
@@ -64,6 +61,17 @@ void Window::draw_frame() {
   m_painter.fill_rect(0, 0, m_geometry.width(), TITLE_BAR_HEIGHT, BACKGROUND_COLOR);
   m_painter.draw_rect(0, 0, m_geometry.width(), m_geometry.height(), BORDER_COLOR);
   m_painter.draw_line(0, TITLE_BAR_HEIGHT, m_geometry.width(), TITLE_BAR_HEIGHT, BORDER_COLOR);
+
+#if 1
+  // Draw the pikachu icon.
+  constexpr uint32_t pika_color = 0xffffff;
+  for (uint32_t i = 0; i < pika_icon_width; ++i) {
+    for (uint32_t j = 0; j < pika_icon_height; ++j) {
+      const uint32_t color = pika_color | (pika_icon[i + pika_icon_height * j] << 24);
+      m_painter.draw_pixel(5 + i, 2 + j, color);
+    }
+  }
+#endif
 
   const auto text_width = m_painter.get_font().get_width(m_title.get_data(), m_title.get_length());
   const auto text_x = (m_geometry.width() - text_width) / 2;

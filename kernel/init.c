@@ -33,7 +33,7 @@ int main() {
 
   char title[] = "Window 0";
   title[7] = '0' + pid;
-  sys_window_t* window = sys_window_create(title, x, y, width, height, SYS_WF_DEFAULT);
+  sys_window_t* window = sys_window_create(title, x, y, width, height, pid == 4 ? SYS_WF_NO_FRAME : SYS_WF_DEFAULT);
   if (window == NULL)
     return 1;
 
