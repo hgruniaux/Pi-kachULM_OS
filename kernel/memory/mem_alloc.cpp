@@ -24,7 +24,7 @@ static void split_space(MetaPtr block, size_t bytes_count) {
   MetaPtr sub_block;
   uintptr_t next_addr = (uintptr_t)block->ptr + bytes_count;
 
-  KASSERT(next_addr <= KernelMemory::get_heap_end());
+  KASSERT(next_addr < KernelMemory::get_heap_end());
 
   sub_block = (MetaPtr)next_addr;
   sub_block->is_free = true;
@@ -154,11 +154,13 @@ void* kmalloc(size_t byte_count, size_t alignment) {
     return nullptr;
   }
 
+#if 0
   if (block->size > byte_count + META_BLOCK_SIZE) {
     split_space(block, byte_count);
     // LOG_INFO("Free addr {}", (VirtualAddress)(block->next)->ptr);
     kfree((block->next)->ptr);
   }
+#endif
 
   return block->ptr;
 }
@@ -177,17 +179,26 @@ void kfree(void* ptr) {
   block->ptr = block->data;
   block->size += (uintptr_t)ptr - (uintptr_t)block->ptr;
 
-#if 0
   if (block->next != nullptr && (block->next)->is_free) {
     // LOG_INFO("Merging to right");
     merge_block(block, block->next);
   }
 
   if (block->previous != nullptr && (block->previous)->is_free) {
-    merge_block(block->previous, block);
     // LOG_INFO("Merging to left");
+    if (!((block->previous)->next == block)) {
+      if (get_block_addr((VirtualAddress)((block->previous)->next)->ptr) == block) {
+        (block->previous)->next = block;
+        LOG_WARNING("Décalage adresse block");
+        merge_block(block->previous, block);
+      } else {
+        LOG_WARNING("Block de merde");
+      }
+      return;
+    }
+
+    merge_block(block->previous, block);
   }
-#endif
 }
 
 #include <new>
