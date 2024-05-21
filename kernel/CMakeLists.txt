@@ -82,6 +82,9 @@ add_executable(kernel
         hardware/ps2_keyboard.cpp
         hardware/ps2_keyboard.hpp
 
+        hardware/ps2_keyboard.cpp
+        hardware/ps2_keyboard.hpp
+
         # IRQ
         hardware/irq/bcm2837_irq_manager.hpp
         hardware/irq/bcm2837_irq_manager.cpp
