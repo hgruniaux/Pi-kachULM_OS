@@ -129,6 +129,7 @@ add_executable(kernel
         fs/fat/ffsystem.cpp
         fs/fat/ffunicode.c
         fs/fat/ramdisk.cpp
+        fs/fat/ramdisk.hpp
 )
 
 target_include_directories(kernel PUBLIC .)

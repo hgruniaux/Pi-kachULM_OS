@@ -3,10 +3,9 @@
 #include "diskio.h" /* Declarations of disk functions */
 
 #include <libk/string.hpp>
-#include "memory/mem_alloc.hpp"
+#include "memory/memory.hpp"
+#include "ramdisk.hpp"
 
-// A sector takes 512 bytes.
-constexpr LBA_t RAM_SECTOR_COUNT = (1 << 26) / FF_MIN_SS;  // 68 mb of RAM
 static uint8_t* ramdisk_buffer = nullptr;
 
 extern "C" {
@@ -22,7 +21,7 @@ DSTATUS disk_status(BYTE drive) {
 DSTATUS disk_initialize(BYTE drive) {
   switch (drive) {
     case 0:
-      ramdisk_buffer = (uint8_t*)kmalloc(RAM_SECTOR_COUNT * FF_MIN_SS, alignof(max_align_t));
+      ramdisk_buffer = (uint8_t*)KernelMemory::get_fs_address();
       if (ramdisk_buffer == nullptr)
         return STA_NOINIT;
       return 0;
@@ -59,7 +58,7 @@ DRESULT disk_ioctl(BYTE drive, BYTE cmd, void* buff) {
     case CTRL_SYNC:
       return RES_OK;  // nothing to sync
     case GET_SECTOR_COUNT:
-      *(LBA_t*)buff = RAM_SECTOR_COUNT;
+      *(LBA_t*)buff = RAM_FS_SECTOR_COUNT;
       break;
     case GET_SECTOR_SIZE:
       *(WORD*)buff = FF_MIN_SS;

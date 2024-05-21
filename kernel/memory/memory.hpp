@@ -33,4 +33,7 @@ PhysicalAddress get_physical_vc_address(VirtualAddress vc_addr);
 
 /** Convert a physical address referring to the VideoCore memory to a virtual one. */
 VirtualAddress get_virtual_vc_address(PhysicalAddress vc_addr);
+
+/** Returns the address of the Filesystem in memory. */
+VirtualAddress get_fs_address();
 };  // namespace KernelMemory

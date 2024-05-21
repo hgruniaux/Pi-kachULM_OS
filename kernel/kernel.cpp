@@ -1,12 +1,9 @@
 #include <libk/log.hpp>
 #include "hardware/device.hpp"
 
-#include "graphics/graphics.hpp"
-#include "hardware/framebuffer.hpp"
-#include "hardware/interrupts.hpp"
 #include "hardware/kernel_dt.hpp"
 
-#include "task/task_manager.hpp"
+#include "fs/fat/ff.h"
 #include "fs/filesystem.hpp"
 
 #if defined(__GNUC__)
@@ -29,40 +26,14 @@ extern "C" const char init[];
 
   FileSystem::get().init();
 
-  FrameBuffer& framebuffer = FrameBuffer::get();
-  if (!framebuffer.init(1280, 720)) {
-    LOG_WARNING("failed to initialize framebuffer");
-  } else {
-    const uint32_t fb_width = framebuffer.get_width();
-    const uint32_t fb_height = framebuffer.get_height();
+  FIL f = {};
+  LOG_DEBUG("Open '/test': {}", f_open(&f, "/test", FA_READ) == FR_OK);
 
-    graphics::Painter painter;
-    const char* text = "Hello kernel World from Graphics!";
-    const PKFont font = painter.get_font();
-    const uint32_t text_width = font.get_horizontal_advance(text);
-    const uint32_t text_height = font.get_char_height();
+  char buffer[1024] = {0};
+  uint32_t byte_read;
+  LOG_DEBUG("Reading '/test': {}", f_read(&f, buffer, 20, &byte_read) == FR_OK);
 
-    // Draw the text at the middle of screen
-    painter.clear(graphics::Color::WHITE);
-    painter.set_pen(graphics::Color::BLACK);
-    painter.draw_text((fb_width - text_width) / 2, (fb_height - text_height) / 2, text);
-  }
+  LOG_DEBUG("Data read ({} bytes) : {:$}", byte_read, buffer);
 
-  TaskManager* task_manager = new TaskManager;
-
-  auto task1 = task_manager->create_task((const elf::Header*)&init);
-  task_manager->wake_task(task1);
-
-  auto task2 = task_manager->create_task((const elf::Header*)&init);
-  task_manager->wake_task(task2);
-
-  auto task3 = task_manager->create_task((const elf::Header*)&init);
-  task_manager->wake_task(task3);
-
-  //  Enter userspace
-  task_manager->schedule();
-  task_manager->get_current_task()->get_saved_state().memory->activate();
-  jump_to_el0(task1->get_saved_state().regs.elr, (uintptr_t)task_manager->get_current_task()->get_saved_state().sp);
-  LOG_CRITICAL("Not in user space");
   libk::halt();
 }
