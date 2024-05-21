@@ -30,22 +30,8 @@ extern "C" const char init[];
 
   FrameBuffer& framebuffer = FrameBuffer::get();
   if (!framebuffer.init(1280, 720)) {
-    LOG_CRITICAL("failed to initialize framebuffer");
+    LOG_WARNING("failed to initialize framebuffer");
   }
-
-  const uint32_t fb_width = framebuffer.get_width();
-  const uint32_t fb_height = framebuffer.get_height();
-
-  graphics::Painter painter;
-  const char* text = "Hello kernel World from Graphics!";
-  const PKFont font = painter.get_font();
-  const uint32_t text_width = font.get_horizontal_advance(text);
-  const uint32_t text_height = font.get_char_height();
-
-  // Draw the text at the middle of screen
-  painter.clear(graphics::Color::WHITE);
-  painter.set_pen(graphics::Color::BLACK);
-  painter.draw_text((fb_width - text_width) / 2, (fb_height - text_height) / 2, text);
 
   WindowManager* window_manager = new WindowManager;
   (void)window_manager;  // unused here, but we need to instance it.
