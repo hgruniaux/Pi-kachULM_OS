@@ -32,6 +32,4 @@ class HeapManager {
   MMUTable* _tbl = nullptr;
 
   libk::LinkedList<PhysicalPA> _allocated_pa;
-
-  static PhysicalAddress resolve_kernel_va(VirtualAddress va);
 };

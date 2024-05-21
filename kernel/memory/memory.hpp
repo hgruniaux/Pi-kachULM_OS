@@ -1,7 +1,7 @@
 #pragma once
 
-#include <cstdint>
 #include <cstddef>
+#include <cstdint>
 
 using PhysicalPA = uintptr_t;
 using VirtualPA = uintptr_t;
@@ -10,7 +10,7 @@ using PhysicalAddress = uintptr_t;
 using VirtualAddress = uintptr_t;
 
 namespace KernelMemory {
-void init();
+[[nodiscard]] bool init();
 
 /** Returns the start of the Kernel Heap. */
 [[nodiscard]] VirtualPA get_heap_start();
