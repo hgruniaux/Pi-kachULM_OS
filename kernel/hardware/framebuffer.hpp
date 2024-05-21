@@ -39,6 +39,8 @@ class FrameBuffer {
   /** @brief Returns the framebuffer instance. It should be initialized first. */
   static FrameBuffer& get();
 
+  /** Checks if the framebuffer is correctly initialized (init() called and returned true). */
+  [[nodiscard]] bool is_initialized() const { return m_initialized; }
   /** @brief Initializes a framebuffer of the given size. */
   bool init(uint32_t width, uint32_t height);
 
@@ -96,6 +98,9 @@ class FrameBuffer {
   uint32_t m_width = 0;        // in pixels
   uint32_t m_height = 0;       // in pixels
   uint32_t m_pitch = 0;        // length of a row, in pixels (this may be greater than the frame width)
-  bool m_is_screen0 = true;    // display screen when using double buffering
-  bool m_use_double_buffering = false;
+#ifdef CONFIG_USE_DOUBLE_BUFFERING
+  // display screen when using double buffering
+  bool m_is_screen0 = true;
+#endif  // CONFIG_USE_DOUBLE_BUFFERING
+  bool m_initialized = false;
 };  // class FrameBuffer

@@ -77,6 +77,8 @@ add_executable(kernel
         hardware/system_timer.hpp
         hardware/system_timer.cpp
 
+        hardware/regs.hpp
+
         # IRQ
         hardware/irq/bcm2837_irq_manager.hpp
         hardware/irq/bcm2837_irq_manager.cpp
@@ -111,6 +113,9 @@ add_executable(kernel
         graphics/graphics.hpp
         graphics/graphics.cpp
 
+        graphics/stb_image.h
+        graphics/stb_image.c
+
         # Task
         task/task_manager.hpp
         task/task_manager.cpp
@@ -133,8 +138,23 @@ add_executable(kernel
         task/delta_queue.hpp
         task/delta_queue.cpp
 
-        task/message_queue.hpp
-        task/message_queue.cpp
+        # Window manager
+        wm/geometry.hpp
+
+        wm/window_manager.cpp
+        wm/window_manager.hpp
+
+        wm/window.cpp
+        wm/window.hpp
+
+        wm/message_queue.cpp
+        wm/message_queue.hpp
+
+        # Window manager data: icons and wallpaper
+        wm/data/pika_icon.hpp
+        wm/data/pika_icon.cpp
+        wm/data/wallpaper.hpp
+        wm/data/wallpaper.cpp
 
         # Embed init ELF file inside the kernel
         ${CMAKE_CURRENT_BINARY_DIR}/init_elf.c

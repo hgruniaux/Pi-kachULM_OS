@@ -71,6 +71,8 @@ void Scheduler::update_task_priority(const TaskPtr& task, uint32_t old_priority)
 
 void Scheduler::schedule() {
   auto old_task = Task::current();
+  if (old_task != nullptr && !old_task->can_preempt())
+    return;  // we cannot preempt the current task.
 
   TaskPtr new_task = nullptr;
 
@@ -86,8 +88,8 @@ void Scheduler::schedule() {
   switch_to(new_task);
 
 #if LOG_MIN_LEVEL <= LOG_TRACE_LEVEL
-  sys_pid_t old_task_id = old_task ? old_task->get_id() : UINT16_MAX;
-  sys_pid_t new_task_id = new_task ? new_task->get_id() : UINT16_MAX;
+  const auto old_task_id = old_task ? old_task->get_id() : UINT16_MAX;
+  const auto new_task_id = new_task ? new_task->get_id() : UINT16_MAX;
   if (old_task_id != new_task_id)
     LOG_TRACE("Scheduler: old={}, new={}", old_task_id, new_task_id);
 #endif
@@ -110,14 +112,19 @@ void Scheduler::tick() {
   //   - Higher priority tasks can preempt.
   // However, sometimes lower priority tasks can starve.
 
-  m_elapsed_ticks++;
+  if (old_task != nullptr)
+    old_task->m_elapsed_ticks++;
+
+  if (old_task != nullptr && !old_task->can_preempt())
+    return;  // we cannot preempt the current task.
 
   // Check if there is a waiting process with a higher priority.
   TaskPtr new_task = find_higher_priority_task_than_current();
 
   // Otherwise, check if the current task time slice has expired and if yes
   // then schedule using round-robin.
-  if (new_task == nullptr && m_elapsed_ticks >= TIME_SLICE) {
+  if (new_task == nullptr &&
+      (old_task != nullptr && old_task->m_elapsed_ticks >= get_time_slice_for_priority(old_task->get_priority()))) {
     const uint32_t current_priority = get_current_priority();
     for (int i = (int)current_priority; i >= (int)MIN_PRIORITY; --i) {
       if (!m_run_queue[current_priority].is_empty()) {
@@ -133,8 +140,8 @@ void Scheduler::tick() {
   if (new_task == nullptr)
     return;
 
-  sys_pid_t old_task_id = old_task ? old_task->get_id() : UINT16_MAX;
-  sys_pid_t new_task_id = new_task ? new_task->get_id() : UINT16_MAX;
+  const auto old_task_id = old_task ? old_task->get_id() : UINT16_MAX;
+  const auto new_task_id = new_task ? new_task->get_id() : UINT16_MAX;
   if (old_task_id != new_task_id)
     LOG_TRACE("Scheduler (tick): old={}, new={}", old_task_id, new_task_id);
 #endif
@@ -170,6 +177,15 @@ void Scheduler::switch_to(const TaskPtr& new_task) {
     m_run_queue[current_priority].push_back(m_current_task);
   }
 
-  m_elapsed_ticks = 0;  // start a new time slice for the new task
   m_current_task = new_task;
+  m_current_task->m_elapsed_ticks = 0;  // start a new time slice for the new task
+}
+
+uint64_t Scheduler::get_time_slice_for_priority(uint32_t priority) {
+  switch (priority) {
+    case 0:  // low-priority process, try to preempt more often.
+      return 1;
+    default:
+      return 10;
+  }
 }

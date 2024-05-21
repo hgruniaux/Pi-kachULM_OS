@@ -2,7 +2,6 @@
 
 #include <compare>
 #include <cstddef>
-#include <memory>
 #include "string.hpp"
 #include "utils.hpp"
 

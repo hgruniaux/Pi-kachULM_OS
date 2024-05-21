@@ -12,7 +12,6 @@ add_library(libk STATIC
 
         include/libk/assert.hpp
         include/libk/format.hpp
-        include/libk/spinlock.hpp
         include/libk/string.hpp
         include/libk/utils.hpp
         include/libk/bit_array.hpp

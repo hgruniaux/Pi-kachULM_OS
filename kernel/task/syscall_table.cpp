@@ -24,8 +24,8 @@ void SyscallTable::set_unknown_callback(SyscallCallback callback) {
 
   // Provide a default placeholder callback.
   m_unknown_callback = [](Registers& regs) {
-    LOG_ERROR("Unknown syscall called");
-    regs.x0 = 0;
+    LOG_ERROR("Unknown sys called");
+    regs.gp_regs.x0 = 0;
   };
 }
 
@@ -33,7 +33,7 @@ bool SyscallTable::register_syscall(id_t id, SyscallCallback callback) {
   KASSERT(id < MAX_ID);
 
   if (m_entries[id] != nullptr) {
-    LOG_WARNING("syscall #{} registered more than once", id);
+    LOG_WARNING("sys #{} registered more than once", id);
     return false;
   }
 

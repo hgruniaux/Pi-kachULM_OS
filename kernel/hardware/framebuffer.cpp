@@ -66,7 +66,11 @@ bool FrameBuffer::init(uint32_t width, uint32_t height) {
   };  // struct PropertyMessage
 
   // Allocate a virtual buffer double the size in case of double buffering.
-  const uint32_t requested_virtual_height = m_use_double_buffering ? height * 2 : height;
+#ifdef CONFIG_USE_DOUBLE_BUFFERING
+  const uint32_t requested_virtual_height = height * 2;
+#else
+  const uint32_t requested_virtual_height = height;
+#endif  // CONFIG_USE_DOUBLE_BUFFERING
 
   PropertyMessage message;
   message.set_physical_size_tag.status = 0;
@@ -76,8 +80,8 @@ bool FrameBuffer::init(uint32_t width, uint32_t height) {
   message.set_virtual_size_tag.buffer.height = requested_virtual_height;
   message.set_virtual_offset_tag.buffer.x = 0;
   message.set_virtual_offset_tag.buffer.y = 0;
-  message.set_depth_tag.buffer = 32;        // 32-bits per pixel (8-bits per component)
-  message.set_pixel_order_tag.buffer = 0;   // BGR (so we have 0xRRGGBB, yep, this seems inverted but is not)
+  message.set_depth_tag.buffer = 32;             // 32-bits per pixel (8-bits per component)
+  message.set_pixel_order_tag.buffer = 0;        // BGR (so we have 0xRRGGBB, yep, this seems inverted but is not)
   message.allocate_tag.buffer.alignment = 4096;  // Which value to choose?
   message.get_pitch_tag.buffer = 0;
   const bool success = MailBox::send_property(message);
@@ -86,10 +90,11 @@ bool FrameBuffer::init(uint32_t width, uint32_t height) {
 
   // Read back the responses. The GPU may have changed some requested parameters.
   m_width = message.set_virtual_size_tag.buffer.width;
-  if (m_use_double_buffering)
-    m_height = message.set_virtual_size_tag.buffer.height / 2;
-  else
-    m_height = message.set_virtual_size_tag.buffer.height;
+#ifdef CONFIG_USE_DOUBLE_BUFFERING
+  m_height = message.set_virtual_size_tag.buffer.height / 2;
+#else
+  m_height = message.set_virtual_size_tag.buffer.height;
+#endif  // CONFIG_USE_DOUBLE_BUFFERING
   m_pitch = message.get_pitch_tag.buffer / sizeof(m_buffer[0]);
   m_buffer_size = message.allocate_tag.buffer.response.size / sizeof(uint32_t);
 
@@ -101,7 +106,8 @@ bool FrameBuffer::init(uint32_t width, uint32_t height) {
   LOG_INFO("Framebuffer of size {}x{} allocated (requested {}x{})", m_width, m_height, width, height);
 
   // Dump some debugging information in case of something is not working as intended.
-  LOG_DEBUG("Framebuffer at {:#x} of size {} bytes (pitch = {})", m_buffer, message.allocate_tag.buffer.response.size, m_pitch);
+  LOG_DEBUG("Framebuffer at {:#x} of size {} bytes (pitch = {})", m_buffer, message.allocate_tag.buffer.response.size,
+            m_pitch);
   LOG_DEBUG("Framebuffer pixel order: {} (0 = BGR, 1 = RGB)", message.set_pixel_order_tag.buffer);
   LOG_DEBUG("Framebuffer depth: {}", message.set_depth_tag.buffer);
 
@@ -111,15 +117,16 @@ bool FrameBuffer::init(uint32_t width, uint32_t height) {
   // buffers are cleared.
   clear(0x00000000);
 
-  if (m_use_double_buffering) {
-    // Display the screen 0.
-    m_is_screen0 = true;
-    set_virtual_offset(0, 0);
-    // Switch to screen 1 (the back buffer)
-    m_buffer_size = m_height * m_pitch;
-    m_buffer += m_buffer_size;
-  }
+#ifdef CONFIG_USE_DOUBLE_BUFFERING
+  // Display the screen 0.
+  m_is_screen0 = true;
+  set_virtual_offset(0, 0);
+  // Switch to screen 1 (the back buffer)
+  m_buffer_size = m_height * m_pitch;
+  m_buffer += m_buffer_size;
+#endif  // CONFIG_USE_DOUBLE_BUFFERING
 
+  m_initialized = true;
   return true;
 }
 
@@ -141,9 +148,7 @@ void FrameBuffer::set_pixel(uint32_t x, uint32_t y, uint32_t color) {
 }
 
 void FrameBuffer::present() {
-  if (!m_use_double_buffering)
-    return;
-
+#ifdef CONFIG_USE_DOUBLE_BUFFERING
   if (m_is_screen0) {
     // We are displaying screen0, switch to screen1.
     set_virtual_offset(0, m_height);
@@ -155,6 +160,7 @@ void FrameBuffer::present() {
   }
 
   m_is_screen0 = !m_is_screen0;
+#endif  // CONFIG_USE_DOUBLE_BUFFERING
 }
 
 bool FrameBuffer::set_virtual_offset(uint32_t x, uint32_t y) {

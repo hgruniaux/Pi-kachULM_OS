@@ -11,7 +11,7 @@
 class TaskManager {
  public:
   /** Time (in milliseconds) between each tick for the scheduler. */
-  static constexpr uint32_t TICK_TIME = 100;
+  static constexpr uint32_t TICK_TIME = 10;
 
   TaskManager();
 
@@ -20,8 +20,8 @@ class TaskManager {
   [[nodiscard]] SyscallTable* get_default_syscall_table() const { return m_default_syscall_table; }
   void set_default_syscall_table(SyscallTable* table) { m_default_syscall_table = table; }
 
-  TaskPtr create_task(Task* parent = nullptr);
-  TaskPtr create_task(const elf::Header* program_image);
+  TaskPtr create_kernel_task(void (*f)());
+  TaskPtr create_task(const elf::Header* program_image, Task* parent = nullptr);
 
   /**
    * Put the given task to sleep for a minimum duration given by @a time_in_us (in microseconds).
@@ -66,6 +66,9 @@ class TaskManager {
 
   void schedule();
   void tick();
+
+ private:
+  TaskPtr create_task_common(bool is_kernel = false, Task* parent = nullptr);
 
  private:
   static TaskManager* g_instance;

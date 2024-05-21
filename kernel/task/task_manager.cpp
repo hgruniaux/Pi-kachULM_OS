@@ -3,6 +3,7 @@
 #include "hardware/system_timer.hpp"
 #include "memory/mem_alloc.hpp"
 #include "pika_syscalls.hpp"
+#include "wm/window_manager.hpp"
 
 #include <libk/log.hpp>
 
@@ -34,7 +35,7 @@ TaskManager::TaskManager() : m_delta_queue(this) {
   }
 }
 
-TaskPtr TaskManager::create_task(Task* parent) {
+TaskPtr TaskManager::create_task_common(bool is_kernel, Task* parent) {
   auto task = libk::make_shared<Task>();
   if (!task)
     return nullptr;
@@ -47,26 +48,73 @@ TaskPtr TaskManager::create_task(Task* parent) {
     parent->m_children.push_back(task);
   }
 
-  // Create a process virtual memory view and allocate its stack.
-  const auto stack_size = MemoryChunk::get_page_byte_size() * 2;
-  auto memory = libk::make_shared<ProcessMemory>(stack_size);
-  task->m_saved_state.memory = memory;
-  task->m_saved_state.sp = (void*)task->m_saved_state.memory->get_stack_start();
+  libk::bzero(&task->m_saved_state, sizeof(task->m_saved_state));
+  task->m_saved_state.is_kernel = is_kernel;
 
-  // Set process unique ID.
+  if (is_kernel) {
+    const auto stack_size = MemoryChunk::get_page_byte_size();
+    const void* stack = kmalloc(stack_size, alignof(std::max_align_t));
+    task->m_saved_state.sp = (uint64_t)stack + stack_size;
+    // FIXME: free the kernel stack once the task is killed
+  } else {
+    // Create a process virtual memory view and allocate its stack.
+    const auto stack_size = MemoryChunk::get_page_byte_size() * 2;
+    auto memory = libk::make_shared<ProcessMemory>(stack_size);
+    task->m_saved_state.memory = memory;
+    task->m_saved_state.sp = task->m_saved_state.memory->get_stack_start();
+  }
+
+  // Set task unique ID.
   task->m_id = m_next_available_pid++;
   // FIXME: register id mapping
 
   task->m_priority = Scheduler::DEFAULT_PRIORITY;
+
   task->m_syscall_table = m_default_syscall_table;
 
   m_tasks.push_back(task);
-  LOG_DEBUG("Create a new task with pid={}", task->get_id());
+
+#if LOG_MIN_LEVEL <= LOG_TRACE_LEVEL
+  if (is_kernel) {
+    LOG_TRACE("Create a new kernel task with pid={}", task->get_id());
+  } else {
+    LOG_TRACE("Create a new task with pid={}", task->get_id());
+  }
+#endif
+
   return task;
 }
 
-TaskPtr TaskManager::create_task(const elf::Header* program_image) {
-  auto task = create_task();
+TaskPtr TaskManager::create_kernel_task(void (*f)()) {
+  auto task = create_task_common(true);
+  if (!task)
+    return nullptr;
+
+  task->m_is_kernel = true;
+
+  // Set the entry point of the process.
+  task->m_saved_state.pc = (uint64_t)f;
+
+  // Set the return point of the process (when it returns from its function).
+  auto* ret = (void (*)())[]() {
+    // If this code is reached, you have left the kernel task function.
+    // The task can then be destroyed. Unfortunately, it's quite possible for
+    // this to happen somewhere other than an interrupt. In this case, killing
+    // the task will cause scheduling problems. We therefore mark the task to
+    // be destroyed later (at context switch time) and enter a loop.
+
+    Task::current()->mark_to_be_killed();
+    while (true)
+      asm volatile("");
+  };
+
+  // Set the link register so when we return from the function, we execute ret.
+  task->m_saved_state.gp_regs.x30 = (uint64_t)ret;
+  return task;
+}
+
+TaskPtr TaskManager::create_task(const elf::Header* program_image, Task* parent) {
+  auto task = create_task_common(false, parent);
   if (!task)
     return nullptr;
 
@@ -103,7 +151,7 @@ TaskPtr TaskManager::create_task(const elf::Header* program_image) {
 
   // Set the entry point of the process.
   const auto entry_addr = program_image->entry_addr;
-  task->m_saved_state.regs.elr = entry_addr;
+  task->m_saved_state.pc = entry_addr;
   return task;
 }
 
@@ -115,8 +163,8 @@ void TaskManager::sleep_task(const TaskPtr& task, uint64_t time_in_us) {
   if (!task->is_running())
     return;
 
-  const uint64_t ticks_count = time_in_us / 1000 / TICK_TIME;
-  LOG_DEBUG("Sleep the task pid={} for {} us (i.e. {} ticks)", task->get_id(), time_in_us, ticks_count);
+  const uint64_t ticks_count = libk::max<uint64_t>(1, libk::div_round_up(time_in_us, TICK_TIME * 1000));
+  LOG_TRACE("Sleep the task pid={} for {} us (i.e. {} ticks)", task->get_id(), time_in_us, ticks_count);
 
   m_scheduler->remove_task(task);
   task->m_state = Task::State::INTERRUPTIBLE;
@@ -131,7 +179,7 @@ void TaskManager::pause_task(const TaskPtr& task) {
   if (!task->is_running())
     return;
 
-  LOG_DEBUG("Pause the task pid={}", task->get_id());
+  LOG_TRACE("Pause the task pid={}", task->get_id());
 
   m_scheduler->remove_task(task);
   task->m_state = Task::State::UNINTERRUPTIBLE;
@@ -145,8 +193,9 @@ void TaskManager::wake_task(const TaskPtr& task) {
   if (task->is_running())
     return;
 
-  LOG_DEBUG("Wake the task pid={}", task->get_id());
+  LOG_TRACE("Wake the task pid={}", task->get_id());
 
+  task->m_elapsed_ticks = 0;
   m_scheduler->add_task(task);
   task->m_state = Task::State::RUNNING;
 }
@@ -158,16 +207,23 @@ void TaskManager::kill_task(const TaskPtr& task, int exit_code) {
   if (task->is_terminated())
     return;  // already killed
 
-  LOG_DEBUG("Kill the task pid={} with status {}", task->get_id(), exit_code);
+  LOG_TRACE("Kill the task pid={} with status {}", task->get_id(), exit_code);
 
   // Propagate the kill to children. This is done recursively.
   auto it = task->children_begin();
   for (; it != task->children_end(); ++it) {
-    auto child = *it;
+    const auto& child = *it;
     kill_task(child, exit_code);
   }
 
   m_scheduler->remove_task(task);
+
+  // Destroy the windows.
+  auto& window_manager = WindowManager::get();
+  for (auto* window : task->m_windows) {
+    window_manager.destroy_window(window);
+  }
+
   task->m_state = Task::State::TERMINATED;
 }
 
