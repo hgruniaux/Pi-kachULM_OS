@@ -71,6 +71,9 @@ add_executable(kernel
         hardware/system_timer.cpp
         hardware/system_timer.hpp
 
+        hardware/ps2_keyboard.cpp
+        hardware/ps2_keyboard.hpp
+
         # IRQ
         hardware/irq/bcm2837_irq_manager.cpp
         hardware/irq/bcm2837_irq_manager.hpp
