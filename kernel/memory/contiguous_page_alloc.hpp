@@ -10,15 +10,15 @@ class ContiguousPageAllocator {
 
   // Utility functions
   /** @brief Mark @a nb_pages pages starting from @a addr as used */
-  void mark_as_used(PhysicalPA addr, size_t nb_pages);
+  void mark_as_used(PhysicalPA start, PhysicalPA end);
 
   /** Tries to find @a nb_pages contiguous fresh page.
-   * @returns   - `true` in case of success, @a addr is filled in this case. @n
-   *            - `false` otherwise, @a addr is not modified. */
-  bool fresh_pages(size_t nb_pages, PhysicalPA* addr);
+   * @returns   - `true` in case of success, @a start and @a end are filled in this case. @n
+   *            - `false` otherwise, @a start and @a end are not modified. */
+  bool fresh_pages(size_t nb_pages, PhysicalPA* start, PhysicalPA *end);
 
   /** @brief Free @a nb_pages pages starting from @a addr. */
-  void free_pages(PhysicalPA addr, size_t nb_pages);
+  void free_pages(PhysicalPA start, PhysicalPA end);
 
   /** Check if physical page is free or not
    * @returns   - `true` if page is free @n
@@ -30,7 +30,7 @@ class ContiguousPageAllocator {
   static uint64_t memory_needed(size_t nb_pages);
 
  protected:
-  bool try_fresh_pages(size_t nb_pages, PhysicalPA* addr, bool first_pass);
+  bool try_fresh_pages(size_t nb_pages, PhysicalPA* start, PhysicalPA *end, bool first_pass);
   size_t page_index(PhysicalPA addr) const;
 
   uint64_t _nb_pages;

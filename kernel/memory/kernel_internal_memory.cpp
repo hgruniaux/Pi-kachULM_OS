@@ -234,38 +234,54 @@ PhysicalPA memory_impl::resolve_kernel_va(VirtualAddress va, bool read_only) {
   return (par_el1 & libk::mask_bits(12, 47)) | (va & libk::mask_bits(1, 11));
 }
 
-PhysicalPA memory_impl::allocate_buffer_pa(size_t nb_pages) {
-  PhysicalPA section_start;
-  if (!_contiguous_alloc.fresh_pages(nb_pages, &section_start)) {
-    return 0;
+bool memory_impl::allocate_buffer_pa(size_t nb_pages, PhysicalPA* buffer_start, PhysicalPA* buffer_end) {
+  if (!_contiguous_alloc.fresh_pages(nb_pages, buffer_start, buffer_end)) {
+    return false;
   }
 
-  return section_start + _contiguous_start;
+  //  LOG_DEBUG("Allocated {:#x} -> {:#x}", *buffer_start, *buffer_end);
+  //  LOG_DEBUG("Offset {:#x}", _contiguous_start);
+
+  *buffer_start += _contiguous_start;
+  *buffer_end += _contiguous_start;
+
+  //  LOG_DEBUG("Target Range {:#x} -> {:#x}", *buffer_start, *buffer_end);
+
+  return true;
 }
 
-void memory_impl::free_buffer_pa(PhysicalPA buffer_pa, size_t nb_pages) {
-  _contiguous_alloc.free_pages(buffer_pa - _contiguous_start, nb_pages);
+void memory_impl::free_buffer_pa(PhysicalPA buffer_start, PhysicalPA buffer_end) {
+  //  LOG_DEBUG("Freeing page {:#x} -> {:#x}", buffer_start, buffer_end);
+  //  LOG_DEBUG("Offset {:#x}", _contiguous_start);
+
+  const PhysicalPA target_start = buffer_start - _contiguous_start;
+  const PhysicalPA target_end = buffer_end - _contiguous_start;
+
+  //  LOG_DEBUG("Target {:#x} -> {:#x}", target_start, target_end);
+
+  _contiguous_alloc.free_pages(target_start, target_end);
 }
 
-VirtualPA memory_impl::map_buffer(PhysicalPA buffer_pa, size_t nb_pages) {
-  VirtualPA buffer_va = _buffer_pages;
+VirtualPA memory_impl::map_buffer(PhysicalPA buffer_start, PhysicalPA buffer_end) {
+  VirtualPA buffer_va_start = _buffer_pages;
+  VirtualPA buffer_va_end = _buffer_pages + buffer_end - buffer_start;
 
-  for (size_t page = 0; page < nb_pages; ++page) {
-    const VirtualPA current_pa_page = buffer_pa + page * PAGE_SIZE;
-
-    if (!map_range(&_tbl, _buffer_pages, _buffer_pages, current_pa_page, buffer_memory_rw)) {
-      libk::panic("Failed to map buffer memory in kernel space.");
-    }
-    _buffer_pages += PAGE_SIZE;
+  //  LOG_DEBUG("Mapping buffer {:#x} -> {:#x} to {:#x} -> {:#x}", buffer_start, buffer_end, buffer_va_start,
+  //            buffer_va_end);
+  if (!map_range(&_tbl, buffer_va_start, buffer_va_end, buffer_start, buffer_memory_rw)) {
+    libk::panic("Failed to map buffer memory in kernel space.");
   }
+  //  LOG_DEBUG("Done.");
 
-  _buffer_pages += PAGE_SIZE;
+  _buffer_pages = buffer_va_end + PAGE_SIZE;
 
-  return buffer_va;
+  return buffer_va_start;
 }
 
-void memory_impl::unmap_buffer(VirtualPA buffer_va, size_t nb_pages) {
-  if (!unmap_range(&_tbl, buffer_va, buffer_va + (nb_pages - 1) * PAGE_SIZE)) {
+void memory_impl::unmap_buffer(VirtualPA buffer_start, VirtualPA buffer_end) {
+  //  LOG_DEBUG("Unmapping buffer range {:#x} -> {:#x}", buffer_start, buffer_end);
+
+  if (!unmap_range(&_tbl, buffer_start, buffer_end)) {
     libk::panic("Failed to unmap buffer memory!");
   }
 }

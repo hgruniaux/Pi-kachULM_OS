@@ -1,6 +1,7 @@
 #include "request.hpp"
 #include <climits>
 #include "libk/log.hpp"
+#include "memory/kernel_internal_memory.hpp"
 #include "memory/mem_alloc.hpp"
 
 namespace DMA {
@@ -84,7 +85,7 @@ Request* Request::memcpy_2d(Address src,
 Request* Request::link_to(Request* next) {
   auto* old_next = next_req;
   next_req = next;
-  dma_s->next_req = DMA::get_dma_bus_address((uintptr_t)next->dma_s, false);
+  dma_s->next_req = memory_impl::resolve_kernel_va((uintptr_t)next->dma_s, false);
   return old_next;
 }
 

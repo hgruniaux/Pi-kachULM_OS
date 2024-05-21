@@ -63,7 +63,7 @@ bool PageAllocList::parse_memory_reg(libk::LinearAllocator& mem_alloc,
 }
 
 PageAllocList::PageAllocList(libk::LinearAllocator& mem_alloc, size_t contiguous_res_bytes)
-    : contiguous_res_start(0), contiguous_res_stop(0), _list(nullptr) {
+    : contiguous_res_start(0), contiguous_res_stop(0), _list_beg(nullptr), _list_end(nullptr) {
   // Set up the list of page allocators
   Property prop;
 
@@ -82,7 +82,7 @@ PageAllocList::PageAllocList(libk::LinearAllocator& mem_alloc, size_t contiguous
 }
 
 bool PageAllocList::fresh_page(PhysicalPA* addr) {
-  AllocList* cur = _list;
+  AllocList* cur = _list_beg;
 
   while (cur != nullptr) {
     if (cur->alloc.fresh_page(addr)) {
@@ -97,7 +97,7 @@ bool PageAllocList::fresh_page(PhysicalPA* addr) {
 }
 
 void PageAllocList::free_page(PhysicalPA addr) {
-  AllocList* cur = _list;
+  AllocList* cur = _list_beg;
 
   while (cur != nullptr) {
     if (cur->section_start <= addr && addr < cur->section_stop) {
@@ -113,7 +113,7 @@ void PageAllocList::mark_as_used_range(PhysicalPA start, PhysicalPA end) {
     return;
   }
 
-  AllocList* cur = _list;
+  AllocList* cur = _list_beg;
 
   while (cur != nullptr) {
     if (end > cur->section_start && start < cur->section_stop) {
@@ -135,10 +135,20 @@ void PageAllocList::add_allocator(libk::LinearAllocator& mem_alloc,
                                   PhysicalPA page_end,
                                   size_t nb_pages,
                                   uintptr_t array) {
+
   auto* new_elm = mem_alloc.new_class<AllocList>();
   new_elm->section_start = page_start;
   new_elm->section_stop = page_end;
   new_elm->alloc = PageAlloc(nb_pages, array);
-  new_elm->next = _list;
-  _list = new_elm;
+  new_elm->next = nullptr;
+
+  if (_list_end != nullptr){
+    _list_end->next = new_elm;
+  }
+
+  if (_list_beg == nullptr) {
+    _list_beg = new_elm;
+  }
+
+  _list_end = new_elm;
 }
