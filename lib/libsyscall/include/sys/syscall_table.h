@@ -7,6 +7,7 @@ enum {
   SYS_PRINT,
   SYS_GETPID,
   SYS_DEBUG,
+  SYS_SPAWN,
 
   /* Scheduler system calls. */
   SYS_SLEEP,

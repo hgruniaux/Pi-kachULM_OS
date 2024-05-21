@@ -1,10 +1,14 @@
 #include <libk/log.hpp>
-#include "hardware/device.hpp"
 
-#include "graphics/graphics.hpp"
+#include "hardware/device.hpp"
 #include "hardware/framebuffer.hpp"
 #include "hardware/interrupts.hpp"
 #include "hardware/kernel_dt.hpp"
+
+#include "memory/mem_alloc.hpp"
+
+#include "fs/fat/ff.h"
+#include "fs/filesystem.hpp"
 
 #include "sys/syscall.h"
 #include "task/task_manager.hpp"
@@ -18,7 +22,28 @@
 #define COMPILER_NAME "Unknown Compiler"
 #endif
 
-extern "C" const char init[];
+// Load the init program and execute it! This is the entry point of the userspace world.
+[[noreturn]] static void load_init() {
+  // Create the task manager.
+  TaskManager& task_manager = TaskManager::get();
+  auto init_task = task_manager.create_task("/init");
+  if (init_task == nullptr) {
+    LOG_CRITICAL("Failed to load the init program");
+  }
+
+  // Execute the init program.
+  LOG_INFO("Starting the init program");
+  task_manager.wake_task(init_task);
+
+  while (task_manager.get_current_task() != init_task)
+    task_manager.schedule();
+
+  // Enter userspace!
+  enable_fpu_and_neon();
+  init_task->get_saved_state().memory->activate();
+  jump_to_el0(init_task->get_saved_state().pc, (uintptr_t)init_task->get_saved_state().sp);
+  LOG_CRITICAL("Exited from userspace");
+}
 
 [[noreturn]] void kmain() {
   LOG_INFO("Kernel built at " __TIME__ " on " __DATE__ " with " COMPILER_NAME " !");
@@ -28,38 +53,30 @@ extern "C" const char init[];
   LOG_INFO("Board serial: {:#x}", KernelDT::get_board_serial());
   LOG_INFO("Temp: {} °C / {} °C", Device::get_current_temp() / 1000, Device::get_max_temp() / 1000);
 
+  FileSystem::get().init();
+
   FrameBuffer& framebuffer = FrameBuffer::get();
   if (!framebuffer.init(1280, 720)) {
     LOG_WARNING("failed to initialize framebuffer");
   }
 
   WindowManager* window_manager = new WindowManager;
-  (void)window_manager;  // unused here, but we need to instance it.
+  KASSERT(window_manager != nullptr);
 
   TaskManager* task_manager = new TaskManager;
+  KASSERT(task_manager != nullptr);
 
-  auto task1 = task_manager->create_task((const elf::Header*)&init);
-  task_manager->wake_task(task1);
-
-  auto task = task_manager->create_kernel_task([]() {
+  // Run the window manager task (thread).
+  auto window_manager_task = task_manager->create_kernel_task([]() {
     while (true) {
       WindowManager::get().update();
       sys_usleep(63333);
     }
   });
-  task_manager->wake_task(task);
 
-  int count = 3;
-  while (count-- > 0) {
-    auto task = task_manager->create_task((const elf::Header*)&init);
-    task_manager->wake_task(task);
-  }
+  KASSERT(window_manager_task != nullptr);
+  task_manager->wake_task(window_manager_task);
 
-  enable_fpu_and_neon();
-  //  Enter userspace
-  task_manager->schedule();
-  task_manager->get_current_task()->get_saved_state().memory->activate();
-  jump_to_el0(task1->get_saved_state().pc, (uintptr_t)task_manager->get_current_task()->get_saved_state().sp);
-  LOG_CRITICAL("Not in user space");
-  libk::halt();
+  // Run the init program.
+  load_init();
 }

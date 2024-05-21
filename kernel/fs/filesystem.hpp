@@ -1,5 +1,7 @@
 #pragma once
 
+#include "file.hpp"
+
 class FileSystem {
  public:
   using FileHandle = void*;
@@ -8,6 +10,6 @@ class FileSystem {
 
   void init();
 
-  FileHandle open(const char* path, int flags);
-  void close(FileHandle handle);
+  File* open(const char* path, int flags);
+  void close(File* handle);
 };  // class FileSystem

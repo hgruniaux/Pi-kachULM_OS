@@ -22,6 +22,7 @@ class TaskManager {
 
   TaskPtr create_kernel_task(void (*f)());
   TaskPtr create_task(const elf::Header* program_image, Task* parent = nullptr);
+  TaskPtr create_task(const char* path, Task* parent = nullptr);
 
   /**
    * Put the given task to sleep for a minimum duration given by @a time_in_us (in microseconds).

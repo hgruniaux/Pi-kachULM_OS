@@ -81,6 +81,20 @@ static void pika_sys_sbrk(Registers& regs) {
   regs.gp_regs.x0 = previous_brk;
 }
 
+static void pika_sys_spawn(Registers& regs) {
+  const auto* path = (const char*)regs.gp_regs.x0;
+  if (!check_ptr(regs, (void*)path))
+    return;
+
+  auto task = TaskManager::get().create_task(path, Task::current().get());
+  if (task == nullptr) {
+    set_error(regs, SYS_ERR_GENERIC);
+  } else {
+    TaskManager::get().wake_task(task);
+    set_error(regs, SYS_ERR_OK);
+  }
+}
+
 static void pika_sys_sched_set_priority(Registers& regs) {
   //  const sys_pid_t pid = regs.gp_regs.x0;  // Unused
   const uint32_t priority = regs.gp_regs.x1;
@@ -263,7 +277,7 @@ static void pika_sys_window_set_geometry(Registers& regs) {
   const int32_t width = regs.gp_regs.x3;
   const int32_t height = regs.gp_regs.x4;
 
-  WindowManager::get().set_window_geometry(window, Rect::from_pos_and_size(x, y, width, height));
+  WindowManager::get().set_window_geometry(window, x, y, width, height);
   set_error(regs, SYS_ERR_OK);
 }
 
@@ -362,6 +376,7 @@ SyscallTable* create_pika_syscalls() {
   table->register_syscall(SYS_EXIT, pika_sys_exit);
   table->register_syscall(SYS_PRINT, pika_sys_print);
   table->register_syscall(SYS_GETPID, pika_sys_getpid);
+  table->register_syscall(SYS_SPAWN, pika_sys_spawn);
   table->register_syscall(SYS_DEBUG, [](Registers& regs) {
     libk::print("Debug: {} from pid={}", regs.gp_regs.x0, Task::current()->get_id());
     set_error(regs, SYS_ERR_OK);

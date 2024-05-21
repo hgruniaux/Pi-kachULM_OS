@@ -29,15 +29,13 @@ WindowManager::WindowManager() {
     m_screen_height = fb.get_height();
     m_screen_pitch = fb.get_pitch();
     m_screen_buffer = fb.get_buffer();
+
+#ifdef CONFIG_USE_DMA
+    m_screen_buffer_dma_addr = DMA::get_dma_bus_address((VirtualAddress)m_screen_buffer, false);
+#endif  // CONFIG_USE_DMA
   }
 
-#ifdef CONFIG_INCLUDE_WALLPAPER
-  int wallpaper_width, wallpaper_height;
-  m_wallpaper = (const uint32_t*)stbi_load_from_memory(wallpaper_jpg, wallpaper_jpg_len, &wallpaper_width,
-                                                       &wallpaper_height, nullptr, 4);
-  m_wallpaper_width = wallpaper_width;
-  m_wallpaper_height = wallpaper_height;
-#endif  // CONFIG_INCLUDE_WALLPAPER
+  read_wallpaper();
 }
 
 [[nodiscard]] bool WindowManager::is_valid(Window* window) const {
@@ -122,22 +120,11 @@ void WindowManager::set_window_geometry(Window* window, Rect rect) {
   rect.set_width(libk::clamp(rect.width(), Window::MIN_WIDTH, Window::MAX_WIDTH));
   rect.set_height(libk::clamp(rect.height(), Window::MIN_HEIGHT, Window::MAX_HEIGHT));
 
-  // Handle special values.
-  if (rect.x1 == SYS_POS_DEFAULT) {
-    rect.x1 = 50;
-  } else if (rect.x1 == SYS_POS_CENTERED) {
-    rect.x1 = m_screen_width / 2 - rect.width() / 2;
-  }
-
-  if (rect.y1 == SYS_POS_DEFAULT) {
-    rect.y1 = 50;
-  } else if (rect.x1 == SYS_POS_CENTERED) {
-    rect.y1 = m_screen_height / 2 - rect.height() / 2;
-  }
-
   // Enforce constraints on window position.
   rect.x1 = (libk::clamp(rect.x(), INT16_MIN, INT16_MAX));
   rect.y1 = (libk::clamp(rect.y(), INT16_MIN, INT16_MAX));
+
+  rect.normalize();
 
   const auto old_rect = window->get_geometry();
 
@@ -166,6 +153,25 @@ void WindowManager::set_window_geometry(Window* window, Rect rect) {
   }
 
   m_dirty = true;
+}
+
+void WindowManager::set_window_geometry(Window* window, int32_t x, int32_t y, int32_t w, int32_t h) {
+  KASSERT(is_valid(window));
+
+  // Handle special values.
+  if (x == SYS_POS_DEFAULT) {
+    x = 50;
+  } else if (x == SYS_POS_CENTERED) {
+    x = m_screen_width / 2 - w / 2;
+  }
+
+  if (y == SYS_POS_DEFAULT) {
+    y = 50;
+  } else if (y == SYS_POS_CENTERED) {
+    y = m_screen_height / 2 - h / 2;
+  }
+
+  set_window_geometry(window, Rect::from_pos_and_size(x, y, w, h));
 }
 
 void WindowManager::focus_window(Window* window) {
@@ -292,9 +298,6 @@ void WindowManager::mosaic_layout() {
 }
 
 void WindowManager::update() {
-  if (GenericTimer::get_elapsed_time_in_ms() > 5000 && GenericTimer::get_elapsed_time_in_ms() < 7000)
-    mosaic_layout();
-
   if (!m_dirty || !m_is_supported)
     return;
 
@@ -307,30 +310,29 @@ void WindowManager::update() {
 }
 
 void WindowManager::draw_background(const Rect& rect, DMARequestQueue& request_queue) {
-#ifdef CONFIG_INCLUDE_WALLPAPER
-#if defined(CONFIG_USE_DMA) && 0 /* disable DMA for the background as it does not work yet */
-  const auto framebuffer_dma_addr = DMA::get_dma_bus_address((VirtualAddress)m_wallpaper, true);
-  const auto screen_dma_addr = DMA::get_dma_bus_address((VirtualAddress)&m_screen_buffer, false);
+  if (m_wallpaper == nullptr) {
+    // No wallpaper found. Fill the background.
+    fill_rect(rect, 0xffffff);
+    return;
+  }
+
+#if defined(CONFIG_USE_DMA) && defined(CONFIG_USE_DMA_FOR_WALLPAPER)
+  const auto framebuffer_dma_addr = m_wallpaper->get_dma_address();
   const auto src_stride = 0;
   const auto dst_stride = sizeof(uint32_t) * (m_screen_pitch - m_screen_width);
-  auto* request = DMA::Request::memcpy_2d(framebuffer_dma_addr, screen_dma_addr, sizeof(uint32_t) * (m_wallpaper_width),
-                                          m_wallpaper_height, src_stride, dst_stride);
+  auto* request =
+      DMA::Request::memcpy_2d(framebuffer_dma_addr, m_screen_buffer_dma_addr, sizeof(uint32_t) * (m_wallpaper_width),
+                              m_wallpaper_height, src_stride, dst_stride);
   request_queue.add(request);
 #else
   (void)request_queue;
 
   for (int32_t x = rect.left(); x < rect.right(); ++x) {
     for (int32_t y = rect.top(); y < rect.bottom(); ++y) {
-      // The wallpaper is in RGBA, we expect ABGR.
-      const auto color = libk::bswap(m_wallpaper[x + m_wallpaper_width * y]);
-      m_screen_buffer[x + m_screen_pitch * y] = color >> 8;
+      m_screen_buffer[x + m_screen_pitch * y] = m_wallpaper[x + m_wallpaper_width * y];
     }
   }
-#endif  // CONFIG_USE_DMA
-#else
-  (void)request_queue;
-  fill_rect(rect, 0xffffff);
-#endif  // CONFIG_INCLUDE_WALLPAPER
+#endif  // CONFIG_USE_DMA && CONFIG_USE_DMA_FOR_WALLPAPER
 }
 
 void WindowManager::fill_rect(const Rect& rect, uint32_t color) {
@@ -377,8 +379,8 @@ void WindowManager::draw_window(Window* window, const Rect& dst_rect, DMARequest
 #if CONFIG_USE_DMA
   const auto framebuffer_dma_addr =
       window->get_framebuffer_dma_addr() + sizeof(uint32_t) * (x1 + framebuffer_pitch * y1);
-  const auto screen_dma_addr = DMA::get_dma_bus_address(
-      (VirtualAddress)&m_screen_buffer[src_rect.x() + x1 + m_screen_pitch * (src_rect.y() + y1)], false);
+  const auto screen_dma_addr =
+      m_screen_buffer_dma_addr + sizeof(uint32_t) * (src_rect.x() + x1 + m_screen_pitch * (src_rect.y() + y1));
   const auto src_stride = sizeof(uint32_t) * (framebuffer_pitch - (x2 - x1));
   const auto dst_stride = sizeof(uint32_t) * (m_screen_pitch - (x2 - x1));
   auto* request = DMA::Request::memcpy_2d(framebuffer_dma_addr, screen_dma_addr, sizeof(uint32_t) * (x2 - x1), y2 - y1,
@@ -473,29 +475,78 @@ void WindowManager::draw_windows() {
 #endif  // CONFIG_USE_DMA
 
   DMARequestQueue dma_request_queue;
+  draw_background({0, 0, m_screen_width, m_screen_height}, dma_request_queue);
 
+  if (!m_windows.is_empty()) {
 #if CONFIG_USE_NAIVE_WM_UPDATE
-  draw_background({0, 0, m_screen_width, m_screen_height}, dma_request_queue);
+    auto it = m_windows.begin();
+    while (it.has_next())
+      ++it;
 
-  if (m_windows.is_empty())
-    return;
-
-  auto it = m_windows.begin();
-  while (it.has_next())
-    ++it;
-
-  while (it != m_windows.end()) {
-    draw_window(*it, {0, 0, m_screen_width, m_screen_height}, dma_request_queue);
-    --it;
-  }
+    while (it != m_windows.end()) {
+      draw_window(*it, {0, 0, m_screen_width, m_screen_height}, dma_request_queue);
+      --it;
+    }
 #else
-  draw_background({0, 0, m_screen_width, m_screen_height}, dma_request_queue);
-  draw_windows(m_windows.begin(), {0, 0, m_screen_width, m_screen_height}, dma_request_queue);
+    draw_windows(m_windows.begin(), {0, 0, m_screen_width, m_screen_height}, dma_request_queue);
 #endif  // CONFIG_USE_NAIVE_WM_UPDATE
+  }
 
 #ifdef CONFIG_USE_DMA
   dma_request_queue.execute_and_wait(m_dma_channel);
 #endif  // CONFIG_USE_DMA
 
   FrameBuffer::get().present();
+}
+
+#include "fs/fat/ff.h"
+
+void WindowManager::read_wallpaper() {
+  constexpr const char* WALLPAPER_PATH = "/wallpaper.jpg";
+
+  FIL file = {};
+  if (f_open(&file, WALLPAPER_PATH, FA_READ) != FR_OK) {
+    LOG_WARNING("Failed to open '{}'", WALLPAPER_PATH);
+    return;
+  }
+
+  const UINT file_size = f_size(&file);
+  uint8_t* buffer = (uint8_t*)kmalloc(file_size, alignof(max_align_t));
+  KASSERT(buffer != nullptr);
+
+  UINT read_bytes;
+  const auto result = f_read(&file, buffer, file_size, &read_bytes);
+  KASSERT(result == FR_OK);
+  KASSERT(read_bytes == file_size);
+  f_close(&file);
+
+  int wallpaper_width, wallpaper_height;
+  uint32_t* wallpaper =
+      (uint32_t*)stbi_load_from_memory(buffer, file_size, &wallpaper_width, &wallpaper_height, nullptr, 4);
+  kfree(buffer);
+
+  if (wallpaper == nullptr) {
+    LOG_WARNING("Failed to load the wallpaper, the file is probably badly formatted or not a JPEG");
+    return;
+  }
+
+  // The wallpaper is in RGBA, we expect ABGR. Do the conversion once.
+  for (int32_t x = 0; x < wallpaper_width; ++x) {
+    for (int32_t y = 0; y < wallpaper_height; ++y) {
+      // The wallpaper is in RGBA, we expect ABGR.
+      const auto color = libk::bswap(wallpaper[x + wallpaper_width * y]);
+      wallpaper[x + wallpaper_width * y] = color >> 8;
+    }
+  }
+
+#if defined(CONFIG_USE_DMA) && defined(CONFIG_USE_DMA_FOR_WALLPAPER)
+  m_wallpaper = libk::make_scoped<Buffer>(sizeof(uint32_t) * wallpaper_width * wallpaper_height);
+  libk::memcpy(m_wallpaper->get(), wallpaper, m_wallpaper->get_byte_size());
+#else
+  m_wallpaper = wallpaper;
+#endif  // CONFIG_USE_DMA && CONFIG_USE_DMA_FOR_WALLPAPER
+  m_wallpaper_width = wallpaper_width;
+  m_wallpaper_height = wallpaper_height;
+
+  LOG_INFO("Wallpaper loaded (size {}x{})", m_wallpaper_width, m_wallpaper_height);
 }

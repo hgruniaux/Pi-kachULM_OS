@@ -45,3 +45,9 @@ Then to run the kernel, just type:
 # You may need to change qemu-system-aarch64 by whatever is QEMU for aarch64 is named on your computer.
 qemu-system-aarch64 -M raspi3b -serial stdio -kernel build/kernel/kernel8.elf -dtb doc/DeviceTree/pi3.dtb -device loader,file=/* RamfS file */,addr=0x18000000,force-raw=on
 ```
+
+## The userspace file structure
+
+- `/`: The root
+    - `/init`: ELF program for aarch, the first program started by the OS.
+    - `/wallpaper.jpg`: The window manager wallpaper.

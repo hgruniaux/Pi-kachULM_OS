@@ -18,3 +18,14 @@ void FileSystem::init() {
     return;
   }
 }
+
+File* FileSystem::open(const char* path, int flags) {
+  return nullptr;
+}
+
+void FileSystem::close(File* handle) {
+  KASSERT(handle != nullptr);
+
+  f_close(&handle->m_handle);
+  delete handle;
+}

@@ -10,6 +10,8 @@ Window::Window(const libk::SharedPointer<Task>& task) : m_task(task) {
 #ifdef CONFIG_USE_DMA
 #ifdef CONFIG_WINDOW_LARGE_FRAMEBUFFER
   m_framebuffer = libk::make_scoped<Buffer>(sizeof(uint32_t) * MAX_WIDTH * MAX_HEIGHT);
+  m_geometry = {0, 0, 0, 0};
+  m_framebuffer_pitch = 0;
 #endif  // CONFIG_WINDOW_LARGE_FRAMEBUFFER
 #endif  // CONFIG_USE_DMA
 }

@@ -1,7 +1,10 @@
 #include "task.hpp"
 #include <algorithm>
 #include "task_manager.hpp"
+
+#include "fs/filesystem.hpp"
 #include "wm/window.hpp"
+#include "wm/window_manager.hpp"
 
 void TaskSavedState::save(const Registers& current_regs) {
   gp_regs = current_regs.gp_regs;
@@ -31,6 +34,10 @@ void TaskSavedState::restore(Registers& current_regs) {
     memory->activate();
 }
 
+Task::~Task() {
+  free_resources();
+}
+
 TaskPtr Task::current() {
   return TaskManager::get().get_current_task();
 }
@@ -46,4 +53,36 @@ void Task::unregister_window(Window* window) {
   auto it = std::find(m_windows.begin(), m_windows.end(), window);
   KASSERT(it != m_windows.end());
   m_windows.erase(it);
+}
+
+void Task::register_file(File* file) {
+  KASSERT(file != nullptr);
+
+  m_open_files.push_back(file);
+}
+
+void Task::unregister_file(File* file) {
+  KASSERT(file != nullptr);
+
+  auto it = std::find(m_open_files.begin(), m_open_files.end(), file);
+  KASSERT(it != m_open_files.end());
+  m_open_files.erase(it);
+}
+
+void Task::free_resources() {
+  // Destroy the windows.
+  auto& window_manager = WindowManager::get();
+  for (auto* window : m_windows) {
+    window_manager.destroy_window(window);
+  }
+
+  m_windows.clear();
+
+  // Free all open files.
+  auto& fs = FileSystem::get();
+  for (auto* file : m_open_files) {
+    fs.close(file);
+  }
+
+  m_open_files.clear();
 }

@@ -18,6 +18,10 @@ sys_error_t sys_print(const char* msg) {
   return __syscall1(SYS_PRINT, (sys_word_t)msg);
 }
 
+sys_error_t sys_spawn(const char* path) {
+  return __syscall1(SYS_SPAWN, (sys_word_t)path);
+}
+
 sys_error_t sys_yield() {
   return __syscall0(SYS_YIELD);
 }

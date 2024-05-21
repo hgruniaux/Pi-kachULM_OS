@@ -30,6 +30,7 @@ class WindowManager {
 
   void set_window_visibility(Window* window, bool visible);
   void set_window_geometry(Window* window, Rect rect);
+  void set_window_geometry(Window* window, int32_t x, int32_t y, int32_t w, int32_t h);
 
   void update();
 
@@ -44,6 +45,7 @@ class WindowManager {
   void mosaic_layout();
 
  private:
+  void read_wallpaper();
   void fill_rect(const Rect& rect, uint32_t color);
 
 #ifdef CONFIG_USE_DMA
@@ -99,7 +101,11 @@ class WindowManager {
   libk::LinkedList<Window*> m_windows;
   size_t m_window_count = 0;
 
+#if defined(CONFIG_USE_DMA) && defined(CONFIG_USE_DMA_FOR_WALLPAPER)
+  libk::ScopedPointer<Buffer> m_wallpaper;
+#else
   const uint32_t* m_wallpaper;
+#endif  // CONFIG_USE_DMA && CONFIG_USE_DMA_FOR_WALLPAPER
   uint32_t m_wallpaper_width, m_wallpaper_height;
 
 #ifdef CONFIG_USE_DMA
@@ -107,10 +113,12 @@ class WindowManager {
 #endif  // CONFIG_USE_DMA
 
   uint32_t* m_screen_buffer;
+#ifdef CONFIG_USE_DMA
+  VirtualAddress m_screen_buffer_dma_addr;
+#endif  // CONFIG_USE_DMA
   size_t m_screen_pitch;
   int32_t m_screen_width, m_screen_height;
 
   bool m_dirty = true;         // true when the windows need to be redrawn/updated.
   bool m_is_supported = true;  // is the window manager supported (screen connected)?
-
 };  // class WindowManager

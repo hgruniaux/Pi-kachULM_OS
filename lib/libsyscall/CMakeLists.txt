@@ -19,6 +19,7 @@ add_library(libsyscall STATIC
         src/stdlib/malloc_free.c
         include/assert.h
         src/stdlib/assert.c
-        src/stdlib/rand.c)
+        src/stdlib/rand.c
+        src/startup.c)
 
 target_include_directories(libsyscall PUBLIC include/)
