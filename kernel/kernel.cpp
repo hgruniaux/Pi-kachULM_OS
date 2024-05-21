@@ -83,6 +83,7 @@ extern "C" const char init[];
         green_ptr[i + green_width * j] = 0xff00ff0f;
       }
     }
+    LOG_INFO("We have: {:#x}", green_ptr[green_width - 1 + green_width * 10]);
 
     const auto red_dma = red_window.get_dma_address();
     const auto green_dma = green_window.get_dma_address();
@@ -93,11 +94,11 @@ extern "C" const char init[];
 
     //    DMA::Request req1 = DMA::Request::memcpy(src_dma, dst_dma, width * height * sizeof(uint32_t));
 
-    DMA::Request* red_req = DMA::Request::memcpy_2d(red_dma, red_fb_dma, red_width * sizeof(uint32_t), red_height, 0,
-                                                   (width - red_width) * sizeof(uint32_t));
+    DMA::Request* red_req = DMA::Request::memcpy_2d(red_dma, red_fb_dma, red_width * sizeof(uint32_t), red_height - 1,
+                                                    0, (width - red_width) * sizeof(uint32_t));
 
     DMA::Request* green_req = DMA::Request::memcpy_2d(green_dma, green_fb_dma, green_width * sizeof(uint32_t),
-                                                     green_height, 0, (width - green_width) * sizeof(uint32_t));
+                                                      green_height - 1, 0, (width - green_width) * sizeof(uint32_t));
     red_req->link_to(green_req);
 
     DMA::Channel c;
