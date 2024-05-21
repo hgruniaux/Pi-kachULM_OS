@@ -12,8 +12,14 @@ class Window {
  public:
   static constexpr int32_t MIN_WIDTH = 25;
   static constexpr int32_t MIN_HEIGHT = 25;
+#ifdef CONFIG_WINDOW_LARGE_FRAMEBUFFER
+  // Lower limits when all windows use a full framebuffer (to limit excessive memory usage).
+  static constexpr int32_t MAX_WIDTH = 2000;
+  static constexpr int32_t MAX_HEIGHT = 2000;
+#else
   static constexpr int32_t MAX_WIDTH = UINT16_MAX;
   static constexpr int32_t MAX_HEIGHT = UINT16_MAX;
+#endif  // CONFIG_WINDOW_LARGE_FRAMEBUFFER
   static constexpr size_t MAX_TITLE_LENGTH = 255;
 
   Window(const libk::SharedPointer<Task>& task);
@@ -40,9 +46,14 @@ class Window {
   [[nodiscard]] const MessageQueue& get_message_queue() const { return m_message_queue; }
 
   // Graphics functions:
+#ifdef CONFIG_USE_DMA
   [[nodiscard]] uint32_t* get_framebuffer() { return (uint32_t*)m_framebuffer->get(); }
   [[nodiscard]] const uint32_t* get_framebuffer() const { return (const uint32_t*)m_framebuffer->get(); }
   [[nodiscard]] DMA::Address get_framebuffer_dma_addr() const { return m_framebuffer->get_dma_address(); }
+#else
+  [[nodiscard]] uint32_t* get_framebuffer() { return m_framebuffer; }
+  [[nodiscard]] const uint32_t* get_framebuffer() const { return m_framebuffer; }
+#endif  // CONFIG_USE_DMA
   [[nodiscard]] uint32_t get_framebuffer_pitch() const { return m_framebuffer_pitch; }
   void clear(uint32_t argb = 0x000000);
   void draw_line(uint32_t x1, uint32_t y1, uint32_t x2, uint32_t y2, uint32_t argb);
@@ -76,7 +87,11 @@ class Window {
   // The framebuffer is allocated on the kernel side. It is updated each time
   // the window geometry changes. The size of the framebuffer is the same
   // as the window size (see m_geometry variable).
+#ifdef CONFIG_USE_DMA
   libk::ScopedPointer<Buffer> m_framebuffer;
+#else
+  uint32_t* m_framebuffer;
+#endif
   uint32_t m_framebuffer_pitch = 0;
 
   graphics::Painter m_painter;

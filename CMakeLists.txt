@@ -27,7 +27,8 @@ add_compile_options("$<$<COMPILE_LANGUAGE:CXX>:${EXTRA_CXX_FLAGS}>")
 add_compile_options(-ffile-prefix-map=${CMAKE_SOURCE_DIR}/=./)
 
 # Options
-add_compile_definitions(-DUSE_DMA) # Use the DMA hardware in graphics and window manager
+add_compile_definitions(-DCONFIG_USE_DMA) # Use the DMA hardware in graphics and window manager
+add_compile_definitions(-DCONFIG_WINDOW_LARGE_FRAMEBUFFER)
 
 # Enable checks
 option(ENABLE_CHECKS "Enable checks using clang-tidy" OFF)

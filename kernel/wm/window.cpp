@@ -6,6 +6,12 @@ Window::Window(const libk::SharedPointer<Task>& task) : m_task(task) {
   KASSERT(task != nullptr);
 
   m_painter = {nullptr, 0, 0, 0};
+
+#ifdef CONFIG_USE_DMA
+#ifdef CONFIG_WINDOW_LARGE_FRAMEBUFFER
+  m_framebuffer = libk::make_scoped<Buffer>(sizeof(uint32_t) * MAX_WIDTH * MAX_HEIGHT);
+#endif  // CONFIG_WINDOW_LARGE_FRAMEBUFFER
+#endif  // CONFIG_USE_DMA
 }
 
 void Window::set_title(libk::StringView title) {
@@ -78,11 +84,25 @@ void Window::draw_frame() {
 }
 
 void Window::reallocate_framebuffer() {
+#ifdef CONFIG_USE_DMA
+#ifdef CONFIG_WINDOW_LARGE_FRAMEBUFFER
+  // Update the painter.
+  uint32_t* framebuffer = (uint32_t*)m_framebuffer->get();
+  m_framebuffer_pitch = m_geometry.width();
+  m_painter = graphics::Painter(framebuffer, m_geometry.width(), m_geometry.height(), m_framebuffer_pitch);
+#else
   m_framebuffer.reset();
-
   const auto buffer_size = sizeof(uint32_t) * m_geometry.width() * m_geometry.height();
   m_framebuffer = libk::make_scoped<Buffer>(buffer_size);
   m_task->get_memory()->map_buffer(*m_framebuffer.get(), 0x0000ff0000000000, false, false);
   m_painter =
       graphics::Painter((uint32_t*)m_framebuffer->get(), m_geometry.width(), m_geometry.height(), m_framebuffer_pitch);
+#endif
+#else
+  delete[] m_framebuffer;
+  m_framebuffer = new uint32_t[m_geometry.width() * m_geometry.height()];
+  m_framebuffer_pitch = m_geometry.width();
+  libk::bzero(m_framebuffer, sizeof(uint32_t) * m_geometry.width() * m_geometry.height());
+  m_painter = graphics::Painter(m_framebuffer, m_geometry.width(), m_geometry.height(), m_framebuffer_pitch);
+#endif
 }

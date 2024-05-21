@@ -6,9 +6,9 @@
 #include "geometry.hpp"
 #include "task/task.hpp"
 
-#ifdef USE_DMA
+#ifdef CONFIG_USE_DMA
 #include "hardware/dma/channel.hpp"
-#endif  // USE_DMA
+#endif  // CONFIG_USE_DMA
 
 class Window;
 class Task;
@@ -38,6 +38,9 @@ class WindowManager {
   void mosaic_layout();
 
  private:
+  void fill_rect(const Rect& rect, uint32_t color);
+
+#ifdef CONFIG_USE_DMA
   struct DMARequestQueue {
     DMA::Request* first_request = nullptr;
     DMA::Request* last_request = nullptr;
@@ -72,8 +75,10 @@ class WindowManager {
       channel.wait();
     }
   };
-
-  void fill_rect(const Rect& rect, uint32_t color);
+#else
+  // Stub class when DMA usage is disabled.
+  struct DMARequestQueue {};  // struct DMARequestQueue
+#endif  // CONFIG_USE_DMA
 
   void draw_background(const Rect& rect, DMARequestQueue& request_queue);
   void draw_window(Window* window, const Rect& dst_rect, DMARequestQueue& request_queue);
@@ -94,7 +99,7 @@ class WindowManager {
   size_t m_screen_pitch;
   int32_t m_screen_width, m_screen_height;
 
-#ifdef USE_DMA
+#ifdef CONFIG_USE_DMA
   DMA::Channel m_dma_channel;
-#endif  // USE_DMA
+#endif  // CONFIG_USE_DMA
 };  // class WindowManager

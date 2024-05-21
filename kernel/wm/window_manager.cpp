@@ -7,9 +7,9 @@
 
 #include <algorithm>
 
-#ifdef USE_DMA
+#ifdef CONFIG_USE_DMA
 #include "hardware/dma/request.hpp"
-#endif
+#endif  // CONFIG_USE_DMA
 
 WindowManager* WindowManager::g_instance = nullptr;
 
@@ -310,7 +310,7 @@ void WindowManager::draw_window(Window* window, const Rect& dst_rect, DMARequest
     return;
 
     // Blit the framebuffer into the screen.
-#if USE_DMA
+#if CONFIG_USE_DMA
   const auto framebuffer_dma_addr =
       window->get_framebuffer_dma_addr() + sizeof(uint32_t) * (x1 + framebuffer_pitch * y1);
   const auto screen_dma_addr = DMA::get_dma_bus_address(
@@ -327,7 +327,7 @@ void WindowManager::draw_window(Window* window, const Rect& dst_rect, DMARequest
       m_screen_buffer[dst_x + m_screen_pitch * dst_y] = color;
     }
   }
-#endif
+#endif  // CONFIG_USE_DMA
 
   // Draw the focus border to inform the user what window has the focus.
   if (window->has_focus()) {
@@ -400,9 +400,9 @@ void WindowManager::draw_windows(libk::LinkedList<Window*>::Iterator it,
 }
 
 void WindowManager::draw_windows() {
-#ifdef USE_DMA
+#ifdef CONFIG_USE_DMA
   m_dma_channel.abort_previous();
-#endif  // USE_DMA
+#endif  // CONFIG_USE_DMA
 
   DMARequestQueue dma_request_queue;
 
@@ -425,7 +425,7 @@ void WindowManager::draw_windows() {
   }
 #endif
 
-#ifdef USE_DMA
+#ifdef CONFIG_USE_DMA
   dma_request_queue.execute_and_wait(m_dma_channel);
-#endif
+#endif  // CONFIG_USE_DMA
 }
