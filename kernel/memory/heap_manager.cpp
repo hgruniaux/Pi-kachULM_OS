@@ -67,7 +67,7 @@ VirtualAddress HeapManager::change_heap_end(long byte_offset) {
         break;
       }
       case Kind::Kernel: {
-        pa_to_del = resolve_kernel_va(va_to_del);
+        pa_to_del = memory_impl::resolve_kernel_va(va_to_del, false);
         break;
       }
       default: {
@@ -95,19 +95,6 @@ size_t HeapManager::get_heap_byte_size() const {
   return _heap_byte_size;
 }
 
-PhysicalPA HeapManager::resolve_kernel_va(VirtualAddress va) {
-  asm volatile("at s1e1w, %x0" ::"r"(va));
-
-  uint64_t par_el1;
-  asm volatile("mrs %x0, PAR_EL1" : "=r"(par_el1));
-
-  if (par_el1 & 0x1) {
-    libk::panic("[HeapManager] Unable to resolve physical address from the Kernel heap.");
-  }
-
-  return par_el1 & libk::mask_bits(12, 47);
-}
-
 void HeapManager::free() {
   while (_heap_byte_size > 0) {
     const VirtualPA va_to_del = get_heap_end() - PAGE_SIZE;
@@ -119,7 +106,7 @@ void HeapManager::free() {
         break;
       }
       case Kind::Kernel: {
-        pa_to_del = resolve_kernel_va(va_to_del);
+        pa_to_del = memory_impl::resolve_kernel_va(va_to_del, false);
         break;
       }
       default: {

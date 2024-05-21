@@ -27,11 +27,8 @@ class MemoryChunk {
    * Can be different of @a data_byte_length when @a byte_offset is too big. */
   [[nodiscard]] size_t read(size_t byte_offset, void* data, size_t data_byte_length) const;
 
-  /** Free this memory chunk and all it's mapping in all process memory. */
-  void free();
-
   /** Returns the number of bytes of this chunk. */
-  [[nodiscard]] size_t byte_size() const;
+  [[nodiscard]] size_t get_byte_size() const;
 
   /** @returns the size of a page. */
   static size_t get_page_byte_size();
@@ -45,6 +42,7 @@ class MemoryChunk {
   VirtualPA _kernel_va;
 
   struct ProcessMapped {
+    ProcessMapped(VirtualPA start, ProcessMemory* proc) : chunk_start(start), proc(proc) {}
     VirtualPA chunk_start;
     ProcessMemory* proc;
   };

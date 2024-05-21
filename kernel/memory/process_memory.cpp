@@ -39,7 +39,7 @@ VirtualAddress ProcessMemory::get_stack_end() const {
 }
 
 VirtualAddress ProcessMemory::get_stack_start() const {
-  return PROCESS_STACK_BASE + _stack.byte_size();
+  return PROCESS_STACK_BASE + _stack.get_byte_size();
 }
 
 VirtualPA ProcessMemory::change_heap_end(long byte_offset) {
@@ -63,16 +63,22 @@ void ProcessMemory::activate() const {
   asm volatile("msr ttbr0_el1, %x0" ::"r"(memory_impl::resolve_table_pgd(_tbl)));
 }
 
+void ProcessMemory::deactivate() {
+  asm volatile("msr ttbr0_el1, xzr");
+  asm volatile("tlbi vmalle1is");
+  asm volatile("dsb sy; isb" ::: "memory");
+}
+
 void ProcessMemory::free() {
   // Free the heap
   _heap.free();
 
   // Free all mappings
-  for (const auto chunk : _chunks) {
-    unmap_chunk(chunk.start);  // <- chunk will be removed from the list by unmap
+  for (const auto chunk : _sec) {
+    unmap_memory(chunk.start);  // <- chunk will be removed from the list by unmap
   }
 
-  KASSERT(_chunks.is_empty());
+  KASSERT(_sec.is_empty());
 
   // Free MMU Table
   memory_impl::delete_process_tbl(_tbl);
@@ -93,40 +99,107 @@ bool ProcessMemory::map_chunk(MemoryChunk& chunk, const VirtualPA page_va, bool 
     }
   }
 
-  _chunks.push_back({page_va, &chunk});
+  _sec.emplace_back(page_va, false, &chunk);
   chunk.register_mapping(this, page_va);
 
   return true;
 }
 
-void ProcessMemory::unmap_chunk(VirtualPA chunk_start_address) {
-  auto it = std::find_if(_chunks.begin(), _chunks.end(), [&chunk_start_address](const MappedChunk& chunk) {
-    return chunk.start == chunk_start_address;
-  });
-
-  if (it == std::end(_chunks)) {
-    LOG_ERROR("There is no chunk mapped at {:#x} !", chunk_start_address);
-    return;
-  }
-
-  if (!unmap_range(&_tbl, it->start, it->mem->end_address(it->start))) {
-    LOG_ERROR("Failed to unmap from {:#x} tp {:#x} in process memory with asid: {}.", it->start,
-              it->mem->end_address(it->start), get_asid());
-  }
-
-  it->mem->unregister_mapping(this);
-  _chunks.erase(it);
-}
-
-bool ProcessMemory::change_chunk_attr(VirtualPA chunk_start_address, bool read_only, bool executable) {
-  auto it = std::find_if(_chunks.begin(), _chunks.end(), [&chunk_start_address](const MappedChunk& chunk) {
-    return chunk.start == chunk_start_address;
-  });
-
-  if (it == std::end(_chunks)) {
-    LOG_ERROR("There is no chunk mapped at {:#x} !", chunk_start_address);
+bool ProcessMemory::map_buffer(Buffer& chunk, VirtualPA page_va, bool read_only, bool executable) {
+  if (chunk.buffer_pa_start == 0) {
     return false;
   }
 
-  return change_attr_range(&_tbl, it->start, it->mem->end_address(it->start), get_properties(read_only, executable));
+  const PagesAttributes attr = get_properties(read_only, executable);
+
+  const PhysicalPA buffer_va_start = page_va;
+  const PhysicalPA buffer_va_end = buffer_va_start + chunk.buffer_pa_end - chunk.buffer_pa_start;
+
+  if (!map_range(&_tbl, buffer_va_start, buffer_va_end, chunk.buffer_pa_start, attr)) {
+    return false;
+  }
+
+  _sec.emplace_back(buffer_va_start, true, &chunk);
+  chunk.register_mapping(this, page_va);
+
+  return true;
+}
+
+void ProcessMemory::unmap_memory(VirtualPA start_address) {
+  auto it = _sec.begin();
+  for (; it != std::end(_sec); ++it) {
+    if (it->start == start_address) {
+      break;
+    }
+  }
+
+  if (it == std::end(_sec)) {
+    LOG_ERROR("There is no memory mapped at {:#x} !", start_address);
+    return;
+  }
+
+  VirtualAddress end_address;
+  if (it->is_buffer) {
+    end_address = ((Buffer*)it->mem)->end_address(it->start);
+  } else {
+    end_address = ((MemoryChunk*)it->mem)->end_address(it->start);
+  }
+
+  if (!unmap_range(&_tbl, it->start, end_address)) {
+    LOG_ERROR("Failed to unmap from {:#x} tp {:#x} in process memory with asid: {}.", it->start, end_address,
+              get_asid());
+  }
+
+  if (it->is_buffer) {
+    ((Buffer*)it->mem)->unregister_mapping(this);
+  } else {
+    ((MemoryChunk*)it->mem)->unregister_mapping(this);
+  }
+
+  _sec.erase(it);
+}
+
+bool ProcessMemory::change_memory_attr(VirtualPA start_address, bool read_only, bool executable) {
+  auto it = _sec.begin();
+  for (; it != std::end(_sec); ++it) {
+    if (it->start == start_address) {
+      break;
+    }
+  }
+
+  if (it == std::end(_sec)) {
+    LOG_ERROR("There is no memory mapped at {:#x} !", start_address);
+    return false;
+  }
+
+  VirtualAddress end_address;
+  if (it->is_buffer) {
+    end_address = ((Buffer*)it->mem)->end_address(it->start);
+  } else {
+    end_address = ((MemoryChunk*)it->mem)->end_address(it->start);
+  }
+
+  return change_attr_range(&_tbl, it->start, end_address, get_properties(read_only, executable));
+}
+
+bool ProcessMemory::is_read_only(VirtualPA va) const {
+  PagesAttributes attr;
+
+  if (!get_attr(&_tbl, va, &attr)) {
+    LOG_ERROR("There is no memory mapped at {:#x} !", va);
+    return true;
+  }
+
+  return attr.rw == ReadWritePermission::ReadOnly;
+}
+
+bool ProcessMemory::is_executable(VirtualPA va) const {
+  PagesAttributes attr;
+
+  if (!get_attr(&_tbl, va, &attr)) {
+    LOG_ERROR("There is no memory mapped at {:#x} !", va);
+    return true;
+  }
+
+  return attr.exec == ExecutionPermission::ProcessExecute;
 }
