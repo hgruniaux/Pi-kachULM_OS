@@ -85,9 +85,14 @@ extern "C" const char init[];
       }
     }
 
+    LOG_DEBUG("FB address: {:#x}", framebuffer.get_buffer());
     const auto red_dma = red_window->get_dma_address();
     const auto green_dma = green_window->get_dma_address();
     const auto fb_dma = DMA::get_dma_bus_address((uintptr_t)framebuffer.get_buffer(), true);
+
+    LOG_DEBUG("Red Buf DMA address: {:#x}", red_dma);
+    LOG_DEBUG("Green Buf DMA address: {:#x}", green_dma);
+    LOG_DEBUG("FB DMA address: {:#x}", fb_dma);
 
     const auto red_fb_dma = fb_dma + (red_x + width * red_y) * sizeof(uint32_t);
     const auto green_fb_dma = fb_dma + (green_x + width * green_y) * sizeof(uint32_t);
@@ -112,19 +117,6 @@ extern "C" const char init[];
 
     delete red_req;
     delete green_req;
-
-    red_window.reset();
-
-    {
-      red_window = libk::make_scoped<Buffer>(red_width * 2 * red_height * 2 * sizeof(uint32_t));
-      uint32_t* red_ptr = (uint32_t*)red_window->get();
-
-      for (size_t i = 0; i < red_width * 2; ++i) {
-        for (size_t j = 0; j < red_height * 2; ++j) {
-          red_ptr[i + red_width * j] = 0xffff0000;
-        }
-      }
-    }
   }
 
   //  TaskManager* task_manager = new TaskManager;

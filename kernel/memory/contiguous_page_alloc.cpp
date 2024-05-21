@@ -34,7 +34,7 @@ bool ContiguousPageAllocator::try_fresh_pages(size_t nb_pages, PhysicalPA* start
 
       if (found_free_pages == nb_pages) {
         KASSERT(page_candidate != -1ull);
-        LOG_DEBUG("Allocating from {:#x} to {:#x}", page_candidate, _page_cursor);
+        //        LOG_DEBUG("Allocating from {:#x} to {:#x}", page_candidate, _page_cursor);
         mark_as_used(page_candidate, _page_cursor);
         *start = page_candidate;
         *end = _page_cursor;
@@ -69,7 +69,7 @@ void ContiguousPageAllocator::mark_as_used(PhysicalPA start, PhysicalPA end) {
     libk::panic("Marking page as used failed.");
   }
 
-  LOG_DEBUG("Marking as Used {:#x} -> {:#x}", start, end);
+  //  LOG_DEBUG("Marking as Used {:#x} -> {:#x}", start, end);
 
   for (size_t page_i = page_index(start); page_i <= page_index(end); ++page_i) {
     _free_page.set_bit(page_i, false);
@@ -90,7 +90,7 @@ void ContiguousPageAllocator::free_pages(PhysicalPA start, PhysicalPA end) {
     libk::panic("Marking page as freed failed.");
   }
 
-  LOG_DEBUG("Marking as Free {:#x} -> {:#x}", start, end);
+  //  LOG_DEBUG("Marking as Free {:#x} -> {:#x}", start, end);
 
   for (size_t page_i = page_index(start); page_i <= page_index(end); ++page_i) {
     _free_page.set_bit(page_i, true);

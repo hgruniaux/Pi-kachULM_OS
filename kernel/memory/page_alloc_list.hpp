@@ -29,7 +29,8 @@ class PageAllocList {
   PhysicalPA contiguous_res_start;
   PhysicalPA contiguous_res_stop;
 
-  AllocList* _list = nullptr;
+  AllocList* _list_beg = nullptr;
+  AllocList* _list_end = nullptr;
 
   void add_allocator(libk::LinearAllocator& mem_alloc,
                      PhysicalPA page_start,
