@@ -66,8 +66,9 @@ extern "C" const char init[];
     //    painter.clear(graphics::Color::WHITE);
     //    painter.set_pen(graphics::Color::BLACK);
     //    painter.draw_text((fb_width - text_width) / 2, (fb_height - text_height) / 2, text);
-    Buffer red_window(red_width * red_height * sizeof(uint32_t));
-    uint32_t* red_ptr = (uint32_t*)red_window.get();
+
+    auto red_window = libk::make_scoped<Buffer>(red_width * red_height * sizeof(uint32_t));
+    uint32_t* red_ptr = (uint32_t*)red_window->get();
 
     for (size_t i = 0; i < red_width; ++i) {
       for (size_t j = 0; j < red_height; ++j) {
@@ -75,18 +76,17 @@ extern "C" const char init[];
       }
     }
 
-    Buffer green_window(green_width * green_height * sizeof(uint32_t));
-    uint32_t* green_ptr = (uint32_t*)green_window.get();
+    auto green_window = libk::make_scoped<Buffer>(green_width * green_height * sizeof(uint32_t));
+    uint32_t* green_ptr = (uint32_t*)green_window->get();
 
     for (size_t i = 0; i < green_width; ++i) {
       for (size_t j = 0; j < green_height; ++j) {
         green_ptr[i + green_width * j] = 0xff00ff0f;
       }
     }
-    LOG_INFO("We have: {:#x}", green_ptr[green_width - 1 + green_width * 10]);
 
-    const auto red_dma = red_window.get_dma_address();
-    const auto green_dma = green_window.get_dma_address();
+    const auto red_dma = red_window->get_dma_address();
+    const auto green_dma = green_window->get_dma_address();
     const auto fb_dma = DMA::get_dma_bus_address((uintptr_t)framebuffer.get_buffer(), true);
 
     const auto red_fb_dma = fb_dma + (red_x + width * red_y) * sizeof(uint32_t);
@@ -112,23 +112,37 @@ extern "C" const char init[];
 
     delete red_req;
     delete green_req;
+
+    red_window.reset();
+
+    {
+      red_window = libk::make_scoped<Buffer>(red_width * 2 * red_height * 2 * sizeof(uint32_t));
+      uint32_t* red_ptr = (uint32_t*)red_window->get();
+
+      for (size_t i = 0; i < red_width * 2; ++i) {
+        for (size_t j = 0; j < red_height * 2; ++j) {
+          red_ptr[i + red_width * j] = 0xffff0000;
+        }
+      }
+    }
   }
 
-  TaskManager* task_manager = new TaskManager;
-
-  auto task1 = task_manager->create_task((const elf::Header*)&init);
-  task_manager->wake_task(task1);
-
-  auto task2 = task_manager->create_task((const elf::Header*)&init);
-  task_manager->wake_task(task2);
-
-  auto task3 = task_manager->create_task((const elf::Header*)&init);
-  task_manager->wake_task(task3);
-
-  //  Enter userspace
-  task_manager->schedule();
-  task_manager->get_current_task()->get_saved_state().memory->activate();
-  jump_to_el0(task1->get_saved_state().regs.elr, (uintptr_t)task_manager->get_current_task()->get_saved_state().sp);
-  LOG_CRITICAL("Not in user space");
+  //  TaskManager* task_manager = new TaskManager;
+  //
+  //  auto task1 = task_manager->create_task((const elf::Header*)&init);
+  //  task_manager->wake_task(task1);
+  //
+  //  auto task2 = task_manager->create_task((const elf::Header*)&init);
+  //  task_manager->wake_task(task2);
+  //
+  //  auto task3 = task_manager->create_task((const elf::Header*)&init);
+  //  task_manager->wake_task(task3);
+  //
+  //  //  Enter userspace
+  //  task_manager->schedule();
+  //  task_manager->get_current_task()->get_saved_state().memory->activate();
+  //  jump_to_el0(task1->get_saved_state().regs.elr, (uintptr_t)task_manager->get_current_task()->get_saved_state().sp);
+  //  LOG_CRITICAL("Not in user space");
+  LOG_ERROR("END");
   libk::halt();
 }

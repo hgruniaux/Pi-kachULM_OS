@@ -5,10 +5,16 @@
 #include "kernel_internal_memory.hpp"
 #include "process_memory.hpp"
 
-Buffer::Buffer(uint32_t byte_size)
-    : nb_pages(libk::div_round_up(byte_size, PAGE_SIZE)),
-      buffer_pa(memory_impl::allocate_buffer_pa(nb_pages)),
-      kernel_va(memory_impl::map_buffer(buffer_pa, nb_pages)) {}
+Buffer::Buffer(uint32_t byte_size) {
+  const size_t nb_pages = libk::div_round_up(byte_size, PAGE_SIZE);
+  if (!memory_impl::allocate_buffer_pa(nb_pages, &buffer_pa_start, &buffer_pa_end)) {
+    libk::panic("Error Allocating Buffer.");
+  }
+
+  LOG_DEBUG("We have a Buffer {:#x} -> {:#x}", buffer_pa_start, buffer_pa_end);
+  kernel_va = memory_impl::map_buffer(buffer_pa_start, buffer_pa_end);
+  LOG_DEBUG("Mapped from {:#x}", kernel_va);
+}
 
 Buffer::~Buffer() {
   // Free all mapping in processes
@@ -18,12 +24,12 @@ Buffer::~Buffer() {
 
   KASSERT(_proc.is_empty());
 
-  memory_impl::unmap_buffer(kernel_va, nb_pages);
-  memory_impl::free_buffer_pa(buffer_pa, nb_pages);
+  memory_impl::unmap_buffer(kernel_va, kernel_va + buffer_pa_end - buffer_pa_start);
+  memory_impl::free_buffer_pa(buffer_pa_start, buffer_pa_end);
 }
 
 size_t Buffer::get_byte_size() const {
-  return nb_pages * PAGE_SIZE;
+  return buffer_pa_end - buffer_pa_start + PAGE_SIZE;
 }
 
 void* Buffer::get() const {

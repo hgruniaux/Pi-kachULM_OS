@@ -27,9 +27,10 @@ class Buffer {
   [[nodiscard]] DMA::Address get_dma_address();
 
  private:
-  const size_t nb_pages;
-  const PhysicalPA buffer_pa;
-  const VirtualPA kernel_va;
+//  const size_t nb_pages;
+  PhysicalPA buffer_pa_start;
+  PhysicalPA buffer_pa_end;
+  VirtualPA kernel_va;
 
   friend ProcessMemory;
 

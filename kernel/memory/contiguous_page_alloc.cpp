@@ -17,7 +17,7 @@ size_t ContiguousPageAllocator::page_index(PhysicalPA addr) const {
   return addr / PAGE_SIZE;
 }
 
-bool ContiguousPageAllocator::try_fresh_pages(size_t nb_pages, PhysicalPA* addr, bool first_pass) {
+bool ContiguousPageAllocator::try_fresh_pages(size_t nb_pages, PhysicalPA* start, PhysicalPA* end, bool first_pass) {
   PhysicalPA page_candidate = -1;
   size_t found_free_pages = 0;
 
@@ -34,8 +34,12 @@ bool ContiguousPageAllocator::try_fresh_pages(size_t nb_pages, PhysicalPA* addr,
 
       if (found_free_pages == nb_pages) {
         KASSERT(page_candidate != -1ull);
-        mark_as_used(page_candidate, nb_pages);
-        *addr = page_candidate;
+        LOG_DEBUG("Allocating from {:#x} to {:#x}", page_candidate, _page_cursor);
+        mark_as_used(page_candidate, _page_cursor);
+        *start = page_candidate;
+        *end = _page_cursor;
+
+        _page_cursor += PAGE_SIZE;
         return true;
       }
     } else {
@@ -48,35 +52,47 @@ bool ContiguousPageAllocator::try_fresh_pages(size_t nb_pages, PhysicalPA* addr,
   if (first_pass) {
     // We have searched for all the pages. Let's go back from the beginning.
     _page_cursor = 0;
-    return try_fresh_pages(nb_pages, addr, false);
+    return try_fresh_pages(nb_pages, start, end, false);
   } else {
     // We made a second pass, and still no page found :/
     return false;
   }
 }
 
-void ContiguousPageAllocator::mark_as_used(PhysicalPA addr, size_t nb_pages) {
-  if (page_index(addr) + nb_pages >= _nb_pages) {
-    LOG_ERROR("Page index {} is not in range. Cannot be marked as used.", page_index(addr) + nb_pages);
+void ContiguousPageAllocator::mark_as_used(PhysicalPA start, PhysicalPA end) {
+  if (start > end) {
+    return;
+  }
+
+  if (page_index(end) >= _nb_pages) {
+    LOG_ERROR("Page {:#x} is not in range. Cannot be marked as used.", end);
     libk::panic("Marking page as used failed.");
   }
 
-  for (size_t page_i = page_index(addr); page_i <= page_index(addr) + nb_pages; ++page_i) {
+  LOG_DEBUG("Marking as Used {:#x} -> {:#x}", start, end);
+
+  for (size_t page_i = page_index(start); page_i <= page_index(end); ++page_i) {
     _free_page.set_bit(page_i, false);
   }
 }
 
-bool ContiguousPageAllocator::fresh_pages(size_t nb_pages, PhysicalPA* addr) {
-  return try_fresh_pages(nb_pages, addr, true);
+bool ContiguousPageAllocator::fresh_pages(size_t nb_pages, PhysicalPA* start, PhysicalPA* end) {
+  return try_fresh_pages(nb_pages, start, end, true);
 }
 
-void ContiguousPageAllocator::free_pages(PhysicalPA addr, size_t nb_pages) {
-  if (page_index(addr) + nb_pages >= _nb_pages) {
-    LOG_ERROR("Page index {} is not in range. Cannot be marked as free.", page_index(addr) + nb_pages);
+void ContiguousPageAllocator::free_pages(PhysicalPA start, PhysicalPA end) {
+  if (start > end) {
+    return;
+  }
+
+  if (page_index(end) >= _nb_pages) {
+    LOG_ERROR("Page {:#x} is not in range. Cannot be marked as free.", end);
     libk::panic("Marking page as freed failed.");
   }
 
-  for (size_t page_i = page_index(addr); page_i <= page_index(addr) + nb_pages; ++page_i) {
+  LOG_DEBUG("Marking as Free {:#x} -> {:#x}", start, end);
+
+  for (size_t page_i = page_index(start); page_i <= page_index(end); ++page_i) {
     _free_page.set_bit(page_i, true);
   }
 }
