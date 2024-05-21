@@ -35,7 +35,7 @@ static void pika_sys_unknown(Registers& regs) {
 
 static void pika_sys_exit(Registers& regs) {
   const auto exit_code = (int)regs.gp_regs.x0;
-  TaskManager::get().kill_task(Task::current(), exit_code);
+  TaskManager::get()->kill_task(Task::current(), exit_code);
   // This sys does not return to the user process, no need to set the error code.
 }
 
@@ -44,7 +44,7 @@ static void pika_sys_sleep(Registers& regs) {
 
   if (time_in_us > 0) {
     set_error(regs, SYS_ERR_OK);
-    TaskManager::get().sleep_task(Task::current(), time_in_us);
+    TaskManager::get()->sleep_task(Task::current(), time_in_us);
     return;
   }
 
@@ -52,7 +52,7 @@ static void pika_sys_sleep(Registers& regs) {
 }
 
 static void pika_sys_yield(Registers& regs) {
-  TaskManager::get().schedule();
+  TaskManager::get()->schedule();
   set_error(regs, SYS_ERR_OK);
 }
 
@@ -86,7 +86,7 @@ static void pika_sys_sched_set_priority(Registers& regs) {
   const uint32_t priority = regs.gp_regs.x1;
 
   // TODO: use pid to set priority of another process
-  if (TaskManager::get().set_task_priority(Task::current(), priority)) {
+  if (TaskManager::get()->set_task_priority(Task::current(), priority)) {
     set_error(regs, SYS_ERR_OK);
     return;
   }
