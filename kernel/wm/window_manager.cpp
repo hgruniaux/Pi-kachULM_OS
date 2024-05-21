@@ -1,5 +1,4 @@
 #include "wm/window_manager.hpp"
-#include "data/wallpaper.hpp"
 #include "graphics/graphics.hpp"
 #include "hardware/framebuffer.hpp"
 #include "hardware/timer.hpp"
@@ -12,7 +11,6 @@
 #include "hardware/dma/request.hpp"
 #endif  // CONFIG_USE_DMA
 
-#include "data/wallpaper.hpp"
 #include "graphics/stb_image.h"
 
 WindowManager* WindowManager::g_instance = nullptr;

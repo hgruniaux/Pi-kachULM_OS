@@ -153,8 +153,6 @@ add_executable(kernel
         # Window manager data: icons and wallpaper
         wm/data/pika_icon.hpp
         wm/data/pika_icon.cpp
-        wm/data/wallpaper.hpp
-        wm/data/wallpaper.cpp
 
         # Filesystem
         fs/filesystem.hpp
