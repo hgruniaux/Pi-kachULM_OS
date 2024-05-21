@@ -114,10 +114,21 @@ add_executable(kernel
         task/delta_queue.hpp
         task/delta_queue.cpp
 
-        # Embed init ELF file inside the kernel
-        ${CMAKE_CURRENT_BINARY_DIR}/init_elf.c
         task/message_queue.hpp
         task/message_queue.cpp
+
+        # Embed init ELF file inside the kernel
+        ${CMAKE_CURRENT_BINARY_DIR}/init_elf.c
+
+        # Filesystem
+        fs/filesystem.hpp
+        fs/filesystem.cpp
+        fs/fat/ff.c
+        fs/fat/ff.h
+        fs/fat/ffconf.h
+        fs/fat/ffsystem.cpp
+        fs/fat/ffunicode.c
+        fs/fat/ramdisk.cpp
 )
 
 target_include_directories(kernel PUBLIC .)

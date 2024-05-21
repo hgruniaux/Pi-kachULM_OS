@@ -5,11 +5,9 @@
 #include "hardware/framebuffer.hpp"
 #include "hardware/interrupts.hpp"
 #include "hardware/kernel_dt.hpp"
-#include "hardware/system_timer.hpp"
-#include "hardware/timer.hpp"
-#include "hardware/uart.hpp"
 
 #include "task/task_manager.hpp"
+#include "fs/filesystem.hpp"
 
 #if defined(__GNUC__)
 #define COMPILER_NAME "GCC " __VERSION__
@@ -28,6 +26,8 @@ extern "C" const char init[];
   LOG_INFO("Board revision: {:#x}", KernelDT::get_board_revision());
   LOG_INFO("Board serial: {:#x}", KernelDT::get_board_serial());
   LOG_INFO("Temp: {} °C / {} °C", Device::get_current_temp() / 1000, Device::get_max_temp() / 1000);
+
+  FileSystem::get().init();
 
   FrameBuffer& framebuffer = FrameBuffer::get();
   if (!framebuffer.init(1280, 720)) {
