@@ -2,8 +2,9 @@
 
 #include <libk/linked_list.hpp>
 
+#include "buffer.hpp"
 #include "memory/heap_manager.hpp"
-#include "memory/memory_chunk.hpp"
+#include "memory_chunk.hpp"
 
 class ProcessMemory {
  public:
@@ -25,12 +26,20 @@ class ProcessMemory {
   /** Change the memory mapping to take this process memory in account. */
   void activate() const;
 
+  /** Change the memory mapping to remove any process memory in account. */
+  static void deactivate();
+
   /* Memory chunk management */
   bool map_chunk(MemoryChunk& chunk, VirtualPA address, bool read_only, bool executable);
-  void unmap_chunk(VirtualPA chunk_start_address);
-  bool change_chunk_attr(VirtualPA chunk_start_address, bool read_only, bool executable);
+  bool map_buffer(Buffer& chunk, VirtualPA address, bool read_only, bool executable);
+
+  void unmap_memory(VirtualPA start_address);
+  bool change_memory_attr(VirtualPA start_address, bool read_only, bool executable);
 
   void free();
+
+  bool is_read_only(VirtualPA va) const;
+  bool is_executable(VirtualPA va) const;
 
  private:
   static uint8_t _new_asid;
@@ -39,11 +48,11 @@ class ProcessMemory {
   HeapManager _heap;
   MemoryChunk _stack;
 
- public:
-  struct MappedChunk {
+  struct MappedSections {
     VirtualPA start;
-    MemoryChunk* mem;
+    bool is_buffer;
+    void* mem;
   };
 
-  libk::LinkedList<MappedChunk> _chunks;
+  libk::LinkedList<MappedSections> _sec;
 };

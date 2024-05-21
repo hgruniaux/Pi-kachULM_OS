@@ -3,7 +3,10 @@
 #include <cstddef>
 #include <cstdint>
 #include "hardware/dma/dma_controller.hpp"
+#include "libk/linked_list.hpp"
 #include "memory.hpp"
+
+class ProcessMemory;
 
 class Buffer {
  public:
@@ -27,4 +30,17 @@ class Buffer {
   const size_t nb_pages;
   const PhysicalPA buffer_pa;
   const VirtualPA kernel_va;
+
+  friend ProcessMemory;
+
+  struct ProcessMapped {
+    VirtualPA buffer_start;
+    ProcessMemory* proc;
+  };
+
+  libk::LinkedList<ProcessMapped> _proc;
+
+  void register_mapping(ProcessMemory* proc_mem, VirtualPA start_addr);
+  void unregister_mapping(ProcessMemory* proc_mem);
+  VirtualPA end_address(VirtualPA start_address);
 };
