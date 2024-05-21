@@ -106,21 +106,20 @@ bool ProcessMemory::map_chunk(MemoryChunk& chunk, const VirtualPA page_va, bool 
 }
 
 bool ProcessMemory::map_buffer(Buffer& chunk, VirtualPA page_va, bool read_only, bool executable) {
-  if (chunk.buffer_pa == 0) {
+  if (chunk.buffer_pa_start == 0) {
     return false;
   }
 
   const PagesAttributes attr = get_properties(read_only, executable);
 
-  for (size_t page_id = 0; page_id < chunk.nb_pages; ++page_id) {
-    const PhysicalPA page_pa = chunk.buffer_pa + page_id * PAGE_SIZE;
+  const PhysicalPA buffer_va_start = page_va;
+  const PhysicalPA buffer_va_end = buffer_va_start + chunk.buffer_pa_end - chunk.buffer_pa_start;
 
-    if (!map_range(&_tbl, page_va + page_id * PAGE_SIZE, page_va + page_id * PAGE_SIZE, page_pa, attr)) {
-      return false;
-    }
+  if (!map_range(&_tbl, buffer_va_start, buffer_va_end, chunk.buffer_pa_start, attr)) {
+    return false;
   }
 
-  _sec.emplace_back(page_va, true, &chunk);
+  _sec.emplace_back(buffer_va_start, true, &chunk);
   chunk.register_mapping(this, page_va);
 
   return true;
@@ -186,9 +185,9 @@ bool ProcessMemory::change_memory_attr(VirtualPA start_address, bool read_only, 
 bool ProcessMemory::is_read_only(VirtualPA va) const {
   PagesAttributes attr;
 
-  if(!get_attr(&_tbl, va, &attr)){
-        LOG_ERROR("There is no memory mapped at {:#x} !", va);
-        return true;
+  if (!get_attr(&_tbl, va, &attr)) {
+    LOG_ERROR("There is no memory mapped at {:#x} !", va);
+    return true;
   }
 
   return attr.rw == ReadWritePermission::ReadOnly;
@@ -197,9 +196,9 @@ bool ProcessMemory::is_read_only(VirtualPA va) const {
 bool ProcessMemory::is_executable(VirtualPA va) const {
   PagesAttributes attr;
 
-  if(!get_attr(&_tbl, va, &attr)){
-        LOG_ERROR("There is no memory mapped at {:#x} !", va);
-        return true;
+  if (!get_attr(&_tbl, va, &attr)) {
+    LOG_ERROR("There is no memory mapped at {:#x} !", va);
+    return true;
   }
 
   return attr.exec == ExecutionPermission::ProcessExecute;

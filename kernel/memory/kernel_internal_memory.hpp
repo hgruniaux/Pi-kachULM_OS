@@ -16,10 +16,10 @@ PhysicalPA resolve_table_pgd(const MMUTable& tbl);
 VirtualPA allocate_pages_section(size_t nb_pages, PhysicalPA* pages_ptr);
 void free_section(size_t nb_pages, VirtualPA kernel_va, PhysicalPA* pages_ptr);
 
-PhysicalPA allocate_buffer_pa(size_t nb_pages);
-void free_buffer_pa(PhysicalPA buffer_pa, size_t nb_pages);
-VirtualPA map_buffer(PhysicalPA buffer_pa, size_t nb_pages);
-void unmap_buffer(VirtualPA buffer_va, size_t nb_pages);
+bool allocate_buffer_pa(size_t nb_pages, PhysicalPA* buffer_start, PhysicalPA* buffer_end);
+void free_buffer_pa(PhysicalPA buffer_start, PhysicalPA buffer_end);
+VirtualPA map_buffer(PhysicalPA buffer_start, PhysicalPA buffer_end);
+void unmap_buffer(VirtualPA buffer_start, VirtualPA buffer_end);
 
 PhysicalPA resolve_kernel_va(VirtualAddress va, bool read_only);
 
