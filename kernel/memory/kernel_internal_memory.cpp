@@ -4,6 +4,7 @@
 #include <libk/utils.hpp>
 #include "boot/mmu_utils.hpp"
 #include "contiguous_page_alloc.hpp"
+#include "fs/fat/ramdisk.hpp"
 #include "hardware/kernel_dt.hpp"
 #include "libk/log.hpp"
 
@@ -136,6 +137,9 @@ bool memory_impl::init() {
         mark_as_used_range(start, end);
       }
     }
+
+    // RamFs
+    mark_as_used_range(RAM_FS_PHYSICAL_LOAD_ADDRESS, RAM_FS_PHYSICAL_LOAD_ADDRESS + RAM_FS_BYTE_SIZE);
   }
 
   /* Set up the MMUTable */

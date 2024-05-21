@@ -27,11 +27,11 @@ extern "C" const char init[];
   FileSystem::get().init();
 
   FIL f = {};
-  LOG_DEBUG("Open '/test': {}", f_open(&f, "/test", FA_READ) == FR_OK);
+  LOG_DEBUG("Open '/keep.me': {}", f_open(&f, "/keep.me", FA_READ) == FR_OK);
 
   char buffer[1024] = {0};
   uint32_t byte_read;
-  LOG_DEBUG("Reading '/test': {}", f_read(&f, buffer, 20, &byte_read) == FR_OK);
+  LOG_DEBUG("Reading '/keep.me': {}", f_read(&f, buffer, 120, &byte_read) == FR_OK);
 
   LOG_DEBUG("Data read ({} bytes) : {:$}", byte_read, buffer);
 
