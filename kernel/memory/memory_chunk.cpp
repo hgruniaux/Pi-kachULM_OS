@@ -19,41 +19,9 @@ MemoryChunk::MemoryChunk(size_t nb_pages)
 }
 
 MemoryChunk::~MemoryChunk() {
-  free();
-}
-
-size_t MemoryChunk::write(size_t byte_offset, const void* data, size_t data_byte_length) {
-  if (byte_offset >= byte_size() || _kernel_va == 0) {
-    return 0;
-  }
-
-  void* begin = (void*)(_kernel_va + byte_offset);
-  const size_t available_to_write = byte_size() - byte_offset;
-  const size_t to_write = libk::min(available_to_write, data_byte_length);
-
-  libk::memcpy(begin, data, to_write);
-
-  return to_write;
-}
-
-size_t MemoryChunk::read(size_t byte_offset, void* data, size_t data_byte_length) const {
-  if (byte_offset >= byte_size() || _kernel_va == 0) {
-    return 0;
-  }
-
-  const auto* begin = (const void*)(_kernel_va + byte_offset);
-  const size_t available_to_read = byte_size() - byte_offset;
-  const size_t to_read = libk::min(available_to_read, data_byte_length);
-
-  libk::memcpy(data, begin, to_read);
-
-  return to_read;
-}
-
-void MemoryChunk::free() {
   // Free all mapping in processes
   for (const auto proc : _proc) {
-    proc.proc->unmap_chunk(proc.chunk_start);  // <- proc will be removed from the list by the unregister call
+    proc.proc->unmap_memory(proc.chunk_start);  // <- proc will be removed from the list by the unregister call
   }
 
   KASSERT(_proc.is_empty());
@@ -67,16 +35,44 @@ void MemoryChunk::free() {
   _kernel_va = 0;
 }
 
-size_t MemoryChunk::byte_size() const {
+size_t MemoryChunk::write(size_t byte_offset, const void* data, size_t data_byte_length) {
+  if (byte_offset >= get_byte_size() || _kernel_va == 0) {
+    return 0;
+  }
+
+  void* begin = (void*)(_kernel_va + byte_offset);
+  const size_t available_to_write = get_byte_size() - byte_offset;
+  const size_t to_write = libk::min(available_to_write, data_byte_length);
+
+  libk::memcpy(begin, data, to_write);
+
+  return to_write;
+}
+
+size_t MemoryChunk::read(size_t byte_offset, void* data, size_t data_byte_length) const {
+  if (byte_offset >= get_byte_size() || _kernel_va == 0) {
+    return 0;
+  }
+
+  const auto* begin = (const void*)(_kernel_va + byte_offset);
+  const size_t available_to_read = get_byte_size() - byte_offset;
+  const size_t to_read = libk::min(available_to_read, data_byte_length);
+
+  libk::memcpy(data, begin, to_read);
+
+  return to_read;
+}
+
+size_t MemoryChunk::get_byte_size() const {
   return _nb_pages * PAGE_SIZE;
 }
 
 VirtualPA MemoryChunk::end_address(VirtualPA start_address) {
-  return start_address + byte_size() - PAGE_SIZE;
+  return start_address + get_byte_size() - PAGE_SIZE;
 }
 
 void MemoryChunk::register_mapping(ProcessMemory* proc_mem, VirtualPA start_addr) {
-  _proc.push_back({start_addr, proc_mem});
+  _proc.emplace_back(start_addr, proc_mem);
 }
 
 void MemoryChunk::unregister_mapping(ProcessMemory* proc_mem) {
