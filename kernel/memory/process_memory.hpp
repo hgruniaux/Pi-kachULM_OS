@@ -49,6 +49,7 @@ class ProcessMemory {
   MemoryChunk _stack;
 
   struct MappedSections {
+    MappedSections(VirtualPA start, bool is_buffer, void* mem) : start(start), is_buffer(is_buffer), mem(mem) {}
     VirtualPA start;
     bool is_buffer;
     void* mem;

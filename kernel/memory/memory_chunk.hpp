@@ -42,6 +42,7 @@ class MemoryChunk {
   VirtualPA _kernel_va;
 
   struct ProcessMapped {
+    ProcessMapped(VirtualPA start, ProcessMemory* proc) : chunk_start(start), proc(proc) {}
     VirtualPA chunk_start;
     ProcessMemory* proc;
   };
