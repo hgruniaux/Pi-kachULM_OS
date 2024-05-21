@@ -62,42 +62,9 @@ bool Channel::execute_requests(const Request* req) const {
   }
 
   const uintptr_t req_va_address = (uintptr_t)req->dma_s;
-  LOG_DEBUG("REQ TI: {:#x}", libk::read32(req_va_address + 0x00));
-  LOG_DEBUG("REQ SRC: {:#x}", libk::read32(req_va_address + 0x04));
-  LOG_DEBUG("REQ DST: {:#x}", libk::read32(req_va_address + 0x08));
-  LOG_DEBUG("REQ LEN: {:#x}", libk::read32(req_va_address + 0x0c));
-  LOG_DEBUG("REQ STR: {:#x}", libk::read32(req_va_address + 0x10));
-  LOG_DEBUG("REQ NEX: {:#x}", libk::read32(req_va_address + 0x14));
-  LOG_DEBUG("REQ RS1: {:#x}", libk::read32(req_va_address + 0x18));
-  LOG_DEBUG("REQ RS2: {:#x}", libk::read32(req_va_address + 0x1c));
-
   const uintptr_t req_address = memory_impl::resolve_kernel_va(req_va_address, false);
-  LOG_DEBUG("Request PA Address: {:#x}", req_address);
-  LOG_DEBUG("Request VA Address: {:#x}", req_va_address);
-
   libk::write32(base + CONBLK_AD, req_address);
-  LOG_DEBUG("Channel CS: {:#x}", libk::read32(base + 0x00));
-  LOG_DEBUG("Channel BLOCK: {:#x}", libk::read32(base + 0x04));
-  LOG_DEBUG("Channel TI: {:#x}", libk::read32(base + 0x08));
-  LOG_DEBUG("Channel SRC: {:#x}", libk::read32(base + 0x0c));
-  LOG_DEBUG("Channel DST: {:#x}", libk::read32(base + 0x10));
-  LOG_DEBUG("Channel LEN: {:#x}", libk::read32(base + 0x14));
-  LOG_DEBUG("Channel STR: {:#x}", libk::read32(base + 0x18));
-  LOG_DEBUG("Channel NEX: {:#x}", libk::read32(base + 0x1c));
-  LOG_DEBUG("Channel DBG: {:#x}", libk::read32(base + 0x20));
-  LOG_DEBUG("");
-
   libk::write32(base + CS, CS_WAIT_FOR_WRITE | CS_DIS_DEBUG | CS_ACTIVE | 15 << 20 | 8 << 16);
-  LOG_DEBUG("Channel CS: {:#x}", libk::read32(base + 0x00));
-  LOG_DEBUG("Channel BLOCK: {:#x}", libk::read32(base + 0x04));
-  LOG_DEBUG("Channel TI: {:#x}", libk::read32(base + 0x08));
-  LOG_DEBUG("Channel SRC: {:#x}", libk::read32(base + 0x0c));
-  LOG_DEBUG("Channel DST: {:#x}", libk::read32(base + 0x10));
-  LOG_DEBUG("Channel LEN: {:#x}", libk::read32(base + 0x14));
-  LOG_DEBUG("Channel STR: {:#x}", libk::read32(base + 0x18));
-  LOG_DEBUG("Channel NEX: {:#x}", libk::read32(base + 0x1c));
-  LOG_DEBUG("Channel DBG: {:#x}", libk::read32(base + 0x20));
-
   return true;
 }
 

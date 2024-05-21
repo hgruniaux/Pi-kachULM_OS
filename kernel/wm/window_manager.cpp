@@ -31,11 +31,13 @@ WindowManager::WindowManager() {
     m_screen_buffer = fb.get_buffer();
   }
 
+#ifdef CONFIG_INCLUDE_WALLPAPER
   int wallpaper_width, wallpaper_height;
   m_wallpaper = (const uint32_t*)stbi_load_from_memory(wallpaper_jpg, wallpaper_jpg_len, &wallpaper_width,
                                                        &wallpaper_height, nullptr, 4);
   m_wallpaper_width = wallpaper_width;
   m_wallpaper_height = wallpaper_height;
+#endif  // CONFIG_INCLUDE_WALLPAPER
 }
 
 [[nodiscard]] bool WindowManager::is_valid(Window* window) const {
@@ -305,17 +307,8 @@ void WindowManager::update() {
 }
 
 void WindowManager::draw_background(const Rect& rect, DMARequestQueue& request_queue) {
-  for (int32_t x = rect.left(); x < rect.right(); ++x) {
-    for (int32_t y = rect.top(); y < rect.bottom(); ++y) {
-      // The wallpaper is in RGBA, we expect ABGR.
-      const auto color = libk::bswap(m_wallpaper[x + m_wallpaper_width * y]);
-      m_screen_buffer[x + m_screen_pitch * y] = color >> 8;
-    }
-  }
-
-  return;
-
-#ifdef CONFIG_USE_DMA
+#ifdef CONFIG_INCLUDE_WALLPAPER
+#if defined(CONFIG_USE_DMA) && 0 /* disable DMA for the background as it does not work yet */
   const auto framebuffer_dma_addr = DMA::get_dma_bus_address((VirtualAddress)m_wallpaper, true);
   const auto screen_dma_addr = DMA::get_dma_bus_address((VirtualAddress)&m_screen_buffer, false);
   const auto src_stride = 0;
@@ -325,8 +318,19 @@ void WindowManager::draw_background(const Rect& rect, DMARequestQueue& request_q
   request_queue.add(request);
 #else
   (void)request_queue;
+
+  for (int32_t x = rect.left(); x < rect.right(); ++x) {
+    for (int32_t y = rect.top(); y < rect.bottom(); ++y) {
+      // The wallpaper is in RGBA, we expect ABGR.
+      const auto color = libk::bswap(m_wallpaper[x + m_wallpaper_width * y]);
+      m_screen_buffer[x + m_screen_pitch * y] = color >> 8;
+    }
+  }
+#endif  // CONFIG_USE_DMA
+#else
+  (void)request_queue;
   fill_rect(rect, 0xffffff);
-#endif
+#endif  // CONFIG_INCLUDE_WALLPAPER
 }
 
 void WindowManager::fill_rect(const Rect& rect, uint32_t color) {
@@ -485,6 +489,7 @@ void WindowManager::draw_windows() {
     --it;
   }
 #else
+  draw_background({0, 0, m_screen_width, m_screen_height}, dma_request_queue);
   draw_windows(m_windows.begin(), {0, 0, m_screen_width, m_screen_height}, dma_request_queue);
 #endif  // CONFIG_USE_NAIVE_WM_UPDATE
 
