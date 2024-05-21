@@ -93,12 +93,12 @@ extern "C" const char init[];
 
     //    DMA::Request req1 = DMA::Request::memcpy(src_dma, dst_dma, width * height * sizeof(uint32_t));
 
-    DMA::Request red_req = DMA::Request::memcpy_2d(red_dma, red_fb_dma, red_width * sizeof(uint32_t), red_height, 0,
+    DMA::Request* red_req = DMA::Request::memcpy_2d(red_dma, red_fb_dma, red_width * sizeof(uint32_t), red_height, 0,
                                                    (width - red_width) * sizeof(uint32_t));
 
-    DMA::Request green_req = DMA::Request::memcpy_2d(green_dma, green_fb_dma, green_width * sizeof(uint32_t),
+    DMA::Request* green_req = DMA::Request::memcpy_2d(green_dma, green_fb_dma, green_width * sizeof(uint32_t),
                                                      green_height, 0, (width - green_width) * sizeof(uint32_t));
-    red_req.link_to(green_req);
+    red_req->link_to(green_req);
 
     DMA::Channel c;
     LOG_DEBUG("DMA Start !");
@@ -108,6 +108,9 @@ extern "C" const char init[];
     size_t end = GenericTimer::get_elapsed_time_in_ns();
     LOG_DEBUG("DMA End.");
     LOG_DEBUG("Time: {} ns", end - start);
+
+    delete red_req;
+    delete green_req;
   }
 
   TaskManager* task_manager = new TaskManager;

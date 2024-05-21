@@ -13,7 +13,7 @@ class Channel {
 
   /** Try to execute the list of request @a req.
    * @a Returns `true` is the request has been started. */
-  bool execute_requests(const Request& req) const;
+  bool execute_requests(const Request* req) const;
 
   /** Wait for requests to end. */
   bool wait() const;

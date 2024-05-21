@@ -68,23 +68,23 @@ Request::Request(Address src,
   dma_s->res[1] = 0;
 }
 
-Request Request::memcpy(Address src, Address dest, uint32_t length) {
-  return Request(src, dest, length);
+Request* Request::memcpy(Address src, Address dest, uint32_t length) {
+  return new Request(src, dest, length);
 }
 
-Request Request::memcpy_2d(Address src,
-                           Address dst,
-                           uint16_t x_length,
-                           uint16_t y_length,
-                           uint16_t src_strid,
-                           uint16_t dst_stride) {
-  return Request(src, dst, x_length, y_length, src_strid, dst_stride);
+Request* Request::memcpy_2d(Address src,
+                            Address dst,
+                            uint16_t x_length,
+                            uint16_t y_length,
+                            uint16_t src_strid,
+                            uint16_t dst_stride) {
+  return new Request(src, dst, x_length, y_length, src_strid, dst_stride);
 }
 
-Request* Request::link_to(Request& next) {
+Request* Request::link_to(Request* next) {
   auto* old_next = next_req;
-  next_req = &next;
-  dma_s->next_req = DMA::get_dma_bus_address((uintptr_t)next.dma_s, false);
+  next_req = next;
+  dma_s->next_req = DMA::get_dma_bus_address((uintptr_t)next->dma_s, false);
   return old_next;
 }
 
