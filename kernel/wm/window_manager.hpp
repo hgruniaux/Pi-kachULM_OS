@@ -38,11 +38,46 @@ class WindowManager {
   void mosaic_layout();
 
  private:
+  struct DMARequestQueue {
+    DMA::Request* first_request = nullptr;
+    DMA::Request* last_request = nullptr;
+
+    ~DMARequestQueue() {
+      // Free the DMA request queue.
+      auto* request = first_request;
+      while (request != nullptr) {
+        auto* next = request->next();
+        delete request;
+        request = next;
+      }
+    }
+
+    void add(DMA::Request* request) {
+      KASSERT(request != nullptr);
+
+      if (first_request == nullptr) {
+        first_request = request;
+        last_request = request;
+      } else {
+        last_request->link_to(request);
+        last_request = request;
+      }
+    }
+
+    void execute_and_wait(DMA::Channel& channel) {
+      if (first_request == nullptr)
+        return;
+
+      channel.execute_requests(first_request);
+      channel.wait();
+    }
+  };
+
   void fill_rect(const Rect& rect, uint32_t color);
 
-  void draw_background(const Rect& rect, DMA::Request*& previous_request);
-  void draw_window(Window* window, const Rect& dst_rect, DMA::Request*& previous_request);
-  void draw_windows(libk::LinkedList<Window*>::Iterator it, const Rect& dst_rect, DMA::Request*& previous_request);
+  void draw_background(const Rect& rect, DMARequestQueue& request_queue);
+  void draw_window(Window* window, const Rect& dst_rect, DMARequestQueue& request_queue);
+  void draw_windows(libk::LinkedList<Window*>::Iterator it, const Rect& dst_rect, DMARequestQueue& request_queue);
 
   void draw_windows();
 

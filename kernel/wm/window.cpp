@@ -62,7 +62,6 @@ void Window::draw_frame() {
   m_painter.draw_rect(0, 0, m_geometry.width(), m_geometry.height(), BORDER_COLOR);
   m_painter.draw_line(0, TITLE_BAR_HEIGHT, m_geometry.width(), TITLE_BAR_HEIGHT, BORDER_COLOR);
 
-#if 1
   // Draw the pikachu icon.
   constexpr uint32_t pika_color = 0xffffff;
   for (uint32_t i = 0; i < pika_icon_width; ++i) {
@@ -71,7 +70,6 @@ void Window::draw_frame() {
       m_painter.draw_pixel(5 + i, 2 + j, color);
     }
   }
-#endif
 
   const auto text_width = m_painter.get_font().get_width(m_title.get_data(), m_title.get_length());
   const auto text_x = (m_geometry.width() - text_width) / 2;
@@ -80,9 +78,11 @@ void Window::draw_frame() {
 }
 
 void Window::reallocate_framebuffer() {
-  delete[] m_framebuffer;
-  m_framebuffer = new uint32_t[m_geometry.width() * m_geometry.height()];
-  m_framebuffer_pitch = m_geometry.width();
-  libk::bzero(m_framebuffer, sizeof(uint32_t) * m_geometry.width() * m_geometry.height());
-  m_painter = graphics::Painter(m_framebuffer, m_geometry.width(), m_geometry.height(), m_framebuffer_pitch);
+  m_framebuffer.reset();
+
+  const auto buffer_size = sizeof(uint32_t) * m_geometry.width() * m_geometry.height();
+  m_framebuffer = libk::make_scoped<Buffer>(buffer_size);
+  m_task->get_memory()->map_buffer(*m_framebuffer.get(), 0x0000ff0000000000, false, false);
+  m_painter =
+      graphics::Painter((uint32_t*)m_framebuffer->get(), m_geometry.width(), m_geometry.height(), m_framebuffer_pitch);
 }

@@ -3,6 +3,7 @@
 #include <libk/memory.hpp>
 #include <libk/string_view.hpp>
 #include "graphics/graphics.hpp"
+#include "memory/buffer.hpp"
 #include "task/task.hpp"
 #include "wm/geometry.hpp"
 #include "wm/message_queue.hpp"
@@ -39,8 +40,9 @@ class Window {
   [[nodiscard]] const MessageQueue& get_message_queue() const { return m_message_queue; }
 
   // Graphics functions:
-  [[nodiscard]] uint32_t* get_framebuffer() { return m_framebuffer; }
-  [[nodiscard]] const uint32_t* get_framebuffer() const { return m_framebuffer; }
+  [[nodiscard]] uint32_t* get_framebuffer() { return (uint32_t*)m_framebuffer->get(); }
+  [[nodiscard]] const uint32_t* get_framebuffer() const { return (const uint32_t*)m_framebuffer->get(); }
+  [[nodiscard]] DMA::Address get_framebuffer_dma_addr() const { return m_framebuffer->get_dma_address(); }
   [[nodiscard]] uint32_t get_framebuffer_pitch() const { return m_framebuffer_pitch; }
   void clear(uint32_t argb = 0x000000);
   void draw_line(uint32_t x1, uint32_t y1, uint32_t x2, uint32_t y2, uint32_t argb);
@@ -74,7 +76,7 @@ class Window {
   // The framebuffer is allocated on the kernel side. It is updated each time
   // the window geometry changes. The size of the framebuffer is the same
   // as the window size (see m_geometry variable).
-  uint32_t* m_framebuffer = nullptr;
+  libk::ScopedPointer<Buffer> m_framebuffer;
   uint32_t m_framebuffer_pitch = 0;
 
   graphics::Painter m_painter;
