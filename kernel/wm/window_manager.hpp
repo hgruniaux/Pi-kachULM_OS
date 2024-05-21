@@ -6,6 +6,10 @@
 #include "geometry.hpp"
 #include "task/task.hpp"
 
+#ifdef USE_DMA
+#include "hardware/dma/channel.hpp"
+#endif  // USE_DMA
+
 class Window;
 class Task;
 
@@ -35,9 +39,11 @@ class WindowManager {
 
  private:
   void fill_rect(const Rect& rect, uint32_t color);
-  void draw_background(const Rect& rect);
-  void draw_window(Window* window, const Rect& dst_rect);
-  void draw_windows(libk::LinkedList<Window*>::Iterator it, const Rect& dst_rect);
+
+  void draw_background(const Rect& rect, DMA::Request*& previous_request);
+  void draw_window(Window* window, const Rect& dst_rect, DMA::Request*& previous_request);
+  void draw_windows(libk::LinkedList<Window*>::Iterator it, const Rect& dst_rect, DMA::Request*& previous_request);
+
   void draw_windows();
 
  private:
@@ -52,4 +58,8 @@ class WindowManager {
   uint32_t* m_screen_buffer;
   size_t m_screen_pitch;
   int32_t m_screen_width, m_screen_height;
+
+#ifdef USE_DMA
+  DMA::Channel m_dma_channel;
+#endif  // USE_DMA
 };  // class WindowManager

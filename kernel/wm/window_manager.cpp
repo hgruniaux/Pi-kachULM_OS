@@ -3,11 +3,13 @@
 #include "hardware/framebuffer.hpp"
 #include "hardware/timer.hpp"
 #include "libk/log.hpp"
-#include "task/task.hpp"
 #include "wm/window.hpp"
 
 #include <algorithm>
-#include <ranges>
+
+#ifdef USE_DMA
+#include "hardware/dma/request.hpp"
+#endif
 
 WindowManager* WindowManager::g_instance = nullptr;
 
@@ -267,7 +269,7 @@ void WindowManager::update() {
   LOG_DEBUG("Window manager update done in {} ms for {} window(s)", (end - start) / 1000, m_window_count);
 }
 
-void WindowManager::draw_background(const Rect& rect) {
+void WindowManager::draw_background(const Rect& rect, DMA::Request*& previous_request) {
   fill_rect(rect, 0xffffff);
 }
 
@@ -280,7 +282,7 @@ void WindowManager::fill_rect(const Rect& rect, uint32_t color) {
   }
 }
 
-void WindowManager::draw_window(Window* window, const Rect& dst_rect) {
+void WindowManager::draw_window(Window* window, const Rect& dst_rect, DMA::Request*& previous_request) {
   const Rect& src_rect = window->m_geometry;
   if (!src_rect.intersects(dst_rect))
     return;
@@ -307,14 +309,26 @@ void WindowManager::draw_window(Window* window, const Rect& dst_rect) {
   if (x1 == x2 || y1 == y2)
     return;
 
-  // Blit the framebuffer into the screen.
-  // TODO: Maybe use DMA to do the blit for better performances.
+    // Blit the framebuffer into the screen.
+#if USE_DMA
+  const auto framebuffer_dma_addr =
+      DMA::get_dma_bus_address((VirtualAddress)&framebuffer[x1 + framebuffer_pitch * y1], true);
+  const auto screen_dma_addr = DMA::get_dma_bus_address(
+      (VirtualAddress)&m_screen_buffer[src_rect.x() + x1 + m_screen_pitch * (src_rect.y() + y1)], false);
+  const auto src_stride = sizeof(uint32_t) * (framebuffer_pitch - (x2 - x1));
+  const auto dst_stride = sizeof(uint32_t) * (m_screen_pitch - (x2 - x1));
+  auto request = DMA::Request::memcpy_2d(framebuffer_dma_addr, screen_dma_addr, sizeof(uint32_t) * (x2 - x1), y2 - y1,
+                                         src_stride, dst_stride);
+  m_dma_channel.execute_requests(request);
+  m_dma_channel.wait();
+#else
   for (uint32_t src_x = x1, dst_x = src_rect.x() + x1; src_x < x2; ++src_x, dst_x++) {
     for (uint32_t src_y = y1, dst_y = src_rect.y() + y1; src_y < y2; ++src_y, dst_y++) {
       const auto color = framebuffer[src_x + framebuffer_pitch * src_y];
       m_screen_buffer[dst_x + m_screen_pitch * dst_y] = color;
     }
   }
+#endif
 
   // Draw the focus border to inform the user what window has the focus.
   if (window->has_focus()) {
@@ -326,7 +340,9 @@ void WindowManager::draw_window(Window* window, const Rect& dst_rect) {
   }
 }
 
-void WindowManager::draw_windows(libk::LinkedList<Window*>::Iterator it, const Rect& dst_rect) {
+void WindowManager::draw_windows(libk::LinkedList<Window*>::Iterator it,
+                                 const Rect& dst_rect,
+                                 DMA::Request*& previous_request) {
   KASSERT(dst_rect.left() >= 0 && dst_rect.right() <= m_screen_width && dst_rect.top() >= 0 &&
           dst_rect.bottom() <= m_screen_height);
 
@@ -342,7 +358,7 @@ void WindowManager::draw_windows(libk::LinkedList<Window*>::Iterator it, const R
   Rect src_rect = (*it)->m_geometry;
 
   // Draw the current window (into the destination rectangle):
-  draw_window(*it, dst_rect);
+  draw_window(*it, dst_rect, previous_request);
 
   // Recursively draw the windows behind:
   // dst_rect:
@@ -378,18 +394,24 @@ void WindowManager::draw_windows(libk::LinkedList<Window*>::Iterator it, const R
     it++;
   } while (it != m_windows.end() && !(*it)->is_visible());
 
-  draw_windows(it, left);
-  draw_windows(it, top);
-  draw_windows(it, right);
-  draw_windows(it, bottom);
+  draw_windows(it, left, previous_request);
+  draw_windows(it, top, previous_request);
+  draw_windows(it, right, previous_request);
+  draw_windows(it, bottom, previous_request);
 }
 
 void WindowManager::draw_windows() {
-#if 1
-  draw_background({0, 0, m_screen_width, m_screen_height});
-  draw_windows(m_windows.begin(), {0, 0, m_screen_width, m_screen_height});
+#ifdef USE_DMA
+  m_dma_channel.abort_previous();
+#endif  // USE_DMA
+
+  DMA::Request* dma_request;
+
+#if 0
+  draw_background({0, 0, m_screen_width, m_screen_height}, dma_request);
+  draw_windows(m_windows.begin(), {0, 0, m_screen_width, m_screen_height}, dma_request);
 #else
-  draw_background({0, 0, m_screen_width, m_screen_height});
+  draw_background({0, 0, m_screen_width, m_screen_height}, dma_request);
 
   if (m_windows.is_empty())
     return;
@@ -399,8 +421,12 @@ void WindowManager::draw_windows() {
     ++it;
 
   while (it != m_windows.end()) {
-    draw_window(*it, {0, 0, m_screen_width, m_screen_height});
+    draw_window(*it, {0, 0, m_screen_width, m_screen_height}, dma_request);
     --it;
   }
+#endif
+
+#ifdef USE_DMA
+  // m_dma_channel.execute_requests();
 #endif
 }
