@@ -34,6 +34,7 @@ class Buffer {
   friend ProcessMemory;
 
   struct ProcessMapped {
+    ProcessMapped(VirtualPA start, ProcessMemory* proc) : buffer_start(start), proc(proc) {}
     VirtualPA buffer_start;
     ProcessMemory* proc;
   };
