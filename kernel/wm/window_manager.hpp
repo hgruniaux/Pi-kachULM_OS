@@ -19,6 +19,10 @@ class WindowManager {
 
   [[nodiscard]] static WindowManager& get() { return *g_instance; }
 
+  /** Checks if the window manager is supported (screen connected). */
+  [[nodiscard]] bool is_supported() const { return m_is_supported; }
+
+  /** Checks if the given window is a valid window, registered in this window manager. */
   [[nodiscard]] bool is_valid(Window* window) const;
 
   Window* create_window(const libk::SharedPointer<Task>& task, uint32_t flags);
@@ -34,6 +38,8 @@ class WindowManager {
 
   void post_message(sys_message_t message);
   bool post_message(Window* window, sys_message_t message);
+
+  void present_window(Window* window);
 
   void mosaic_layout();
 
@@ -88,18 +94,23 @@ class WindowManager {
 
  private:
   static WindowManager* g_instance;
+
   Window* m_focus_window = nullptr;  // the window that actually has focus
   libk::LinkedList<Window*> m_windows;
   size_t m_window_count = 0;
 
-  uint64_t m_last_update = 0;
-  bool m_dirty = true;  // true when the windows need to be redrawn/updated.
+  const uint32_t* m_wallpaper;
+  uint32_t m_wallpaper_width, m_wallpaper_height;
+
+#ifdef CONFIG_USE_DMA
+  DMA::Channel m_dma_channel;
+#endif  // CONFIG_USE_DMA
 
   uint32_t* m_screen_buffer;
   size_t m_screen_pitch;
   int32_t m_screen_width, m_screen_height;
 
-#ifdef CONFIG_USE_DMA
-  DMA::Channel m_dma_channel;
-#endif  // CONFIG_USE_DMA
+  bool m_dirty = true;         // true when the windows need to be redrawn/updated.
+  bool m_is_supported = true;  // is the window manager supported (screen connected)?
+
 };  // class WindowManager

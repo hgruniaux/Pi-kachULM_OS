@@ -1,4 +1,5 @@
 #include "wm/window_manager.hpp"
+#include "data/wallpaper.hpp"
 #include "graphics/graphics.hpp"
 #include "hardware/framebuffer.hpp"
 #include "hardware/timer.hpp"
@@ -11,6 +12,9 @@
 #include "hardware/dma/request.hpp"
 #endif  // CONFIG_USE_DMA
 
+#include "data/wallpaper.hpp"
+#include "graphics/stb_image.h"
+
 WindowManager* WindowManager::g_instance = nullptr;
 
 WindowManager::WindowManager() {
@@ -18,11 +22,20 @@ WindowManager::WindowManager() {
   g_instance = this;
 
   auto& fb = FrameBuffer::get();
-  m_screen_buffer = fb.get_buffer();
-  m_screen_width = fb.get_width();
-  m_screen_height = fb.get_height();
-  m_screen_pitch = fb.get_pitch();
-  m_screen_buffer = fb.get_buffer();
+  m_is_supported = fb.is_initialized();
+  if (m_is_supported) {
+    m_screen_buffer = fb.get_buffer();
+    m_screen_width = fb.get_width();
+    m_screen_height = fb.get_height();
+    m_screen_pitch = fb.get_pitch();
+    m_screen_buffer = fb.get_buffer();
+  }
+
+  int wallpaper_width, wallpaper_height;
+  m_wallpaper = (const uint32_t*)stbi_load_from_memory(wallpaper_jpg, wallpaper_jpg_len, &wallpaper_width,
+                                                       &wallpaper_height, nullptr, 4);
+  m_wallpaper_width = wallpaper_width;
+  m_wallpaper_height = wallpaper_height;
 }
 
 [[nodiscard]] bool WindowManager::is_valid(Window* window) const {
@@ -34,6 +47,9 @@ WindowManager::WindowManager() {
 }
 
 Window* WindowManager::create_window(const libk::SharedPointer<Task>& task, uint32_t flags) {
+  if (!m_is_supported)
+    return nullptr;
+
   Window* window = new Window(task);
   if (window == nullptr)
     return nullptr;
@@ -151,6 +167,8 @@ void WindowManager::set_window_geometry(Window* window, Rect rect) {
 }
 
 void WindowManager::focus_window(Window* window) {
+  KASSERT(is_valid(window));
+
   if (m_focus_window == window)
     return;
 
@@ -177,6 +195,8 @@ void WindowManager::focus_window(Window* window) {
 }
 
 void WindowManager::unfocus_window(Window* window) {
+  KASSERT(is_valid(window));
+
   if (m_focus_window != window)
     return;
 
@@ -202,6 +222,9 @@ void WindowManager::unfocus_window(Window* window) {
 }
 
 void WindowManager::post_message(sys_message_t message) {
+  if (!m_is_supported)
+    return;
+
   message.timestamp = GenericTimer::get_elapsed_time_in_ms();
   for (auto* window : m_windows) {
     window->get_message_queue().enqueue(message);
@@ -213,6 +236,18 @@ bool WindowManager::post_message(Window* window, sys_message_t message) {
 
   message.timestamp = GenericTimer::get_elapsed_time_in_ms();
   return window->get_message_queue().enqueue(message);
+}
+
+void WindowManager::present_window(Window* window) {
+  KASSERT(is_valid(window));
+
+  (void)window;
+
+  // Let do a full update the next time.
+  // A partial update is more challenging as we should only draw the pixels that are visible on the screen.
+  // This is straightforward if the window is a top level window (e.g. has focus),
+  // but it becomes tricky if the window is behind other windows.
+  m_dirty = true;  // mark the screen as dirty and needs an update
 }
 
 void WindowManager::mosaic_layout() {
@@ -237,7 +272,7 @@ void WindowManager::mosaic_layout() {
 
     int32_t width = window_width;
     // If we are the last window, take all the remaining place in the last row.
-    const bool is_last = (current_idx + 1) == m_window_count;
+    const bool is_last = (size_t)(current_idx + 1) == m_window_count;
     if (is_last) {
       width = (nb_columns - i) * window_width;
     }
@@ -258,7 +293,7 @@ void WindowManager::update() {
   if (GenericTimer::get_elapsed_time_in_ms() > 2000 && GenericTimer::get_elapsed_time_in_ms() < 3000)
     mosaic_layout();
 
-  if (!m_dirty)
+  if (!m_dirty || !m_is_supported)
     return;
 
   const auto start = GenericTimer::get_elapsed_time_in_micros();
@@ -270,7 +305,27 @@ void WindowManager::update() {
 }
 
 void WindowManager::draw_background(const Rect& rect, DMARequestQueue& request_queue) {
+  for (int32_t x = rect.left(); x < rect.right(); ++x) {
+    for (int32_t y = rect.top(); y < rect.bottom(); ++y) {
+      const auto color = m_wallpaper[x + m_wallpaper_width * y];
+      m_screen_buffer[x + m_screen_pitch * y] = (color >> 8) | ((color & 0xff) << 24);
+    }
+  }
+
+  return;
+
+#ifdef CONFIG_USE_DMA
+  const auto framebuffer_dma_addr = DMA::get_dma_bus_address((VirtualAddress)m_wallpaper, true);
+  const auto screen_dma_addr = DMA::get_dma_bus_address((VirtualAddress)&m_screen_buffer, false);
+  const auto src_stride = 0;
+  const auto dst_stride = sizeof(uint32_t) * (m_screen_pitch - m_screen_width);
+  auto* request = DMA::Request::memcpy_2d(framebuffer_dma_addr, screen_dma_addr, sizeof(uint32_t) * (m_wallpaper_width),
+                                          m_wallpaper_height, src_stride, dst_stride);
+  request_queue.add(request);
+#else
+  (void)request_queue;
   fill_rect(rect, 0xffffff);
+#endif
 }
 
 void WindowManager::fill_rect(const Rect& rect, uint32_t color) {
@@ -283,6 +338,10 @@ void WindowManager::fill_rect(const Rect& rect, uint32_t color) {
 }
 
 void WindowManager::draw_window(Window* window, const Rect& dst_rect, DMARequestQueue& request_queue) {
+#ifndef CONFIG_USE_DMA
+  (void)request_queue;
+#endif  // !CONFIG_USE_DMA
+
   const Rect& src_rect = window->m_geometry;
   if (!src_rect.intersects(dst_rect))
     return;
@@ -345,6 +404,10 @@ void WindowManager::draw_windows(libk::LinkedList<Window*>::Iterator it,
   KASSERT(dst_rect.left() >= 0 && dst_rect.right() <= m_screen_width && dst_rect.top() >= 0 &&
           dst_rect.bottom() <= m_screen_height);
 
+#ifndef CONFIG_USE_DMA
+  (void)request_queue;
+#endif  // !CONFIG_USE_DMA
+
   if (!dst_rect.has_surface())
     return;
 
@@ -406,10 +469,7 @@ void WindowManager::draw_windows() {
 
   DMARequestQueue dma_request_queue;
 
-#if 0
-  draw_background({0, 0, m_screen_width, m_screen_height}, dma_request_queue);
-  draw_windows(m_windows.begin(), {0, 0, m_screen_width, m_screen_height}, dma_request_queue);
-#else
+#if CONFIG_USE_NAIVE_WM_UPDATE
   draw_background({0, 0, m_screen_width, m_screen_height}, dma_request_queue);
 
   if (m_windows.is_empty())
@@ -423,9 +483,13 @@ void WindowManager::draw_windows() {
     draw_window(*it, {0, 0, m_screen_width, m_screen_height}, dma_request_queue);
     --it;
   }
-#endif
+#else
+  draw_windows(m_windows.begin(), {0, 0, m_screen_width, m_screen_height}, dma_request_queue);
+#endif  // CONFIG_USE_NAIVE_WM_UPDATE
 
 #ifdef CONFIG_USE_DMA
   dma_request_queue.execute_and_wait(m_dma_channel);
 #endif  // CONFIG_USE_DMA
+
+  FrameBuffer::get().present();
 }

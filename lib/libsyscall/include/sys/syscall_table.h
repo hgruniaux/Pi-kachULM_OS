@@ -29,6 +29,7 @@ enum {
   SYS_WINDOW_SET_VISIBILITY,
   SYS_WINDOW_GET_GEOMETRY,
   SYS_WINDOW_SET_GEOMETRY,
+  SYS_WINDOW_PRESENT,
 
   /* Window graphics system calls. */
   SYS_GFX_CLEAR,

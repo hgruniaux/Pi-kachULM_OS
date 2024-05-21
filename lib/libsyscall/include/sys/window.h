@@ -63,6 +63,7 @@ sys_error_t sys_window_set_geometry(sys_window_t* window, int32_t x, int32_t y, 
 sys_error_t sys_window_get_geometry(sys_window_t* window, uint32_t* x, uint32_t* y, uint32_t* width, uint32_t* height);
 
 /* Window graphics API. */
+sys_error_t sys_window_present(sys_window_t* window);
 sys_error_t sys_gfx_clear(sys_window_t* window, uint32_t argb);
 sys_error_t sys_gfx_draw_line(sys_window_t* window, uint32_t x0, uint32_t y0, uint32_t x1, uint32_t y2, uint32_t argb);
 sys_error_t sys_gfx_draw_rect(sys_window_t* window,

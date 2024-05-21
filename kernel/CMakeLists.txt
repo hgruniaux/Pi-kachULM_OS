@@ -113,6 +113,9 @@ add_executable(kernel
         graphics/graphics.hpp
         graphics/graphics.cpp
 
+        graphics/stb_image.h
+        graphics/stb_image.c
+
         # Task
         task/task_manager.hpp
         task/task_manager.cpp
@@ -137,8 +140,6 @@ add_executable(kernel
 
         # Window manager
         wm/geometry.hpp
-        wm/pika_icon.hpp
-        wm/pika_icon.cpp
 
         wm/window_manager.cpp
         wm/window_manager.hpp
@@ -149,7 +150,11 @@ add_executable(kernel
         wm/message_queue.cpp
         wm/message_queue.hpp
 
-        wm/pika_icon.hpp
+        # Window manager data: icons and wallpaper
+        wm/data/pika_icon.hpp
+        wm/data/pika_icon.cpp
+        wm/data/wallpaper.hpp
+        wm/data/wallpaper.cpp
 
         # Embed init ELF file inside the kernel
         ${CMAKE_CURRENT_BINARY_DIR}/init_elf.c

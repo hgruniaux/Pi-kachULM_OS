@@ -7,5 +7,6 @@ void* malloc(size_t n) {
 }
 
 void free(void* ptr) {
+  (void)ptr;
   // TODO: better free
 }

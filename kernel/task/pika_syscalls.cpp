@@ -267,6 +267,15 @@ static void pika_sys_window_set_geometry(Registers& regs) {
   set_error(regs, SYS_ERR_OK);
 }
 
+static void pika_sys_window_present(Registers& regs) {
+  auto* window = (Window*)regs.gp_regs.x0;
+  if (!check_window(regs, window))
+    return;
+
+  WindowManager::get().present_window(window);
+  set_error(regs, SYS_ERR_OK);
+}
+
 static void pika_sys_gfx_clear(Registers& regs) {
   auto* window = (Window*)regs.gp_regs.x0;
   if (!check_window(regs, window))
@@ -379,6 +388,7 @@ SyscallTable* create_pika_syscalls() {
   table->register_syscall(SYS_WINDOW_SET_GEOMETRY, pika_sys_window_set_geometry);
 
   // Window graphics calls.
+  table->register_syscall(SYS_WINDOW_PRESENT, pika_sys_window_present);
   table->register_syscall(SYS_GFX_CLEAR, pika_sys_gfx_clear);
   table->register_syscall(SYS_GFX_DRAW_LINE, pika_sys_gfx_draw_line);
   table->register_syscall(SYS_GFX_DRAW_RECT, pika_sys_gfx_draw_rect);

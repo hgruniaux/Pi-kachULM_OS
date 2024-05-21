@@ -1,6 +1,6 @@
 #include "window.hpp"
+#include "data/pika_icon.hpp"
 #include "memory/mem_alloc.hpp"
-#include "pika_icon.hpp"
 
 Window::Window(const libk::SharedPointer<Task>& task) : m_task(task) {
   KASSERT(task != nullptr);

@@ -135,6 +135,12 @@ sys_error_t sys_window_get_geometry(sys_window_t* window, uint32_t* x, uint32_t*
                     (sys_word_t)height);
 }
 
+sys_error_t sys_window_present(sys_window_t* window) {
+  assert(window != NULL);
+
+  return __syscall1(SYS_WINDOW_PRESENT, window->kernel_handle);
+}
+
 sys_error_t sys_gfx_clear(sys_window_t* window, uint32_t argb) {
   assert(window != NULL);
   return __syscall2(SYS_GFX_CLEAR, window->kernel_handle, argb);
