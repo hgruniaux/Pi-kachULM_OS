@@ -129,8 +129,8 @@ static bool do_kernelspace_interrupt(Registers& registers) {
 
   switch (ec) {
       // Handle AArch64 syscall
-    case 0b010101:  // SVC instruction execution in AArch64 state.
-      return do_syscall(registers);
+    case 0b010101:   // SVC instruction execution in AArch64 state.
+      return false;  // the syscall is handled later, once the context switcher is created
     case 0b100001:
       LOG_WARNING("Instruction Abort from kernel space at {:#x}.", registers.far);
       break;
@@ -186,17 +186,24 @@ class ContextSwitcher {
 };  // class ContextSwitcher
 
 extern "C" void exception_handler(InterruptSource source, InterruptKind kind, Registers& registers) {
-  ContextSwitcher context_switcher(registers);
-
   if ((source == InterruptSource::CURRENT_SP_ELX || source == InterruptSource::CURRENT_SP_EL0) &&
       kind == InterruptKind::SYNCHRONOUS) {
     if (do_kernelspace_interrupt(registers))
       return;
   }
 
+  ContextSwitcher context_switcher(registers);
+
   if (kind == InterruptKind::IRQ) {
     IRQManager::handle_interrupts();
     return;
+  }
+
+  // Handle syscall from kernel code.
+  const uint32_t ec = (registers.esr >> 26) & 0x3F;
+  if (source == InterruptSource::CURRENT_SP_EL0 && kind == InterruptKind::SYNCHRONOUS && ec == 0b010101) {
+    if (do_syscall(registers))
+      return;
   }
 
   if (source == InterruptSource::LOWER_AARCH64 && kind == InterruptKind::SYNCHRONOUS) {
