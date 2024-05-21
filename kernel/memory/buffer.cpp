@@ -11,9 +11,9 @@ Buffer::Buffer(uint32_t byte_size) {
     libk::panic("Error Allocating Buffer.");
   }
 
-  LOG_DEBUG("We have a Buffer {:#x} -> {:#x}", buffer_pa_start, buffer_pa_end);
+//  LOG_DEBUG("We have a Buffer {:#x} -> {:#x}", buffer_pa_start, buffer_pa_end);
   kernel_va = memory_impl::map_buffer(buffer_pa_start, buffer_pa_end);
-  LOG_DEBUG("Mapped from {:#x}", kernel_va);
+//  LOG_DEBUG("Mapped from {:#x}", kernel_va);
 }
 
 Buffer::~Buffer() {
