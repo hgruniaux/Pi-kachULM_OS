@@ -290,7 +290,7 @@ void WindowManager::mosaic_layout() {
 }
 
 void WindowManager::update() {
-  if (GenericTimer::get_elapsed_time_in_ms() > 2000 && GenericTimer::get_elapsed_time_in_ms() < 3000)
+  if (GenericTimer::get_elapsed_time_in_ms() > 5000 && GenericTimer::get_elapsed_time_in_ms() < 7000)
     mosaic_layout();
 
   if (!m_dirty || !m_is_supported)
@@ -307,8 +307,9 @@ void WindowManager::update() {
 void WindowManager::draw_background(const Rect& rect, DMARequestQueue& request_queue) {
   for (int32_t x = rect.left(); x < rect.right(); ++x) {
     for (int32_t y = rect.top(); y < rect.bottom(); ++y) {
-      const auto color = m_wallpaper[x + m_wallpaper_width * y];
-      m_screen_buffer[x + m_screen_pitch * y] = (color >> 8) | ((color & 0xff) << 24);
+      // The wallpaper is in RGBA, we expect ABGR.
+      const auto color = libk::bswap(m_wallpaper[x + m_wallpaper_width * y]);
+      m_screen_buffer[x + m_screen_pitch * y] = color >> 8;
     }
   }
 
