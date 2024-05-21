@@ -55,12 +55,12 @@ Channel::~Channel() {
   dma_impl::free_channel(base);
 }
 
-bool Channel::execute_requests(const Request& req) const {
+bool Channel::execute_requests(const Request* req) const {
   if (!is_free()) {
     return false;
   }
 
-  const uintptr_t req_va_address = (uintptr_t)req.dma_s;
+  const uintptr_t req_va_address = (uintptr_t)req->dma_s;
   const uintptr_t req_address = memory_impl::resolve_kernel_va(req_va_address, false);
 
   libk::write32(base + CONBLK_AD, req_address);

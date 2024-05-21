@@ -11,8 +11,9 @@ class Request {
 
   /** Create a Request that will write @a byte_length bytes from @a src to @a dst.
    * Beware, @a src is a DMA Address, so if byte_length > page_size, it must
-   * be made of continuous **physical** address ! Use Buffer to have an buffer continuous in memory. */
-  static Request memcpy(Address src, Address dst, uint32_t byte_length);
+   * be made of continuous **physical** address ! Use Buffer to have an buffer continuous in memory.
+   * YOU FREE THIS THING */
+  static Request* memcpy(Address src, Address dst, uint32_t byte_length);
 
   /** Create a Request that will 2D write @a value on @a dst.
    *
@@ -23,8 +24,8 @@ class Request {
    * @param src_stride, dst_stride This value is added to pass from a line to the next one.
    *            So it is the difference from the end of a line to the start of the next one !
    *            THIS IS NOT THE PITCH.
-   */
-  static Request memcpy_2d(Address src,
+   * YOU FREE THIS THING */
+  static Request* memcpy_2d(Address src,
                            Address dst,
                            uint16_t line_byte_length,
                            uint16_t nb_lines,
@@ -34,7 +35,7 @@ class Request {
   /** Execute the request @a next after this one.
    * The previous following request is returned and overwritten.
    * This operation modify this request and so any list in witch this request appear. */
-  Request* link_to(Request& next);
+  Request* link_to(Request* next);
 
   /** Remove and returns the request that shall be execute after this one. */
   Request* unlink();
