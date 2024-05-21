@@ -32,7 +32,12 @@ void TaskSavedState::restore(Registers& current_regs) {
 }
 
 TaskPtr Task::current() {
-  return TaskManager::get().get_current_task();
+  TaskManager* task_manager = TaskManager::get();
+  if (task_manager == nullptr) {
+    return nullptr;
+  } else {
+    return task_manager->get_current_task();
+  }
 }
 
 void Task::register_window(Window* window) {
