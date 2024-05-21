@@ -5,8 +5,6 @@
 void WaitList::add(const libk::SharedPointer<Task>& task) {
   KASSERT(task);
 
-  const libk::SpinLockGuard lock(m_lock);
-
   if (task->is_terminated())
     return;
 
@@ -15,8 +13,6 @@ void WaitList::add(const libk::SharedPointer<Task>& task) {
 }
 
 void WaitList::wake_one() {
-  const libk::SpinLockGuard lock(m_lock);
-
   // Retrieve the first task that is not terminated.
   libk::SharedPointer<Task> task;
   do {
@@ -30,8 +26,6 @@ void WaitList::wake_one() {
 }
 
 void WaitList::wake_all() {
-  const libk::SpinLockGuard lock(m_lock);
-
   // Wake all tasks.
   for (auto& task : m_wait_list) {
     if (task->is_terminated())

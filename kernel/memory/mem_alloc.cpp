@@ -1,9 +1,13 @@
 #include "mem_alloc.hpp"
-#include "libk/log.hpp"
 #include "memory.hpp"
 
 #include <libk/utils.hpp>
 
+#ifdef CONFIG_USE_NAIVE_MALLOC
+void* kmalloc(size_t byte_count, size_t alignment) {}
+
+void kfree(void* ptr) {}
+#else
 using MetaPtr = struct MetaBlock*;
 
 struct MetaBlock {
@@ -19,12 +23,13 @@ constexpr size_t META_BLOCK_SIZE = offsetof(MetaBlock, data);
 
 static MetaPtr g_malloc_meta_head = nullptr;
 
+#if 0
 static void split_space(MetaPtr block, size_t bytes_count) {
   KASSERT(block != nullptr);
   MetaPtr sub_block;
   uintptr_t next_addr = (uintptr_t)block->ptr + bytes_count;
 
-  KASSERT(next_addr <= KernelMemory::get_heap_end());
+  KASSERT(next_addr < KernelMemory::get_heap_end());
 
   sub_block = (MetaPtr)next_addr;
   sub_block->is_free = true;
@@ -35,6 +40,7 @@ static void split_space(MetaPtr block, size_t bytes_count) {
   sub_block->ptr = sub_block->data;
   block->next = sub_block;
 }
+#endif
 
 static MetaPtr extend_heap(MetaPtr last, size_t size, size_t alignment) {  // alignment is always at least 1
   auto end = (MetaPtr)KernelMemory::get_heap_end();
@@ -82,22 +88,9 @@ static MetaPtr get_block_addr(VirtualAddress addr) {
       return b;
     }
 
-    // LOG_INFO("Getting block for addr {}", addr);
-    // LOG_INFO("Heap end at addr {}", KernelMemory::get_heap_end());
-
     while (b != nullptr && (uintptr_t)b->ptr + b->size < addr) {
-      // if (b->next==nullptr)
-      // {
-      //   LOG_INFO("Last block infos = {}, {}", (VirtualAddress)b->ptr, b->size);
-      // }
-
       b = b->next;
     }
-
-    // if (b==nullptr)
-    // {
-    //   LOG_INFO("Not matching block found");
-    // }
 
     if (b != nullptr && (uintptr_t)b->ptr > addr)
       return nullptr;
@@ -115,8 +108,6 @@ static inline bool is_addr_valid(VirtualAddress addr) {
     return (b != nullptr && addr == (VirtualAddress)b->ptr);
   }
 
-  // LOG_INFO("Unbounded addr {}", addr);
-  // LOG_INFO("Heap end at addr {}", KernelMemory::get_heap_end());
   return false;
 }
 
@@ -154,11 +145,13 @@ void* kmalloc(size_t byte_count, size_t alignment) {
     return nullptr;
   }
 
+#if 0
   if (block->size > byte_count + META_BLOCK_SIZE) {
     split_space(block, byte_count);
     // LOG_INFO("Free addr {}", (VirtualAddress)(block->next)->ptr);
     kfree((block->next)->ptr);
   }
+#endif
 
   return block->ptr;
 }
@@ -166,9 +159,6 @@ void* kmalloc(size_t byte_count, size_t alignment) {
 void kfree(void* ptr) {
   if (ptr == nullptr)
     return;
-
-  // if(!is_addr_valid((VirtualAddress)ptr)) {
-  //   LOG_INFO("Unvalid addr {}",(VirtualAddress)ptr); }
 
   KASSERT(is_addr_valid((VirtualAddress)ptr));
 
@@ -178,14 +168,27 @@ void kfree(void* ptr) {
   block->size += (uintptr_t)ptr - (uintptr_t)block->ptr;
 
   if (block->next != nullptr && (block->next)->is_free) {
-    // LOG_INFO("Merging to right");
     merge_block(block, block->next);
   }
 
   if (block->previous != nullptr && (block->previous)->is_free) {
+    if (!((block->previous)->next == block)) {
+      if (get_block_addr((VirtualAddress)((block->previous)->next)->ptr) == block) {
+        (block->previous)->next = block;
+        merge_block(block->previous, block);
+      }
+
+      return;
+    }
+
     merge_block(block->previous, block);
-    // LOG_INFO("Merging to left");
   }
+}
+#endif  // CONFIG_USE_NAIVE_MALLOC
+
+extern "C" void* krealloc(void* ptr, size_t new_size) {
+  kfree(ptr);
+  return kmalloc(new_size, alignof(max_align_t));
 }
 
 #include <new>

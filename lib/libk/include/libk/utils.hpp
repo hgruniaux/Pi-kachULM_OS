@@ -216,4 +216,23 @@ template <std::unsigned_integral T>
 [[gnu::always_inline]] static inline void write64(uintptr_t address, uint64_t value) {
   *(volatile uint64_t*)address = value;
 }
+
+/** Returns `floor(sqrt(s))` using only integer operations. */
+template <std::integral T>
+static inline T isqrt(T s) {
+  if (s <= 1)
+    return s;
+
+  // Initial estimate (must be too high)
+  unsigned int x0 = s / 2;
+
+  // Newton method
+  unsigned int x1 = (x0 + s / x0) / 2;
+  while (x1 < x0) {
+    x0 = x1;
+    x1 = (x0 + s / x0) / 2;
+  }
+
+  return x0;
+}
 }  // namespace libk

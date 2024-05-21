@@ -28,6 +28,33 @@ add_compile_options("$<$<COMPILE_LANGUAGE:CXX>:${EXTRA_CXX_FLAGS}>")
 # This allow smaller and more readable logs.
 add_compile_options(-ffile-prefix-map=${CMAKE_SOURCE_DIR}/=./)
 
+# =========================================================
+# Some configurations that are supported by the kernel code:
+
+# Use the DMA hardware/driver to blit windows into the screen.
+add_compile_definitions(-DCONFIG_USE_DMA)
+
+# Allocate a single large framebuffer per window (and do not reallocate and resize it when
+# the window is resized). This is intended to fix a bug in the DMA/page allocator.
+# If the DMA is disabled, this config is ignored.
+add_compile_definitions(-DCONFIG_WINDOW_LARGE_FRAMEBUFFER)
+
+# Use the naive algorithm (draw all windows in order) for the window manager update.
+# If not defined, a divide and conquer smarter algorithm is used that only set each pixel of
+# the screen exactly one time.
+add_compile_definitions(-DCONFIG_USE_NAIVE_WM_UPDATE)
+
+# Use a naive malloc/free implementation that just allocate memory using the heap break
+# and never free memory. This is a really bad allocator (as it never free memory), but
+# it is guaranteed to work.
+# add_compile_definitions(-DCONFIG_USE_NAIVE_MALLOC)
+
+# Enable the use of double buffering for the screen framebuffer (using mailbox set virtual offset).
+# add_compile_definitions(-DCONFIG_USE_DOUBLE_BUFFERING)
+
+# Include the wallpaper data and display it as the background in the window manager.
+add_compile_definitions(-DCONFIG_INCLUDE_WALLPAPER)
+
 # Enable checks
 option(ENABLE_CHECKS "Enable checks using clang-tidy" OFF)
 if (${ENABLE_CHECKS})

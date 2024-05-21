@@ -2,20 +2,24 @@
 
 #include <cstdint>
 #include <libk/memory.hpp>
+#include "hardware/regs.hpp"
 #include "memory/process_memory.hpp"
-#include "task/message_queue.hpp"
 #include "task/syscall_table.hpp"
 
 struct TaskSavedState {
-  Registers regs;
+  GPRegisters gp_regs;
+  FPURegisters fpu_regs;
   libk::SharedPointer<ProcessMemory> memory;
-  void* sp;  // stack pointer
+  uint64_t pc;  // program counter
+  uint64_t sp;  // stack pointer
+  bool is_kernel;
 
   void save(const Registers& current_regs);
   void restore(Registers& current_regs);
 };  // struct TaskSavedState
 
 class TaskManager;
+class Window;
 
 /**
  * Represents a runnable task in the system. This can be a user process, a thread, etc.
@@ -84,12 +88,9 @@ class Task {
   /** Gets the task virtual memory. */
   [[nodiscard]] libk::SharedPointer<ProcessMemory> get_memory() const { return m_saved_state.memory; }
 
-  [[nodiscard]] MessageQueue& get_message_queue() { return m_message_queue; }
-  [[nodiscard]] const MessageQueue& get_message_queue() const { return m_message_queue; }
-
   /** Forward to `get_syscall_table()->call_syscall(id, registers)`. */
   void call_syscall(uint32_t id, Registers& registers) { m_syscall_table->call_syscall(id, registers); }
-  /** Gets the task syscall table. */
+  /** Gets the task sys table. */
   [[nodiscard]] SyscallTable* get_syscall_table() { return m_syscall_table; }
   [[nodiscard]] const SyscallTable* get_syscall_table() const { return m_syscall_table; }
   void set_syscall_table(SyscallTable* table) {
@@ -97,8 +98,23 @@ class Task {
     m_syscall_table = table;
   }
 
+  [[nodiscard]] bool is_marked_to_be_killed() const { return m_marked_kill; }
+  void mark_to_be_killed() { m_marked_kill = true; }
+
+  void register_window(Window* window);
+  void unregister_window(Window* window);
+
+  [[nodiscard]] bool can_preempt() const { return m_preempt_count == 0; }
+  void disable_preempt() { m_preempt_count++; }
+  void enable_preempt() {
+    m_preempt_count--;
+    KASSERT(m_preempt_count >= 0);
+  }
+
  private:
   friend class TaskManager;
+  friend class Scheduler;
+
   id_t m_id;
   State m_state = State::INTERRUPTIBLE;
   uint32_t m_priority = 0;
@@ -106,13 +122,17 @@ class Task {
   const char* m_name = nullptr;
   SyscallTable* m_syscall_table = nullptr;
   TaskManager* m_manager = nullptr;
+  uint64_t m_elapsed_ticks = 0;
+  bool m_is_kernel = false;    // it is a kernel stack (in EL1)?
+  bool m_marked_kill = false;  // is the task marked to be called at the next context switch?
+  int m_preempt_count = 0;
 
   // Parent-children relationship.
   Task* m_parent = nullptr;  // not a SharedPointer to avoid cyclic dependencies
   libk::LinkedList<libk::SharedPointer<Task>> m_children;
 
-  // Message system
-  MessageQueue m_message_queue;
+  // Living windows created by this task.
+  libk::LinkedList<Window*> m_windows;
 
   libk::LinkedList<MemoryChunk> m_mapped_chunks;
 };  // class Task

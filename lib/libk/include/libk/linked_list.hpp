@@ -136,6 +136,9 @@ class LinkedList {
 
     BaseIterator() = default;
 
+    [[nodiscard]] bool has_next() const { return m_node->next != nullptr; }
+    [[nodiscard]] bool has_previous() const { return m_node->previous != nullptr; }
+
     element_type& operator*() const { return m_node->data; }
     element_type* operator->() const { return &(m_node->data); }
 
@@ -175,12 +178,19 @@ class LinkedList {
   };  // class BaseIterator
 
   using Iterator = BaseIterator<false>;
-  using ConstIterator = BaseIterator<false>;
+  using ConstIterator = BaseIterator<true>;
+  using ReverseIterator = std::reverse_iterator<Iterator>;
+  using ConstReverseIterator = std::reverse_iterator<ConstIterator>;
 
   [[nodiscard]] Iterator begin() { return Iterator(m_head); }
-  [[nodiscard]] ConstIterator begin() const { return Iterator(m_head); }
+  [[nodiscard]] ConstIterator begin() const { return ConstIterator(m_head); }
   [[nodiscard]] Iterator end() { return Iterator(nullptr); }
-  [[nodiscard]] ConstIterator end() const { return Iterator(nullptr); }
+  [[nodiscard]] ConstIterator end() const { return ConstIterator(nullptr); }
+
+  [[nodiscard]] ReverseIterator rbegin() { return std::make_reverse_iterator(Iterator(m_tail)); }
+  [[nodiscard]] ConstReverseIterator rbegin() const { return std::make_reverse_iterator(Iterator(m_tail)); }
+  [[nodiscard]] ReverseIterator rend() { return std::make_reverse_iterator(Iterator(nullptr)); }
+  [[nodiscard]] ConstReverseIterator rend() const { return std::make_reverse_iterator(Iterator(nullptr)); }
 
   void insert_before(Iterator it, const T& data) {
     Node* node = new Node{data};
