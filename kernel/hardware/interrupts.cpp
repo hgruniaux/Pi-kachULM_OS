@@ -159,6 +159,10 @@ class ContextSwitcher {
   ContextSwitcher(Registers& regs) : m_regs(regs) { m_old_task = Task::current(); }
 
   ~ContextSwitcher() {
+    if (!TaskManager::get().is_ready()) {
+      return;
+    }
+
     if (m_old_task != nullptr && m_old_task->is_marked_to_be_killed())
       TaskManager::get().kill_task(m_old_task);
 

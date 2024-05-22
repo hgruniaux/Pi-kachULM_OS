@@ -281,3 +281,10 @@ void TaskManager::tick() {
   m_delta_queue.tick();
   m_scheduler->tick();
 }
+
+void TaskManager::mark_as_ready() {
+  m_ready = true;
+}
+bool TaskManager::is_ready() const {
+  return m_ready;
+}

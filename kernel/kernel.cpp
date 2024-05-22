@@ -54,6 +54,7 @@ static void dispatch_key_event_to_wm(sys_key_event_t event) {
   // Enter userspace!
   enable_fpu_and_neon();
   init_task->get_saved_state().memory->activate();
+  task_manager.mark_as_ready();
   jump_to_el0(init_task->get_saved_state().pc, (uintptr_t)init_task->get_saved_state().sp);
   LOG_CRITICAL("Exited from userspace");
 }

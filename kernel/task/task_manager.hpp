@@ -68,6 +68,9 @@ class TaskManager {
   void schedule();
   void tick();
 
+  void mark_as_ready();
+  bool is_ready() const;
+
  private:
   TaskPtr create_task_common(bool is_kernel = false, Task* parent = nullptr);
 
@@ -79,4 +82,5 @@ class TaskManager {
   Task::id_t m_next_available_pid = 0;
   SyscallTable* m_default_syscall_table = nullptr;
   DeltaQueue m_delta_queue;
+  bool m_ready = false;
 };  // class TaskManager

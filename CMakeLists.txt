@@ -32,7 +32,7 @@ add_compile_options(-ffile-prefix-map=${CMAKE_SOURCE_DIR}/=./)
 # Some configurations that are supported by the kernel code:
 
 # Use the DMA hardware/driver to blit windows into the screen.
-add_compile_definitions(-DCONFIG_USE_DMA)
+#add_compile_definitions(-DCONFIG_USE_DMA)
 
 # Allocate a single large framebuffer per window (and do not reallocate and resize it when
 # the window is resized). This is intended to fix a bug in the DMA/page allocator.
