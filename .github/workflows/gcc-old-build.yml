@@ -16,7 +16,7 @@ jobs:
 
             -   uses: awalsh128/cache-apt-pkgs-action@latest
                 with:
-                    packages: qemu-system-arm g++-12-aarch64-linux-gnu gcc-12-aarch64-linux-gnu
+                    packages: qemu-system-arm g++-12-aarch64-linux-gnu gcc-12-aarch64-linux-gnu mtools
                     version: 1.0
 
             -   name: Configure Project
