@@ -8,6 +8,7 @@
 
 #ifdef CONFIG_USE_DMA
 #include "hardware/dma/channel.hpp"
+#include "sys/keyboard.h"
 #endif  // CONFIG_USE_DMA
 
 class Window;
@@ -44,6 +45,13 @@ class WindowManager {
   void mosaic_layout();
 
  private:
+  bool handle_key_event(sys_key_event_t event);
+  void switch_focus();
+  void move_focus_window_left();
+  void move_focus_window_right();
+  void move_focus_window_up();
+  void move_focus_window_down();
+
   void fill_rect(const Rect& rect, uint32_t color);
 
 #ifdef CONFIG_USE_DMA
