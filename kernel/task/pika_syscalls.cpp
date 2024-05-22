@@ -179,6 +179,52 @@ static void pika_sys_get_file_size(Registers& regs) {
   regs.gp_regs.x0 = file->get_size();
 }
 
+static bool check_dir(Registers& regs, Dir* dir) {
+  if (Task::current()->own_dir(dir))
+    return true;
+
+  set_error(regs, SYS_ERR_INVALID_DIR);
+  return false;
+}
+
+static void pika_sys_open_dir(Registers& regs) {
+  const char* path = (const char*)regs.gp_regs.x0;
+  if (!check_ptr(regs, (void*)path))
+    return;
+
+  auto* dir = FileSystem::get().open_dir(path);
+  regs.gp_regs.x0 = (sys_word_t)dir;
+  if (dir == nullptr)
+    return;
+
+  Task::current()->register_dir(dir);
+}
+
+static void pika_sys_close_dir(Registers& regs) {
+  Dir* dir = (Dir*)regs.gp_regs.x0;
+  if (!check_dir(regs, dir))
+    return;
+
+  FileSystem::get().close_dir(dir);
+  Task::current()->unregister_dir(dir);
+  set_error(regs, SYS_ERR_OK);
+}
+
+static void pika_sys_read_dir(Registers& regs) {
+  Dir* dir = (Dir*)regs.gp_regs.x0;
+  if (!check_dir(regs, dir))
+    return;
+
+  sys_file_info_t* file_info = (sys_file_info_t*)regs.gp_regs.x1;
+  if (!check_dir(regs, dir))
+    return;
+
+  if (dir->read(file_info))
+    set_error(regs, SYS_ERR_OK);
+  else
+    set_error(regs, SYS_ERR_GENERIC);
+}
+
 static bool check_window(Registers& regs, Window* window) {
   if (Task::current()->own_window(window))
     return true;
@@ -473,6 +519,9 @@ SyscallTable* create_pika_syscalls() {
   table->register_syscall(SYS_CLOSE_FILE, pika_sys_close_file);
   table->register_syscall(SYS_READ_FILE, pika_sys_read_file);
   table->register_syscall(SYS_GET_FILE_SIZE, pika_sys_get_file_size);
+  table->register_syscall(SYS_OPEN_DIR, pika_sys_open_dir);
+  table->register_syscall(SYS_CLOSE_DIR, pika_sys_close_dir);
+  table->register_syscall(SYS_READ_DIR, pika_sys_read_dir);
 
   // Window manager system calls.
   table->register_syscall(SYS_POLL_MESSAGE, pika_sys_poll_msg);

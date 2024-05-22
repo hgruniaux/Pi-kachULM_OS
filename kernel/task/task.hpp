@@ -21,6 +21,7 @@ struct TaskSavedState {
 class TaskManager;
 class Window;
 class File;
+class Dir;
 
 /**
  * Represents a runnable task in the system. This can be a user process, a thread, etc.
@@ -112,6 +113,10 @@ class Task {
   void register_file(File* file);
   void unregister_file(File* file);
 
+  [[nodiscard]] bool own_dir(Dir* dir) const;
+  void register_dir(Dir* dir);
+  void unregister_dir(Dir* dir);
+
   [[nodiscard]] bool can_preempt() const { return m_preempt_count == 0; }
   void disable_preempt() { m_preempt_count++; }
   void enable_preempt() {
@@ -145,6 +150,7 @@ class Task {
   // Task resources
   libk::LinkedList<Window*> m_windows;
   libk::LinkedList<File*> m_open_files;
+  libk::LinkedList<Dir*> m_open_dirs;
   libk::LinkedList<MemoryChunk> m_mapped_chunks;
 };  // class Task
 

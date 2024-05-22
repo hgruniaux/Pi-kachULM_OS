@@ -4,16 +4,19 @@ set -e
 
 mkdir -p ./fs/usr/bin
 
-cd cmake-build-release-clang-17 || exit
+cd cmake-build-gcc-release || exit
 
-make init
+ninja init
 mv usr/init ../fs/init
 
-make credits
+ninja credits
 mv usr/credits ../fs/usr/bin/credits
 
-make slides
+ninja slides
 mv usr/slides ../fs/usr/bin/slides
 
-#cd ../tools || exit
-#./create-fs.sh ../home_made/gen-files/fs.img
+ninja explorer
+mv usr/explorer ../fs/usr/bin/explorer
+
+cd ../tools || exit
+./create-fs.sh ../fs.bin

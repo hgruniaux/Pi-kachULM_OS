@@ -109,6 +109,8 @@ class WindowManager {
   libk::LinkedList<Window*> m_windows;
   size_t m_window_count = 0;
 
+  uint32_t m_last_window_x = 50, m_last_window_y = 50;
+
 #if defined(CONFIG_USE_DMA) && defined(CONFIG_USE_DMA_FOR_WALLPAPER)
   libk::ScopedPointer<Buffer> m_wallpaper;
 #else

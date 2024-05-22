@@ -172,6 +172,8 @@ add_executable(kernel
         fs/fat/ramdisk.hpp
         fs/file.hpp
         fs/file.cpp
+        fs/dir.hpp
+        fs/dir.cpp
 )
 
 target_include_directories(kernel PUBLIC .)

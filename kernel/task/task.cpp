@@ -85,6 +85,28 @@ void Task::unregister_file(File* file) {
   m_open_files.erase(it);
 }
 
+bool Task::own_dir(Dir* dir) const {
+  if (dir == nullptr)
+    return false;
+
+  auto it = std::find(m_open_dirs.begin(), m_open_dirs.end(), dir);
+  return it != m_open_dirs.end();
+}
+
+void Task::register_dir(Dir* dir) {
+  KASSERT(dir != nullptr);
+
+  m_open_dirs.push_back(dir);
+}
+
+void Task::unregister_dir(Dir* dir) {
+  KASSERT(dir != nullptr);
+
+  auto it = std::find(m_open_dirs.begin(), m_open_dirs.end(), dir);
+  KASSERT(it != m_open_dirs.end());
+  m_open_dirs.erase(it);
+}
+
 void Task::free_resources() {
   // Destroy the windows.
   auto& window_manager = WindowManager::get();
@@ -101,4 +123,11 @@ void Task::free_resources() {
   }
 
   m_open_files.clear();
+
+  // Free all open dirs.
+  for (auto* dir : m_open_dirs) {
+    fs.close_dir(dir);
+  }
+
+  m_open_dirs.clear();
 }

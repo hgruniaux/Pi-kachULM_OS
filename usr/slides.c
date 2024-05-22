@@ -39,28 +39,6 @@ static void draw_slide() {
   sys_window_present(window);
 }
 
-#if 0
-static void cat_file(const char* path) {
-  sys_file_t* file = sys_open_file(path, SYS_FM_READ);
-  if (file == NULL) {
-    sys_print("Failed to open file");
-    return;
-  }
-
-  size_t file_size = sys_get_file_size(file);
-  char* buffer = malloc(sizeof(char) * file_size);
-  assert(buffer != NULL);
-
-  size_t read_bytes;
-  sys_file_read(file, buffer, file_size, &read_bytes);
-  assert(read_bytes == file_size);
-
-  sys_print(buffer);
-
-  sys_close_file(file);
-}
-#endif
-
 #define SLIDE_PATH_PREFIX "/slides/"
 #define SLIDE_PATH_PREFIX_LEN 8
 
@@ -188,10 +166,6 @@ static void handle_key_event(sys_key_event_t event) {
 
 int main() {
   sys_print("SLIDES");
-
-#if 0
-  cat_file("/keep.me");
-#endif
 
   window = sys_window_create("Slides", SYS_POS_CENTERED, SYS_POS_CENTERED, 800, 600, SYS_WF_DEFAULT);
   if (window == NULL) {

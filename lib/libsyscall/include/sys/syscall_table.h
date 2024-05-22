@@ -24,8 +24,9 @@ enum {
   SYS_READ_FILE,
   SYS_GET_FILE_SIZE,
 
-  SYS_FIND_FIRST_FILE,
-  SYS_FIND_NEXT_FILE,
+  SYS_OPEN_DIR,
+  SYS_CLOSE_DIR,
+  SYS_READ_DIR,
 
   /* Window manager system calls. */
   SYS_POLL_MESSAGE,

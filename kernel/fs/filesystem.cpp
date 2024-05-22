@@ -21,6 +21,8 @@ void FileSystem::init() {
 }
 
 File* FileSystem::open(const char* path, int flags) {
+  KASSERT(path != nullptr);
+
   File* file = new File;
 
   BYTE mode = 0;
@@ -40,5 +42,24 @@ void FileSystem::close(File* handle) {
   KASSERT(handle != nullptr);
 
   f_close(&handle->m_handle);
+  delete handle;
+}
+
+Dir* FileSystem::open_dir(const char* path) {
+  KASSERT(path != nullptr);
+
+  Dir* dir = new Dir;
+
+  if (f_opendir(&dir->m_handle, path) == FR_OK)
+    return dir;
+
+  delete dir;
+  return nullptr;
+}
+
+void FileSystem::close_dir(Dir* handle) {
+  KASSERT(handle != nullptr);
+
+  f_closedir(&handle->m_handle);
   delete handle;
 }

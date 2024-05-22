@@ -158,13 +158,15 @@ void WindowManager::set_window_geometry(Window* window, int32_t x, int32_t y, in
 
   // Handle special values.
   if (x == SYS_POS_DEFAULT) {
-    x = 50;
+    x = m_last_window_x;
+    m_last_window_x += 50;
   } else if (x == SYS_POS_CENTERED) {
     x = m_screen_width / 2 - w / 2;
   }
 
   if (y == SYS_POS_DEFAULT) {
-    y = 50;
+    y = m_last_window_y;
+    m_last_window_y += 50;
   } else if (y == SYS_POS_CENTERED) {
     y = m_screen_height / 2 - h / 2;
   }
