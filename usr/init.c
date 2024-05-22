@@ -9,7 +9,7 @@ int main() {
       sys_print("Failed to spawn " program); \
   } while (0)
 
-  LAUNCH("/usr/bin/credits");
+  // LAUNCH("/usr/bin/credits");
   LAUNCH("/usr/bin/slides");
 
   while (true)

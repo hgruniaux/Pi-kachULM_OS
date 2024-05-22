@@ -254,13 +254,21 @@ bool WindowManager::post_message(Window* window, sys_message_t message) {
 void WindowManager::present_window(Window* window) {
   KASSERT(is_valid(window));
 
-  (void)window;
-
-  // Let do a full update the next time.
-  // A partial update is more challenging as we should only draw the pixels that are visible on the screen.
-  // This is straightforward if the window is a top level window (e.g. has focus),
-  // but it becomes tricky if the window is behind other windows.
-  m_dirty = true;  // mark the screen as dirty and needs an update
+  if (!m_dirty && window->has_focus()) {
+    // If no update is required for now and the window is at front (has focus), then
+    // only redraw the window.
+    DMARequestQueue dma_request_queue;
+    draw_window(window, {0, 0, m_screen_width, m_screen_height}, dma_request_queue);
+#ifdef CONFIG_USE_DMA
+    dma_request_queue.execute_and_wait(m_dma_channel);
+#endif  // CONFIG_USE_DMA
+  } else {
+    // Let do a full update the next time.
+    // A partial update is more challenging as we should only draw the pixels that are visible on the screen.
+    // This is straightforward if the window is a top level window (e.g. has focus),
+    // but it becomes tricky if the window is behind other windows.
+    m_dirty = true;  // mark the screen as dirty and needs an update
+  }
 }
 
 void WindowManager::mosaic_layout() {

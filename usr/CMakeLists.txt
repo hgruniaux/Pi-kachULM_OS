@@ -7,4 +7,4 @@ endfunction()
 
 add_userspace_executable(init init.c)
 add_userspace_executable(credits credits.c)
-add_userspace_executable(slides slides.c)
+add_userspace_executable(slides slides.c stb_image.c)

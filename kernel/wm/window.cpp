@@ -58,6 +58,10 @@ void Window::draw_text(uint32_t x, uint32_t y, const char* text, uint32_t argb) 
   m_painter.draw_text(x, y, text, argb);
 }
 
+void Window::blit(uint32_t x, uint32_t y, uint32_t width, uint32_t height, const uint32_t* argb_buffer) {
+  m_painter.blit(x, y, width, height, argb_buffer);
+}
+
 void Window::draw_frame() {
   if (!m_has_frame)
     return;

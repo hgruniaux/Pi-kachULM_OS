@@ -427,6 +427,24 @@ static void pika_sys_gfx_draw_text(Registers& regs) {
   set_error(regs, SYS_ERR_OK);
 }
 
+static void pika_sys_gfx_blit(Registers& regs) {
+  auto* window = (Window*)regs.gp_regs.x0;
+  if (!check_window(regs, window))
+    return;
+
+  uint32_t x, y;
+  uint32_t width, height;
+  unpack_couple(regs.gp_regs.x1, x, y);
+  unpack_couple(regs.gp_regs.x2, width, height);
+
+  const uint32_t* argb_buffer = (const uint32_t*)regs.gp_regs.x3;
+  if (!check_ptr(regs, (void*)argb_buffer))
+    return;
+
+  window->blit(x, y, width, height, argb_buffer);
+  set_error(regs, SYS_ERR_OK);
+}
+
 SyscallTable* create_pika_syscalls() {
   SyscallTable* table = new SyscallTable;
   KASSERT(table != nullptr);
@@ -474,6 +492,7 @@ SyscallTable* create_pika_syscalls() {
   table->register_syscall(SYS_GFX_DRAW_RECT, pika_sys_gfx_draw_rect);
   table->register_syscall(SYS_GFX_FILL_RECT, pika_sys_gfx_fill_rect);
   table->register_syscall(SYS_GFX_DRAW_TEXT, pika_sys_gfx_draw_text);
+  table->register_syscall(SYS_GFX_BLIT, pika_sys_gfx_blit);
 
   return table;
 }

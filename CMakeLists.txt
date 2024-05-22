@@ -47,13 +47,10 @@ add_compile_definitions(-DCONFIG_USE_NAIVE_WM_UPDATE)
 # Use a naive malloc/free implementation that just allocate memory using the heap break
 # and never free memory. This is a really bad allocator (as it never free memory), but
 # it is guaranteed to work.
-add_compile_definitions(-DCONFIG_USE_NAIVE_MALLOC)
+# add_compile_definitions(-DCONFIG_USE_NAIVE_MALLOC)
 
 # Enable the use of double buffering for the screen framebuffer (using mailbox set virtual offset).
 # add_compile_definitions(-DCONFIG_USE_DOUBLE_BUFFERING)
-
-# Include the wallpaper data and display it as the background in the window manager.
-# add_compile_definitions(-DCONFIG_INCLUDE_WALLPAPER)
 
 # Enable checks
 option(ENABLE_CHECKS "Enable checks using clang-tidy" OFF)

@@ -16,6 +16,9 @@ bool File::write(const void* buffer, size_t bytes_to_write, size_t* wrote_bytes)
     *wrote_bytes = wrote_bytes_bis;
   return result == FR_OK;
 #else
+  (void)buffer;
+  (void)bytes_to_write;
+  (void)wrote_bytes;
   return false;
 #endif
 }

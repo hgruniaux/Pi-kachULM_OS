@@ -186,3 +186,16 @@ sys_error_t sys_gfx_draw_text(sys_window_t* window, uint32_t x, uint32_t y, cons
   const uint64_t param1 = (uint64_t)x | ((uint64_t)y << 32);
   return __syscall4(SYS_GFX_DRAW_TEXT, window->kernel_handle, param1, (sys_word_t)text, argb);
 }
+
+sys_error_t sys_gfx_blit(sys_window_t* window,
+                         uint32_t x,
+                         uint32_t y,
+                         uint32_t width,
+                         uint32_t height,
+                         const uint32_t* argb_buffer) {
+  assert(window != NULL);
+
+  const uint64_t param1 = (uint64_t)x | ((uint64_t)y << 32);
+  const uint64_t param2 = (uint64_t)width | ((uint64_t)height << 32);
+  return __syscall4(SYS_GFX_BLIT, window->kernel_handle, param1, param2, (sys_word_t)argb_buffer);
+}
