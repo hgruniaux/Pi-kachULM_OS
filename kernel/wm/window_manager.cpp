@@ -550,3 +550,63 @@ bool WindowManager::handle_key_event(sys_key_event_t event) {
       return false;
   }
 }
+
+void WindowManager::switch_focus() {
+  if (m_windows.is_empty())
+    return;
+
+  if (m_focus_window == nullptr) {
+    focus_window(*m_windows.begin());
+    return;
+  } else {
+    auto it = m_windows.begin();
+    ++it;
+
+    if (it == m_windows.end())
+      return;
+
+    focus_window(*it);
+  }
+}
+
+constexpr uint32_t WINDOW_MOVE_STEP = 10;
+
+void WindowManager::move_focus_window_left() {
+  if (m_focus_window == nullptr)
+    return;
+
+  auto rect = m_focus_window->get_geometry();
+  rect.x1 -= WINDOW_MOVE_STEP;
+  rect.x2 -= WINDOW_MOVE_STEP;
+  set_window_geometry(m_focus_window, rect);
+}
+
+void WindowManager::move_focus_window_right() {
+  if (m_focus_window == nullptr)
+    return;
+
+  auto rect = m_focus_window->get_geometry();
+  rect.x1 += WINDOW_MOVE_STEP;
+  rect.x2 += WINDOW_MOVE_STEP;
+  set_window_geometry(m_focus_window, rect);
+}
+
+void WindowManager::move_focus_window_up() {
+  if (m_focus_window == nullptr)
+    return;
+
+  auto rect = m_focus_window->get_geometry();
+  rect.y1 -= WINDOW_MOVE_STEP;
+  rect.y2 -= WINDOW_MOVE_STEP;
+  set_window_geometry(m_focus_window, rect);
+}
+
+void WindowManager::move_focus_window_down() {
+  if (m_focus_window == nullptr)
+    return;
+
+  auto rect = m_focus_window->get_geometry();
+  rect.y1 += WINDOW_MOVE_STEP;
+  rect.y2 += WINDOW_MOVE_STEP;
+  set_window_geometry(m_focus_window, rect);
+}
