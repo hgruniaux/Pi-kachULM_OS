@@ -20,6 +20,8 @@ add_library(libsyscall STATIC
         include/assert.h
         src/stdlib/assert.c
         src/stdlib/rand.c
-        src/startup.c)
+        src/startup.c
+        include/sys/file.h
+        src/sys/file.c)
 
 target_include_directories(libsyscall PUBLIC include/)

@@ -42,6 +42,14 @@ TaskPtr Task::current() {
   return TaskManager::get().get_current_task();
 }
 
+bool Task::own_window(Window* window) const {
+  if (window == nullptr)
+    return false;
+
+  auto it = std::find(m_windows.begin(), m_windows.end(), window);
+  return it != m_windows.end();
+}
+
 void Task::register_window(Window* window) {
   KASSERT(window != nullptr && window->get_task().get() == this);
   m_windows.push_back(window);
@@ -53,6 +61,14 @@ void Task::unregister_window(Window* window) {
   auto it = std::find(m_windows.begin(), m_windows.end(), window);
   KASSERT(it != m_windows.end());
   m_windows.erase(it);
+}
+
+bool Task::own_file(File* file) const {
+  if (file == nullptr)
+    return false;
+
+  auto it = std::find(m_open_files.begin(), m_open_files.end(), file);
+  return it != m_open_files.end();
 }
 
 void Task::register_file(File* file) {

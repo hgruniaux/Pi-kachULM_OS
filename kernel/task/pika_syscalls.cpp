@@ -1,11 +1,13 @@
 #include "pika_syscalls.hpp"
 
+#include <sys/file.h>
 #include <sys/syscall.h>
 #include <sys/window.h>
 
 #include <libk/assert.hpp>
 #include <libk/log.hpp>
 
+#include "fs/filesystem.hpp"
 #include "task/task.hpp"
 #include "task/task_manager.hpp"
 #include "wm/window.hpp"
@@ -119,13 +121,70 @@ static void pika_sys_sched_get_priority(Registers& regs) {
   set_error(regs, SYS_ERR_OK);
 }
 
-static bool check_window(Registers& regs, Window* window) {
-  if (!WindowManager::get().is_valid(window) || window->get_task() != Task::current()) {
-    set_error(regs, SYS_ERR_INVALID_WINDOW);
-    return false;
-  }
+static bool check_file(Registers& regs, File* file) {
+  if (Task::current()->own_file(file))
+    return true;
 
-  return true;
+  set_error(regs, SYS_ERR_INVALID_FILE);
+  return false;
+}
+
+static void pika_sys_open_file(Registers& regs) {
+  const char* path = (const char*)regs.gp_regs.x0;
+  if (!check_ptr(regs, (void*)path))
+    return;
+
+  const sys_file_mode_t mode = (sys_file_mode_t)regs.gp_regs.x1;
+  auto* file = FileSystem::get().open(path, mode);
+  regs.gp_regs.x0 = (sys_word_t)file;
+  if (file == nullptr)
+    return;
+
+  Task::current()->register_file(file);
+}
+
+static void pika_sys_close_file(Registers& regs) {
+  File* file = (File*)regs.gp_regs.x0;
+  if (!check_file(regs, file))
+    return;
+
+  FileSystem::get().close(file);
+  Task::current()->unregister_file(file);
+  set_error(regs, SYS_ERR_OK);
+}
+
+static void pika_sys_read_file(Registers& regs) {
+  File* file = (File*)regs.gp_regs.x0;
+  if (!check_file(regs, file))
+    return;
+
+  void* buffer = (void*)regs.gp_regs.x1;
+  size_t* read_bytes = (size_t*)regs.gp_regs.x3;
+  if (!check_ptr(regs, buffer) || !check_ptr(regs, read_bytes))
+    return;
+
+  size_t bytes_to_read = regs.gp_regs.x2;
+  bool success = file->read(buffer, bytes_to_read, read_bytes);
+  if (success)
+    set_error(regs, SYS_ERR_OK);
+  else
+    set_error(regs, SYS_ERR_GENERIC);
+}
+
+static void pika_sys_get_file_size(Registers& regs) {
+  File* file = (File*)regs.gp_regs.x0;
+  if (!check_file(regs, file))
+    return;
+
+  regs.gp_regs.x0 = file->get_size();
+}
+
+static bool check_window(Registers& regs, Window* window) {
+  if (Task::current()->own_window(window))
+    return true;
+
+  set_error(regs, SYS_ERR_INVALID_WINDOW);
+  return false;
 }
 
 static void pika_sys_poll_msg(Registers& regs) {
@@ -390,6 +449,12 @@ SyscallTable* create_pika_syscalls() {
   table->register_syscall(SYS_YIELD, pika_sys_yield);
   table->register_syscall(SYS_SCHED_SET_PRIORITY, pika_sys_sched_set_priority);
   table->register_syscall(SYS_SCHED_GET_PRIORITY, pika_sys_sched_get_priority);
+
+  // File system calls.
+  table->register_syscall(SYS_OPEN_FILE, pika_sys_open_file);
+  table->register_syscall(SYS_CLOSE_FILE, pika_sys_close_file);
+  table->register_syscall(SYS_READ_FILE, pika_sys_read_file);
+  table->register_syscall(SYS_GET_FILE_SIZE, pika_sys_get_file_size);
 
   // Window manager system calls.
   table->register_syscall(SYS_POLL_MESSAGE, pika_sys_poll_msg);

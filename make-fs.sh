@@ -12,5 +12,8 @@ mv usr/init ../fs/init
 ninja credits
 mv usr/credits ../fs/usr/bin/credits
 
+ninja slides
+mv usr/slides ../fs/usr/bin/slides
+
 cd ../tools || exit
 ./create-fs.sh ../fs.bin

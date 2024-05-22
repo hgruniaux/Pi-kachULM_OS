@@ -20,6 +20,11 @@ int main() {
   sys_print("CREDITS");
 
   sys_window_t* window = sys_window_create("Credits", SYS_POS_DEFAULT, SYS_POS_DEFAULT, 500, 400, SYS_WF_DEFAULT);
+  if (window == NULL) {
+    sys_print("Failed to create window for credits");
+    return 1;
+  }
+
   draw_credits(window);
 
   bool should_close = false;

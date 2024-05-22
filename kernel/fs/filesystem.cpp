@@ -1,4 +1,5 @@
 #include "filesystem.hpp"
+#include <sys/file.h>
 #include <libk/log.hpp>
 #include <libk/string.hpp>
 
@@ -20,6 +21,18 @@ void FileSystem::init() {
 }
 
 File* FileSystem::open(const char* path, int flags) {
+  File* file = new File;
+
+  BYTE mode = 0;
+  if ((flags & SYS_FM_READ) != 0)
+    mode |= FA_READ;
+  if ((flags & SYS_FM_WRITE) != 0)
+    mode |= FA_WRITE;
+
+  if (f_open(&file->m_handle, path, mode) == FR_OK)
+    return file;
+
+  delete file;
   return nullptr;
 }
 

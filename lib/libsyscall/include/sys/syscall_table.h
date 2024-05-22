@@ -19,6 +19,13 @@ enum {
   SYS_SBRK,
 
   /* Filesystem system calls. */
+  SYS_OPEN_FILE,
+  SYS_CLOSE_FILE,
+  SYS_READ_FILE,
+  SYS_GET_FILE_SIZE,
+
+  SYS_FIND_FIRST_FILE,
+  SYS_FIND_NEXT_FILE,
 
   /* Window manager system calls. */
   SYS_POLL_MESSAGE,

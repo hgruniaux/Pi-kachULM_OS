@@ -104,9 +104,11 @@ class Task {
   [[nodiscard]] bool is_marked_to_be_killed() const { return m_marked_kill; }
   void mark_to_be_killed() { m_marked_kill = true; }
 
+  [[nodiscard]] bool own_window(Window* window) const;
   void register_window(Window* window);
   void unregister_window(Window* window);
 
+  [[nodiscard]] bool own_file(File* file) const;
   void register_file(File* file);
   void unregister_file(File* file);
 
