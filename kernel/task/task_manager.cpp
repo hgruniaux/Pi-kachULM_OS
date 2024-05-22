@@ -23,7 +23,7 @@ TaskManager::TaskManager() : m_delta_queue(this) {
     if (SystemTimer::is_used(timer_id))
       continue;
 
-    if (SystemTimer::set_recurrent_ms(timer_id, TICK_TIME, []() { TaskManager::get().tick(); })) {
+    if (SystemTimer::set_recurrent_ms(timer_id, TICK_TIME, []() { TaskManager::get()->tick(); })) {
       LOG_INFO("System timer {} used for scheduler with tick time {} ms", timer_id, TICK_TIME);
       timer_found = true;
       break;

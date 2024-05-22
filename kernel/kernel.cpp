@@ -4,10 +4,8 @@
 #include "hardware/framebuffer.hpp"
 #include "hardware/interrupts.hpp"
 #include "hardware/kernel_dt.hpp"
+#include "hardware/ps2_keyboard.hpp"
 
-#include "memory/mem_alloc.hpp"
-
-#include "fs/fat/ff.h"
 #include "fs/filesystem.hpp"
 
 #include "sys/syscall.h"
@@ -22,10 +20,25 @@
 #define COMPILER_NAME "Unknown Compiler"
 #endif
 
+// Send a key event to the window manager.
+static void dispatch_key_event_to_wm(sys_key_event_t event) {
+  sys_message_t msg = {};
+  if (sys_is_press_event(event))
+    msg.id = SYS_MSG_KEYDOWN;
+  else if (sys_is_release_event(event))
+    msg.id = SYS_MSG_KEYUP;
+  else
+    return;
+
+  msg.param1 = event;
+  msg.param2 = 0;
+  WindowManager::get().post_message(msg);
+}
+
 // Load the init program and execute it! This is the entry point of the userspace world.
 [[noreturn]] static void load_init() {
   // Create the task manager.
-  TaskManager& task_manager = TaskManager::get();
+  TaskManager& task_manager = *TaskManager::get();
   auto init_task = task_manager.create_task("/init");
   if (init_task == nullptr) {
     LOG_CRITICAL("Failed to load the init program");
@@ -62,6 +75,9 @@
 
   WindowManager* window_manager = new WindowManager;
   KASSERT(window_manager != nullptr);
+
+  PS2Keyboard::init();
+  PS2Keyboard::set_on_event(&dispatch_key_event_to_wm);
 
   TaskManager* task_manager = new TaskManager;
   KASSERT(task_manager != nullptr);
