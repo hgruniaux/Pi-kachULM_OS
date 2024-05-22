@@ -84,5 +84,5 @@ if (${TARGET_QEMU})
 endif ()
 
 add_subdirectory(lib)
-add_subdirectory(usr)
+add_subdirectory(binuser)
 add_subdirectory(kernel)

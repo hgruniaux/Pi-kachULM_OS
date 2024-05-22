@@ -39,7 +39,7 @@ static void dispatch_key_event_to_wm(sys_key_event_t event) {
 [[noreturn]] static void load_init() {
   // Create the task manager.
   TaskManager& task_manager = TaskManager::get();
-  auto init_task = task_manager.create_task("/init");
+  auto init_task = task_manager.create_task("/bin/init");
   if (init_task == nullptr) {
     LOG_CRITICAL("Failed to load the init program");
   }

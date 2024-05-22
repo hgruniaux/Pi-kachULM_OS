@@ -190,7 +190,7 @@ add_custom_target(linker_script
 target_link_options(kernel PRIVATE -nostdlib -T ${CMAKE_CURRENT_BINARY_DIR}/link-gen.ld)
 # In order to be compatible with MAKE
 # See: https://discourse.cmake.org/t/link-depends-on-output-of-add-custom-command-no-rule-to-make-target/10179
-add_dependencies(kernel linker_script)
+add_dependencies(kernel linker_script fs-img)
 
 # Extracting the elf file to a binary one
 add_custom_target(kernel-img
