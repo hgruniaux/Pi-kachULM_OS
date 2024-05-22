@@ -228,6 +228,13 @@ void WindowManager::post_message(sys_message_t message) {
     return;
 
   message.timestamp = GenericTimer::get_elapsed_time_in_ms();
+
+  // Handle window manager specific shortcuts.
+  if (message.id == SYS_MSG_KEYDOWN) {
+    if (handle_key_event(message.param1))
+      return;  // the key event was handled by the window manager, do not propagate it.
+  }
+
   for (auto* window : m_windows) {
     window->get_message_queue().enqueue(message);
   }
@@ -498,4 +505,108 @@ void WindowManager::draw_windows() {
 #endif  // CONFIG_USE_DMA
 
   FrameBuffer::get().present();
+}
+
+bool WindowManager::handle_key_event(sys_key_event_t event) {
+  if (!sys_is_press_event(event))
+    return false;
+
+  if (!sys_is_alt_pressed(event))
+    return false;
+
+  switch (sys_get_key_code(event)) {
+    case SYS_KEY_TAB:  // Alt+Tab -> switch focus
+      switch_focus();
+      return true;
+    case SYS_KEY_LEFT_ARROW:  // Alt+Left -> move window to the left
+      move_focus_window_left();
+      return true;
+    case SYS_KEY_RIGHT_ARROW:  // Alt+Right -> move window to the right
+      move_focus_window_right();
+      return true;
+    case SYS_KEY_UP_ARROW:  // Alt+Arrow -> move window up
+      move_focus_window_up();
+      return true;
+    case SYS_KEY_DOWN_ARROW:  // Alt+Down -> move window down
+      move_focus_window_down();
+      return true;
+    case SYS_KEY_F:  // Alt+F -> toggle fullscreen
+      // TODO: better fullscreen support (for example, when focus out, the window should not be fullscreen anymore)
+      if (m_focus_window != nullptr)
+        set_window_geometry(m_focus_window, Rect::from_pos_and_size(0, 0, m_screen_width, m_screen_height));
+      return true;
+    case SYS_KEY_Q:  // Alt+Q -> close window
+      if (m_focus_window != nullptr) {
+        sys_message_t message = {};
+        message.id = SYS_MSG_CLOSE;
+        post_message(m_focus_window, message);
+      }
+
+      return true;
+    case SYS_KEY_M:  // Alt+M -> mosaic layout
+      mosaic_layout();
+      return true;
+    default:
+      return false;
+  }
+}
+
+void WindowManager::switch_focus() {
+  if (m_windows.is_empty())
+    return;
+
+  if (m_focus_window == nullptr) {
+    focus_window(*m_windows.begin());
+    return;
+  } else {
+    auto it = m_windows.begin();
+    ++it;
+
+    if (it == m_windows.end())
+      return;
+
+    focus_window(*it);
+  }
+}
+
+constexpr uint32_t WINDOW_MOVE_STEP = 10;
+
+void WindowManager::move_focus_window_left() {
+  if (m_focus_window == nullptr)
+    return;
+
+  auto rect = m_focus_window->get_geometry();
+  rect.x1 -= WINDOW_MOVE_STEP;
+  rect.x2 -= WINDOW_MOVE_STEP;
+  set_window_geometry(m_focus_window, rect);
+}
+
+void WindowManager::move_focus_window_right() {
+  if (m_focus_window == nullptr)
+    return;
+
+  auto rect = m_focus_window->get_geometry();
+  rect.x1 += WINDOW_MOVE_STEP;
+  rect.x2 += WINDOW_MOVE_STEP;
+  set_window_geometry(m_focus_window, rect);
+}
+
+void WindowManager::move_focus_window_up() {
+  if (m_focus_window == nullptr)
+    return;
+
+  auto rect = m_focus_window->get_geometry();
+  rect.y1 -= WINDOW_MOVE_STEP;
+  rect.y2 -= WINDOW_MOVE_STEP;
+  set_window_geometry(m_focus_window, rect);
+}
+
+void WindowManager::move_focus_window_down() {
+  if (m_focus_window == nullptr)
+    return;
+
+  auto rect = m_focus_window->get_geometry();
+  rect.y1 += WINDOW_MOVE_STEP;
+  rect.y2 += WINDOW_MOVE_STEP;
+  set_window_geometry(m_focus_window, rect);
 }
