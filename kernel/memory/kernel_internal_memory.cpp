@@ -104,7 +104,7 @@ bool memory_impl::init() {
     }
 
     const size_t nb_pages = libk::div_round_down(_contiguous_stop - _contiguous_start + 1, PAGE_SIZE);
-    const size_t nb_used_page = libk::div_round_up(PageAlloc::memory_needed(nb_pages), PAGE_SIZE);
+    const size_t nb_used_page = libk::div_round_up(ContiguousPageAllocator::memory_needed(nb_pages), PAGE_SIZE);
 
     PhysicalPA contiguous_physical_memory;
     if (!allocate_pages(_lin_alloc, nb_used_page, &contiguous_physical_memory)) {

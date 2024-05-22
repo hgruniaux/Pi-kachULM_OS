@@ -92,6 +92,8 @@ static const char* get_slide_path(int idx) {
 
 static uint8_t* load_slide_image(int idx, int* buffer_length) {
   const char* path = get_slide_path(idx);
+  sys_print("Loading...");
+  sys_print(path);
   sys_file_t* file = sys_open_file(path, SYS_FM_READ);
   if (file == NULL)
     return NULL;
@@ -107,6 +109,8 @@ static uint8_t* load_slide_image(int idx, int* buffer_length) {
   *buffer_length = file_size;
 
   sys_close_file(file);
+  sys_print("Done.");
+
   return buffer;
 }
 

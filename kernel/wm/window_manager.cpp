@@ -71,13 +71,13 @@ void WindowManager::destroy_window(Window* window) {
 
   window->get_task()->unregister_window(window);
 
-  const auto it = std::find(m_windows.begin(), m_windows.end(), window);
-  m_windows.erase(it);
-
   if (m_focus_window == window) {
     // Unfocus the window.
     unfocus_window(window);
   }
+
+  const auto it = std::find(m_windows.begin(), m_windows.end(), window);
+  m_windows.erase(it);
 
   --m_window_count;
   delete window;
@@ -219,11 +219,15 @@ void WindowManager::unfocus_window(Window* window) {
   Window* new_focus_window = nullptr;
   for (auto* w : m_windows) {
     // TODO: give focus to the nearest window (according to depth).
-    if (w != window)
-      w = new_focus_window;
+    if (w != window && w->is_visible())
+      new_focus_window = w;
   }
 
   m_focus_window = nullptr;
+
+  if (new_focus_window == nullptr)
+    return;
+
   focus_window(new_focus_window);
 }
 
@@ -536,11 +540,12 @@ bool WindowManager::handle_key_event(sys_key_event_t event) {
       move_focus_window_down();
       return true;
     case SYS_KEY_F:  // Alt+F -> toggle fullscreen
-      // TODO: better fullscreen support (for example, when focus out, the window should not be fullscreen anymore)
+                     // TODO: better fullscreen support (for example, when focus out, the window should not be
+                     // fullscreen anymore)
       if (m_focus_window != nullptr)
         set_window_geometry(m_focus_window, Rect::from_pos_and_size(0, 0, m_screen_width, m_screen_height));
       return true;
-    case SYS_KEY_Q:  // Alt+Q -> close window
+    case SYS_KEY_A:  // Alt+Q -> close window
       if (m_focus_window != nullptr) {
         sys_message_t message = {};
         message.id = SYS_MSG_CLOSE;
@@ -548,7 +553,7 @@ bool WindowManager::handle_key_event(sys_key_event_t event) {
       }
 
       return true;
-    case SYS_KEY_M:  // Alt+M -> mosaic layout
+    case SYS_KEY_SEMI_COLON:  // Alt+M -> mosaic layout
       mosaic_layout();
       return true;
     default:
