@@ -11,10 +11,16 @@
 static sys_window_t* window = NULL;
 static int current_slide = 0;
 
+static bool begin_show = false;
+
 static const uint32_t* slide_pixels = NULL;
 static int slide_width = 0, slide_height = 0;
 
 static void draw_slide() {
+  if (!begin_show) {
+    return;
+  }
+
   uint32_t win_width, win_height;
   sys_window_get_geometry(window, NULL, NULL, &win_width, &win_height);
 
@@ -204,6 +210,7 @@ int main() {
         should_close = true;
         break;
       case SYS_MSG_RESIZE:
+        begin_show = true; // To fix an issu we have at start... Don't ask why.
         draw_slide();
         break;
       case SYS_MSG_KEYDOWN:
