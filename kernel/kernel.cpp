@@ -19,21 +19,23 @@
 static key_event evs[100];
 static size_t nb_evs = 0;
 
-libk::StringView keycode_to_string(KeyCode key);
+libk::StringView keycode_to_string(sys_key_code_t key);
 
 UART* uart = nullptr;
 
 void print_event(key_event event) {
-  if (is_press_event(event)) {
+  if (sys_is_press_event(event)) {
     LOG_INFO("Key Press: '{}' (Ctrl: {}, Alt: {}, Shift: {}, Num lock: {}, Caps lock: {}, Scroll lock: {})",
-             keycode_to_string(get_key_code(event)), is_ctrl_pressed(event), is_alt_pressed(event),
-             is_shift_pressed(event), is_num_lock_on(event), is_caps_lock_on(event), is_scroll_lock_on(event));
+             keycode_to_string(sys_get_key_code(event)), sys_is_ctrl_pressed(event), sys_is_alt_pressed(event),
+             sys_is_shift_pressed(event), sys_is_num_lock_on(event), sys_is_caps_lock_on(event),
+             sys_is_scroll_lock_on(event));
   }
 
-  if (is_release_event(event)) {
+  if (sys_is_release_event(event)) {
     LOG_INFO("Key Release: '{}' (Ctrl: {}, Alt: {}, Shift: {}, Num lock: {}, Caps lock: {}, Scroll lock: {})",
-             keycode_to_string(get_key_code(event)), is_ctrl_pressed(event), is_alt_pressed(event),
-             is_shift_pressed(event), is_num_lock_on(event), is_caps_lock_on(event), is_scroll_lock_on(event));
+             keycode_to_string(sys_get_key_code(event)), sys_is_ctrl_pressed(event), sys_is_alt_pressed(event),
+             sys_is_shift_pressed(event), sys_is_num_lock_on(event), sys_is_caps_lock_on(event),
+             sys_is_scroll_lock_on(event));
   }
 }
 
@@ -46,7 +48,7 @@ void on_tick() {
 }
 
 void on_key_event(key_event ev) {
-  if (is_release_event(ev)) {
+  if (sys_is_release_event(ev)) {
     return;
   }
 
@@ -56,7 +58,7 @@ void on_key_event(key_event ev) {
     break;                    \
   }
 
-  switch (get_key_code(ev)) {
+  switch (sys_get_key_code(ev)) {
     CASE_KEY_CHAR(KEY_A, 'a')
     CASE_KEY_CHAR(KEY_B, 'b')
     CASE_KEY_CHAR(KEY_C, 'c')
@@ -177,7 +179,7 @@ void on_key_event(key_event ev) {
   }
 }
 
-libk::StringView keycode_to_string(KeyCode key) {
+libk::StringView keycode_to_string(sys_key_code_t key) {
 #define CASE_KEY(k) \
   case k: {         \
     return #k;      \

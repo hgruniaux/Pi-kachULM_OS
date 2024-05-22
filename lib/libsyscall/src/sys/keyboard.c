@@ -1,4 +1,4 @@
-#include "sys/keyboard.h"
+#include <sys/keyboard.h>
 
 #define MASK(x) (1ull << x)
 #define CTRL_MASK (MASK(20))
@@ -11,76 +11,62 @@
 #define PRESS_EVENT (MASK(30))
 #define RELEASE_EVENT (MASK(31))
 
-bool is_ctrl_pressed(key_event event) {
+sys_bool_t sys_is_ctrl_pressed(sys_key_event_t event) {
   return (event & CTRL_MASK) != 0;
 }
 
-bool is_shift_pressed(key_event event) {
+sys_bool_t sys_is_shift_pressed(sys_key_event_t event) {
   return (event & SHIFT_MASK) != 0;
 }
 
-bool is_alt_pressed(key_event event) {
+sys_bool_t sys_is_alt_pressed(sys_key_event_t event) {
   return (event & ALT_MASK) != 0;
 }
 
-bool is_num_lock_on(key_event event) {
+sys_bool_t sys_is_num_lock_on(sys_key_event_t event) {
   return (event & NUM_MASK) != 0;
 }
 
-bool is_caps_lock_on(key_event event) {
+sys_bool_t sys_is_caps_lock_on(sys_key_event_t event) {
   return (event & CAP_MASK) != 0;
 }
 
-bool is_scroll_lock_on(key_event event) {
+sys_bool_t sys_is_scroll_lock_on(sys_key_event_t event) {
   return (event & SCROLL_MASK) != 0;
 }
 
-KeyCode get_key_code(key_event event) {
-  return (KeyCode)(event & KEY_CODE_MASK);
+sys_key_code_t sys_get_key_code(sys_key_event_t event) {
+  return (sys_key_code_t)(event & KEY_CODE_MASK);
 }
 
-bool is_press_event(key_event event) {
+sys_bool_t sys_is_press_event(sys_key_event_t event) {
   return (event & PRESS_EVENT) != 0;
 }
 
-bool is_release_event(key_event event) {
+sys_bool_t sys_is_release_event(sys_key_event_t event) {
   return (event & RELEASE_EVENT) != 0;
 }
 
-key_event create_press_event(KeyCode code,
-                             bool ctrl_on,
-                             bool shift_on,
-                             bool alt_on,
-                             bool num_lock_on,
-                             bool caps_on,
-                             bool scroll_on) {
-  key_event e = code;
-  e |= ctrl_on ? CTRL_MASK : 0;
-  e |= shift_on ? SHIFT_MASK : 0;
-  e |= alt_on ? ALT_MASK : 0;
-  e |= num_lock_on ? NUM_MASK : 0;
-  e |= caps_on ? CAP_MASK : 0;
-  e |= scroll_on ? SCROLL_MASK : 0;
+sys_key_event_t sys_create_press_event(sys_key_code_t code, sys_key_modifiers_t mods) {
+  sys_key_event_t e = code;
+  e |= (mods & SYS_KEY_MOD_CTRL) != 0 ? CTRL_MASK : 0;
+  e |= (mods & SYS_KEY_MOD_SHIFT) != 0 ? SHIFT_MASK : 0;
+  e |= (mods & SYS_KEY_MOD_ALT) != 0 ? ALT_MASK : 0;
+  e |= (mods & SYS_KEY_MOD_NUM) != 0 ? NUM_MASK : 0;
+  e |= (mods & SYS_KEY_MOD_CAPS) != 0 ? CAP_MASK : 0;
+  e |= (mods & SYS_KEY_MOD_SCROLL) != 0 ? SCROLL_MASK : 0;
   e |= PRESS_EVENT;
-
   return e;
 }
 
-key_event create_release_event(KeyCode code,
-                               bool ctrl_on,
-                               bool shift_on,
-                               bool alt_on,
-                               bool num_lock_on,
-                               bool caps_on,
-                               bool scroll_on) {
-  key_event e = code;
-  e |= ctrl_on ? CTRL_MASK : 0;
-  e |= shift_on ? SHIFT_MASK : 0;
-  e |= alt_on ? ALT_MASK : 0;
-  e |= num_lock_on ? NUM_MASK : 0;
-  e |= caps_on ? CAP_MASK : 0;
-  e |= scroll_on ? SCROLL_MASK : 0;
+sys_key_event_t sys_create_release_event(sys_key_code_t code, sys_key_modifiers_t mods) {
+  sys_key_event_t e = code;
+  e |= (mods & SYS_KEY_MOD_CTRL) != 0 ? CTRL_MASK : 0;
+  e |= (mods & SYS_KEY_MOD_SHIFT) != 0 ? SHIFT_MASK : 0;
+  e |= (mods & SYS_KEY_MOD_ALT) != 0 ? ALT_MASK : 0;
+  e |= (mods & SYS_KEY_MOD_NUM) != 0 ? NUM_MASK : 0;
+  e |= (mods & SYS_KEY_MOD_CAPS) != 0 ? CAP_MASK : 0;
+  e |= (mods & SYS_KEY_MOD_SCROLL) != 0 ? SCROLL_MASK : 0;
   e |= RELEASE_EVENT;
-
   return e;
 }

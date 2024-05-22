@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+
 namespace PS2Keyboard {
 using Event = void (*)(uint64_t);
 

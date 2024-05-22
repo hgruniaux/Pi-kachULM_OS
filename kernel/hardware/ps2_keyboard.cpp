@@ -207,17 +207,30 @@ void process_message(uint8_t message) {
 
   if (msg_stack == 0xe012e07c || msg_stack == 0xe07ce012) {
     // Print Screen Press
-    msg_stack = KEY_PRINT_SCREEN;
+    msg_stack = SYS_KEY_PRINT_SCREEN;
   }
 
   if (msg_stack == 0xe11477e11477) {
     // Pause Press
-    msg_stack = KEY_PAUSE;
+    msg_stack = SYS_KEY_PAUSE;
   }
 
-  KeyCode keycode = (KeyCode)msg_stack;
-  key_event event = is_release ? create_release_event(keycode, ctrl_on, shift_on, alt_on, num_on, caps_on, scroll_on)
-                               : create_press_event(keycode, ctrl_on, shift_on, alt_on, num_on, caps_on, scroll_on);
+  sys_key_modifiers_t mods = SYS_KEY_MOD_NONE;
+  if (ctrl_on)
+    mods |= SYS_KEY_MOD_CTRL;
+  if (shift_on)
+    mods |= SYS_KEY_MOD_SHIFT;
+  if (alt_on)
+    mods |= SYS_KEY_MOD_ALT;
+  if (num_on)
+    mods |= SYS_KEY_MOD_NUM;
+  if (caps_on)
+    mods |= SYS_KEY_MOD_CAPS;
+  if (scroll_on)
+    mods |= SYS_KEY_MOD_SCROLL;
+
+  sys_key_code_t keycode = (sys_key_code_t)msg_stack;
+  sys_key_event_t event = is_release ? sys_create_release_event(keycode, mods) : sys_create_press_event(keycode, mods);
 
   if (on_event != nullptr) {
     (*on_event)(event);
