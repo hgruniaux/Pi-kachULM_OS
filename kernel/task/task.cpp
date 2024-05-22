@@ -39,12 +39,7 @@ Task::~Task() {
 }
 
 TaskPtr Task::current() {
-  TaskManager* task_manager = TaskManager::get();
-  if (task_manager == nullptr) {
-    return nullptr;
-  } else {
-    return task_manager->get_current_task();
-  }
+  return TaskManager::get().get_current_task();
 }
 
 bool Task::own_window(Window* window) const {

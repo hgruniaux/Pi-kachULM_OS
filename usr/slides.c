@@ -33,7 +33,7 @@ int main() {
 
   sys_window_t* window = sys_window_create("Slides", SYS_POS_CENTERED, SYS_POS_CENTERED, 800, 600, SYS_WF_DEFAULT);
   if (window == NULL) {
-    sys_print("Failed to create window for credits");
+    sys_print("Failed to create window for slides");
     return 1;
   }
 

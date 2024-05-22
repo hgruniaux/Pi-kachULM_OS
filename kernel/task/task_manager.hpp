@@ -15,7 +15,7 @@ class TaskManager {
 
   TaskManager();
 
-  [[nodiscard]] static TaskManager* get() { return g_instance; }
+  [[nodiscard]] static TaskManager& get() { return *g_instance; }
 
   [[nodiscard]] SyscallTable* get_default_syscall_table() const { return m_default_syscall_table; }
   void set_default_syscall_table(SyscallTable* table) { m_default_syscall_table = table; }

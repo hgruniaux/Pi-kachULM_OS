@@ -38,7 +38,7 @@ static void dispatch_key_event_to_wm(sys_key_event_t event) {
 // Load the init program and execute it! This is the entry point of the userspace world.
 [[noreturn]] static void load_init() {
   // Create the task manager.
-  TaskManager& task_manager = *TaskManager::get();
+  TaskManager& task_manager = TaskManager::get();
   auto init_task = task_manager.create_task("/init");
   if (init_task == nullptr) {
     LOG_CRITICAL("Failed to load the init program");
