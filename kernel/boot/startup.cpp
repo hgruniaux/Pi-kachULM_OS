@@ -58,7 +58,7 @@ void call_fini_array() {
 }
 
 // This function is defined in kernel.cpp. It is the real entry point of the kernel.
-void kmain(UART& log);
+void kmain();
 
 extern "C" void init_interrupts_vector_table();
 
@@ -107,6 +107,6 @@ extern "C" void _startup(uintptr_t dtb) {
     LOG_ERROR("Unable to initialise the DMA Controller.");
   }
 
-  kmain(log);  // the real kernel entry point
+  kmain();  // the real kernel entry point
   call_fini_array();
 }
