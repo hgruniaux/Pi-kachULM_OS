@@ -562,6 +562,11 @@ bool WindowManager::handle_key_event(sys_key_event_t event) {
 }
 
 void WindowManager::switch_focus() {
+  // This is a rolling window switch
+  // The one with the focus goes to the back and
+  // the one just behin him gets the focus.
+  // (It's ugly, but it works for now.)
+
   if (m_windows.is_empty())
     return;
 
@@ -569,13 +574,45 @@ void WindowManager::switch_focus() {
     focus_window(*m_windows.begin());
     return;
   } else {
-    auto it = m_windows.begin();
-    ++it;
+    auto old_window_it = std::find(m_windows.begin(), m_windows.end(), m_focus_window);
+    auto new_window_it = old_window_it;
 
-    if (it == m_windows.end())
+    new_window_it++;
+
+    if (new_window_it == m_windows.end())
+      new_window_it = m_windows.begin();
+
+    if (*old_window_it == *new_window_it)
       return;
 
-    focus_window(*it);
+    sys_message_t message;
+
+    (*old_window_it)->m_focus = false;
+
+    // Send focus out messsage.
+    libk::bzero(&message, sizeof(sys_message_t));
+    message.id = SYS_MSG_FOCUS_OUT;
+    post_message(*old_window_it, message);
+
+    // Send focus in message.
+    libk::bzero(&message, sizeof(sys_message_t));
+    message.id = SYS_MSG_FOCUS_IN;
+    post_message(*new_window_it, message);
+
+    m_focus_window = *new_window_it;
+    m_focus_window->m_focus = true;
+
+    // Move new window to front
+    auto new_window = *new_window_it;
+    m_windows.erase(new_window_it);
+    m_windows.push_front(new_window);
+
+    // Move old window to back
+    auto old_window = *old_window_it;
+    m_windows.erase(old_window_it);
+    m_windows.push_back(old_window);
+
+    m_dirty = true;
   }
 }
 
