@@ -531,16 +531,28 @@ bool WindowManager::handle_key_event(sys_key_event_t event) {
       switch_focus();
       return true;
     case SYS_KEY_LEFT_ARROW:  // Alt+Left -> move window to the left
-      move_focus_window_left();
+      if (sys_is_shift_pressed(event))
+        resize_focus_window_left();
+      else
+        move_focus_window_left();
       return true;
     case SYS_KEY_RIGHT_ARROW:  // Alt+Right -> move window to the right
-      move_focus_window_right();
+      if (sys_is_shift_pressed(event))
+        resize_focus_window_right();
+      else
+        move_focus_window_right();
       return true;
     case SYS_KEY_UP_ARROW:  // Alt+Arrow -> move window up
-      move_focus_window_up();
+      if (sys_is_shift_pressed(event))
+        resize_focus_window_up();
+      else
+        move_focus_window_up();
       return true;
     case SYS_KEY_DOWN_ARROW:  // Alt+Down -> move window down
-      move_focus_window_down();
+      if (sys_is_shift_pressed(event))
+        resize_focus_window_down();
+      else
+        move_focus_window_down();
       return true;
     case SYS_KEY_F:  // Alt+F -> toggle fullscreen
                      // TODO: better fullscreen support (for example, when focus out, the window should not be
@@ -670,6 +682,44 @@ void WindowManager::move_focus_window_down() {
   auto rect = m_focus_window->get_geometry();
   rect.y1 += WINDOW_MOVE_STEP;
   rect.y2 += WINDOW_MOVE_STEP;
+  set_window_geometry(m_focus_window, rect);
+}
+
+constexpr uint32_t WINDOW_RESIZE_STEP = 10;
+
+void WindowManager::resize_focus_window_left() {
+  if (m_focus_window == nullptr)
+    return;
+
+  auto rect = m_focus_window->get_geometry();
+  rect.x1 -= WINDOW_RESIZE_STEP;
+  set_window_geometry(m_focus_window, rect);
+}
+
+void WindowManager::resize_focus_window_right() {
+  if (m_focus_window == nullptr)
+    return;
+
+  auto rect = m_focus_window->get_geometry();
+  rect.x2 += WINDOW_RESIZE_STEP;
+  set_window_geometry(m_focus_window, rect);
+}
+
+void WindowManager::resize_focus_window_up() {
+  if (m_focus_window == nullptr)
+    return;
+
+  auto rect = m_focus_window->get_geometry();
+  rect.y1 -= WINDOW_RESIZE_STEP;
+  set_window_geometry(m_focus_window, rect);
+}
+
+void WindowManager::resize_focus_window_down() {
+  if (m_focus_window == nullptr)
+    return;
+
+  auto rect = m_focus_window->get_geometry();
+  rect.y2 += WINDOW_RESIZE_STEP;
   set_window_geometry(m_focus_window, rect);
 }
 

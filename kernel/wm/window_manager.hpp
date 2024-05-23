@@ -52,6 +52,10 @@ class WindowManager {
   void move_focus_window_right();
   void move_focus_window_up();
   void move_focus_window_down();
+  void resize_focus_window_left();
+  void resize_focus_window_right();
+  void resize_focus_window_up();
+  void resize_focus_window_down();
 
   void read_wallpaper();
   void fill_rect(const Rect& rect, uint32_t color);
