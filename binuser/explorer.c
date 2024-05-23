@@ -6,6 +6,7 @@
 
 #define INDENT 20
 #define TITLE_BAR_HEIGHT 30
+#define PADDING 20
 
 static sys_window_t* window = NULL;
 
@@ -64,8 +65,8 @@ static void draw_dir(sys_window_t* window, const char* path) {
 
 static void draw(sys_window_t* window) {
   current_idx = 0;
-  current_x = 20;
-  current_y = TITLE_BAR_HEIGHT + 20;
+  current_x = PADDING + 10;
+  current_y = TITLE_BAR_HEIGHT + PADDING;
   draw_dir(window, "/");
   sys_window_present(window);
 }
@@ -86,7 +87,12 @@ static void handle_key_event(sys_key_event_t event) {
       draw(window);
       break;
     case SYS_KEY_ENTER:
-      sys_spawn(current_path);
+      if (current_is_file) {
+        if (!SYS_IS_OK(sys_spawn(current_path)))
+          sys_print("Failed to spawn the selected item (probably not an ELF program)");
+      } else {
+        sys_print("The current selected item is not a file");
+      }
       break;
     default:
       break;

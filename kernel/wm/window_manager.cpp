@@ -3,6 +3,7 @@
 #include "hardware/framebuffer.hpp"
 #include "hardware/timer.hpp"
 #include "libk/log.hpp"
+#include "task/task_manager.hpp"
 #include "wm/window.hpp"
 
 #include <algorithm>
@@ -547,6 +548,7 @@ bool WindowManager::handle_key_event(sys_key_event_t event) {
       if (m_focus_window != nullptr)
         set_window_geometry(m_focus_window, Rect::from_pos_and_size(0, 0, m_screen_width, m_screen_height));
       return true;
+      // SYS_KEY_A instead of SYS_KEY_Q because of AZERTY <-> QWERTY layouts
     case SYS_KEY_A:  // Alt+Q -> close window
       if (m_focus_window != nullptr) {
         sys_message_t message = {};
@@ -555,9 +557,20 @@ bool WindowManager::handle_key_event(sys_key_event_t event) {
       }
 
       return true;
+      // SYS_KEY_SEMI_COLON instead of SYS_KEY_M because of AZERTY <-> QWERTY layouts
     case SYS_KEY_SEMI_COLON:  // Alt+M -> mosaic layout
       mosaic_layout();
       return true;
+    case SYS_KEY_E: {  // Alt+E -> spawn the file explorer
+      auto explorer = TaskManager::get().create_task("/bin/explorer");
+      if (explorer == nullptr) {
+        LOG_ERROR("Failed to spawn the file explorer");
+        return true;
+      }
+
+      TaskManager::get().wake_task(explorer);
+      return true;
+    }
     default:
       return false;
   }
