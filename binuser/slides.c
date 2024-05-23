@@ -159,6 +159,16 @@ static void handle_key_event(sys_key_event_t event) {
       current_slide++;
       update_current_slide();
       break;
+    case SYS_KEY_C: {
+      if (!sys_is_alt_pressed(event))
+        break;
+
+      if (!SYS_IS_OK(sys_spawn("/bin/credits")))
+        sys_print("Failed to spawn credits :/");
+
+      break;
+    }
+
     default:
       break;
   }
@@ -184,7 +194,7 @@ int main() {
         should_close = true;
         break;
       case SYS_MSG_RESIZE:
-        begin_show = true; // To fix an issu we have at start... Don't ask why.
+        begin_show = true;  // To fix an issu we have at start... Don't ask why.
         draw_slide();
         break;
       case SYS_MSG_KEYDOWN:
