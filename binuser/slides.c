@@ -148,6 +148,13 @@ static void handle_key_event(sys_key_event_t event) {
     return;
 
   switch (sys_get_key_code(event)) {
+    case SYS_KEY_B: {
+      if (!begin_show) {
+        begin_show = true;
+        update_current_slide();
+      }
+      break;
+    }
     case SYS_KEY_LEFT_ARROW:
       if (current_slide == 0)
         return;
@@ -194,7 +201,6 @@ int main() {
         should_close = true;
         break;
       case SYS_MSG_RESIZE:
-        begin_show = true;  // To fix an issu we have at start... Don't ask why.
         draw_slide();
         break;
       case SYS_MSG_KEYDOWN:
