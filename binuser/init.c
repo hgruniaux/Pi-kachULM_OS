@@ -9,9 +9,9 @@ int main() {
       sys_print("Failed to spawn " program); \
   } while (0)
 
-  LAUNCH("/bin/explorer");
-  LAUNCH("/bin/credits");
-  LAUNCH("/bin/slides");
+//  LAUNCH("/bin/explorer");
+//  LAUNCH("/bin/credits");
+//  LAUNCH("/bin/slides");
 
   while (true)
     asm volatile("");
