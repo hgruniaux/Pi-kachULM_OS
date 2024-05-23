@@ -137,20 +137,8 @@ static inline constexpr PhysicalPA decode_entry(const uint64_t entry, PagesAttri
   return entry & libk::mask_bits(12, 47);
 }
 
-void reload_tlb(const MMUTable* table) {
-  switch (table->kind) {
-    case MMUTable::Kind::Kernel: {
-      // Encoding from page D8-6757
-      asm volatile("tlbi vmalle1is");
-      break;
-    }
-    case MMUTable::Kind::Process: {
-      // Encoding from page D8-6757
-      const uint64_t tmp = ((uint64_t)table->asid << 48);
-      asm volatile("tlbi aside1, %x0" ::"r"(tmp));
-      break;
-    }
-  }
+void reload_tlb() {
+  asm volatile("tlbi vmalle1is");
   asm volatile("dsb sy; isb" ::: "memory");
 }
 
@@ -238,7 +226,7 @@ bool change_attr_va(MMUTable* tbl, VirtualPA va, PagesAttributes attr) {
   const uint64_t new_entry = encode_new_entry(tbl, old_pa, va_level, attr);
   va_table[va_index] = 0ull;
   data_sync();
-  reload_tlb(tbl);
+  reload_tlb();
   va_table[va_index] = new_entry;
   data_sync();
   return true;
@@ -300,7 +288,7 @@ void map_range_in_table(MMUTable* tbl,
         // entry_kind = Block or Page -> Need to invalidate previous entry
         table[index] = 0ull;
         data_sync();
-        reload_tlb(tbl);
+        reload_tlb();
       }
 
       table[index] = new_entry;
@@ -320,7 +308,7 @@ void map_range_in_table(MMUTable* tbl,
       // entry_kind = Block -> Need to invalidate previous entry
       table[index] = 0ull;
       data_sync();
-      reload_tlb(tbl);
+      reload_tlb();
     }
 
     VirtualPA new_table = tbl->alloc(tbl->handle);
@@ -403,7 +391,7 @@ void unmap_range_in_table(MMUTable* tbl,
           // Can erase the whole block !
           table[index] = 0ull;
           data_sync();
-          reload_tlb(tbl);
+          reload_tlb();
         } else {
           // Need to split :/
           // 1. Retrieve attributes and page
@@ -415,7 +403,7 @@ void unmap_range_in_table(MMUTable* tbl,
           PhysicalPA new_table_pa = tbl->resolve_va(tbl->handle, new_table);
           table[index] = 0ull;
           data_sync();
-          reload_tlb(tbl);
+          reload_tlb();
           table[index] = new_table_pa | TABLE_MARKER;
           data_sync();
 
@@ -436,7 +424,7 @@ void unmap_range_in_table(MMUTable* tbl,
       case EntryKind::Page: {
         table[index] = 0ull;
         data_sync();
-        reload_tlb(tbl);
+        reload_tlb();
         break;
       }
 
@@ -497,7 +485,7 @@ void clear_table(MMUTable* tbl, uint64_t* table, size_t table_level, VirtualPA t
 
       case EntryKind::Page:
       case EntryKind::Block: {
-        reload_tlb(tbl);
+        reload_tlb();
         break;
       }
     }
@@ -564,7 +552,7 @@ void change_properties_for_range(MMUTable* tbl,
           // We can change the whole block !
           table[index] = encode_new_entry(tbl, entry_pa, table_level, attr);
           data_sync();
-          reload_tlb(tbl);
+          reload_tlb();
         } else {
           // Need to split :/
           // 1. Allocate new table
@@ -572,7 +560,7 @@ void change_properties_for_range(MMUTable* tbl,
           PhysicalPA new_table_pa = tbl->resolve_va(tbl->handle, new_table);
           table[index] = new_table_pa | TABLE_MARKER;
           data_sync();
-          reload_tlb(tbl);
+          reload_tlb();
 
           // 2. And map untouched regions
 
@@ -599,7 +587,7 @@ void change_properties_for_range(MMUTable* tbl,
 
         table[index] = encode_new_entry(tbl, entry_pa, table_level, attr);
         data_sync();
-        reload_tlb(tbl);
+        reload_tlb();
         break;
       }
 
@@ -621,3 +609,56 @@ bool change_attr_range(MMUTable* tbl, VirtualPA va_start, VirtualPA va_end, Page
   change_properties_for_range(tbl, va_start, va_end, attr, (uint64_t*)tbl->pgd, 1, get_base_address(tbl));
   return true;
 }
+
+//auto spaces = "                                                                              ";
+//
+//void pp_table(MMUTable* tbl, uint64_t* table, size_t table_level, VirtualPA table_first_page_va) {
+//  const auto table_last_page_va = table_last_page(table_first_page_va, table_level);
+//  const auto tab = libk::StringView(spaces, 2 * (4 - table_level));
+//
+//  LOG_DEBUG("");
+//  LOG_DEBUG("{} Debugging MMU Table at {:#x} (level: {:#x}) from {:#x} -> {:#x}.", tab, table, table_level,
+//            table_first_page_va, table_last_page_va);
+//
+//  for (size_t index = 0; index <= TABLE_ENTRIES; ++index) {
+//    const uint64_t entry = table[index];
+//    const auto entry_va_start = get_entry_va_from_table_index(table_first_page_va, table_level, index);
+//
+//    switch (get_entry_kind(entry, table_level)) {
+//      case EntryKind::Invalid: {
+//        // Nothing to do here !
+//        LOG_INFO("{} Entry: {}: Invalid ({:#b})", tab, index, entry);
+//        break;
+//      }
+//
+//      case EntryKind::Block: {
+//        // May need to split the block :/
+//        const auto entry_va_stop = table_last_page(table_first_page_va, table_level + 1);
+//        const PhysicalPA entry_pa_start = decode_entry(entry, nullptr);
+//        const PhysicalPA entry_pa_stop = entry_va_start + entry_va_stop - entry_va_start;
+//        LOG_INFO("{} Entry: {}: Block from {:#x} -> {:#x} to {:#x} -> {:#x} ({:#b})", tab, index, entry_va_start,
+//                 entry_va_stop, entry_pa_start, entry_pa_stop);
+//        break;
+//      }
+//
+//      case EntryKind::Page: {
+//        const PhysicalPA entry_pa_start = decode_entry(entry, nullptr);
+//        LOG_INFO("{} Entry: {}: Page {:#x} to {:#x} ({:#b})", tab, index, entry_pa_start, entry_va_start, entry);
+//        break;
+//      }
+//
+//      case EntryKind::Table: {
+//        const auto entry_va_stop = table_last_page(table_first_page_va, table_level + 1);
+//        VirtualPA sub_table_va = tbl->resolve_pa(tbl->handle, get_table_pa_from_entry(entry));
+//
+//        LOG_INFO("Entry: {}: Sub Table at {:#x} from {:#x} -> {:#x} ({:#b})", index, sub_table_va, entry_va_start,
+//                 entry_va_stop, entry);
+//        pp_table(tbl, (uint64_t*)sub_table_va, table_level - 1, entry_va_start);
+//      }
+//    }
+//  }
+//}
+//
+//void print_mmu_table(MMUTable* tbl) {
+//  pp_table(tbl, (uint64_t*)tbl->pgd, 4, get_base_address(tbl));
+//}

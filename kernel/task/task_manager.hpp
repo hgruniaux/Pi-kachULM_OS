@@ -15,13 +15,14 @@ class TaskManager {
 
   TaskManager();
 
-  [[nodiscard]] static TaskManager* get() { return g_instance; }
+  [[nodiscard]] static TaskManager& get() { return *g_instance; }
 
   [[nodiscard]] SyscallTable* get_default_syscall_table() const { return m_default_syscall_table; }
   void set_default_syscall_table(SyscallTable* table) { m_default_syscall_table = table; }
 
   TaskPtr create_kernel_task(void (*f)());
   TaskPtr create_task(const elf::Header* program_image, Task* parent = nullptr);
+  TaskPtr create_task(const char* path, Task* parent = nullptr);
 
   /**
    * Put the given task to sleep for a minimum duration given by @a time_in_us (in microseconds).
@@ -67,6 +68,9 @@ class TaskManager {
   void schedule();
   void tick();
 
+  void mark_as_ready();
+  bool is_ready() const;
+
  private:
   TaskPtr create_task_common(bool is_kernel = false, Task* parent = nullptr);
 
@@ -78,4 +82,5 @@ class TaskManager {
   Task::id_t m_next_available_pid = 0;
   SyscallTable* m_default_syscall_table = nullptr;
   DeltaQueue m_delta_queue;
+  bool m_ready = false;
 };  // class TaskManager

@@ -20,6 +20,8 @@ struct TaskSavedState {
 
 class TaskManager;
 class Window;
+class File;
+class Dir;
 
 /**
  * Represents a runnable task in the system. This can be a user process, a thread, etc.
@@ -48,6 +50,8 @@ class Task {
     /** Process has been terminated/killed. */
     TERMINATED
   };  // enum class State
+
+  ~Task();
 
   /** Gets the current active (running) task. This forward to TaskManager::get_current_task(). */
   [[nodiscard]] static libk::SharedPointer<Task> current();
@@ -90,7 +94,7 @@ class Task {
 
   /** Forward to `get_syscall_table()->call_syscall(id, registers)`. */
   void call_syscall(uint32_t id, Registers& registers) { m_syscall_table->call_syscall(id, registers); }
-  /** Gets the task sys table. */
+  /** Gets the task syscall table. */
   [[nodiscard]] SyscallTable* get_syscall_table() { return m_syscall_table; }
   [[nodiscard]] const SyscallTable* get_syscall_table() const { return m_syscall_table; }
   void set_syscall_table(SyscallTable* table) {
@@ -101,8 +105,17 @@ class Task {
   [[nodiscard]] bool is_marked_to_be_killed() const { return m_marked_kill; }
   void mark_to_be_killed() { m_marked_kill = true; }
 
+  [[nodiscard]] bool own_window(Window* window) const;
   void register_window(Window* window);
   void unregister_window(Window* window);
+
+  [[nodiscard]] bool own_file(File* file) const;
+  void register_file(File* file);
+  void unregister_file(File* file);
+
+  [[nodiscard]] bool own_dir(Dir* dir) const;
+  void register_dir(Dir* dir);
+  void unregister_dir(Dir* dir);
 
   [[nodiscard]] bool can_preempt() const { return m_preempt_count == 0; }
   void disable_preempt() { m_preempt_count++; }
@@ -110,6 +123,9 @@ class Task {
     m_preempt_count--;
     KASSERT(m_preempt_count >= 0);
   }
+
+ private:
+  void free_resources();
 
  private:
   friend class TaskManager;
@@ -131,9 +147,10 @@ class Task {
   Task* m_parent = nullptr;  // not a SharedPointer to avoid cyclic dependencies
   libk::LinkedList<libk::SharedPointer<Task>> m_children;
 
-  // Living windows created by this task.
+  // Task resources
   libk::LinkedList<Window*> m_windows;
-
+  libk::LinkedList<File*> m_open_files;
+  libk::LinkedList<Dir*> m_open_dirs;
   libk::LinkedList<MemoryChunk> m_mapped_chunks;
 };  // class Task
 

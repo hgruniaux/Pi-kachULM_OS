@@ -116,4 +116,4 @@ struct MMUTable {
 void clear_all(MMUTable* table);
 
 /** Refresh the TLB for this page mapping. */
-void reload_tlb(const MMUTable* table);
+void reload_tlb();

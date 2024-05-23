@@ -7,6 +7,7 @@ enum {
   SYS_PRINT,
   SYS_GETPID,
   SYS_DEBUG,
+  SYS_SPAWN,
 
   /* Scheduler system calls. */
   SYS_SLEEP,
@@ -18,6 +19,14 @@ enum {
   SYS_SBRK,
 
   /* Filesystem system calls. */
+  SYS_OPEN_FILE,
+  SYS_CLOSE_FILE,
+  SYS_READ_FILE,
+  SYS_GET_FILE_SIZE,
+
+  SYS_OPEN_DIR,
+  SYS_CLOSE_DIR,
+  SYS_READ_DIR,
 
   /* Window manager system calls. */
   SYS_POLL_MESSAGE,
@@ -37,6 +46,7 @@ enum {
   SYS_GFX_DRAW_RECT,
   SYS_GFX_FILL_RECT,
   SYS_GFX_DRAW_TEXT,
+  SYS_GFX_BLIT
 };
 
 #endif  // !__PIKAOS_LIBC_SYS_SYSCALL_TABLE_H__

@@ -159,27 +159,27 @@ add_executable(kernel
         # Window manager data: icons and wallpaper
         wm/data/pika_icon.hpp
         wm/data/pika_icon.cpp
-        wm/data/wallpaper.hpp
-        wm/data/wallpaper.cpp
 
-        # Embed init ELF file inside the kernel
-        ${CMAKE_CURRENT_BINARY_DIR}/init_elf.c
+        # Filesystem
+        fs/filesystem.hpp
+        fs/filesystem.cpp
+        fs/fat/ff.c
+        fs/fat/ff.h
+        fs/fat/ffconf.h
+        fs/fat/ffsystem.cpp
+        fs/fat/ffunicode.c
+        fs/fat/ramdisk.cpp
+        fs/fat/ramdisk.hpp
+        fs/file.hpp
+        fs/file.cpp
+        fs/dir.hpp
+        fs/dir.cpp
 )
 
 target_include_directories(kernel PUBLIC .)
 set_target_properties(kernel PROPERTIES OUTPUT_NAME "kernel8.elf")
 
 target_link_libraries(kernel PRIVATE libk libsyscall libelf device-tree)
-
-add_executable(init init.c)
-target_link_libraries(init PRIVATE libsyscall)
-target_compile_options(init PRIVATE -nostdlib -no-pie -Wl,-e_start)
-target_link_options(init PRIVATE -nostdlib -no-pie -Wl,-e_start)
-add_custom_command(
-        OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/init_elf.c
-        COMMAND xxd -i init > ${CMAKE_CURRENT_BINARY_DIR}/init_elf.c
-        DEPENDS init
-        COMMENT "Embedding ELF init in kernel")
 
 # Use the linker script.
 set(LINKER_SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/boot/link.ld)
@@ -190,7 +190,7 @@ add_custom_target(linker_script
 target_link_options(kernel PRIVATE -nostdlib -T ${CMAKE_CURRENT_BINARY_DIR}/link-gen.ld)
 # In order to be compatible with MAKE
 # See: https://discourse.cmake.org/t/link-depends-on-output-of-add-custom-command-no-rule-to-make-target/10179
-add_dependencies(kernel linker_script)
+add_dependencies(kernel linker_script fs-img)
 
 # Extracting the elf file to a binary one
 add_custom_target(kernel-img

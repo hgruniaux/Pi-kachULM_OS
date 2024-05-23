@@ -115,6 +115,9 @@ class Painter {
   uint32_t draw_text(int32_t x, int32_t y, int32_t w, const char* text);
   uint32_t draw_text(int32_t x, int32_t y, int32_t w, const char* text, Color color);
 
+  // Image blit.
+  void blit(uint32_t x, uint32_t y, uint32_t width, uint32_t height, const uint32_t* argb_buffer);
+
   // Clipping functions:
   void revert_clipping();
   void set_clipping(int32_t x_min, int32_t y_min, int32_t x_max, int32_t y_max);

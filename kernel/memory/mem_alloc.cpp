@@ -4,9 +4,21 @@
 #include <libk/utils.hpp>
 
 #ifdef CONFIG_USE_NAIVE_MALLOC
-void* kmalloc(size_t byte_count, size_t alignment) {}
+void* kmalloc(size_t byte_count, size_t alignment) {
+  if (alignment == 0)
+    alignment++;
 
-void kfree(void* ptr) {}
+  if (byte_count == 0)
+    byte_count++;  // ensure that we have a unique pointer address even when allocating 0 bytes
+
+  uintptr_t ptr = KernelMemory::get_heap_end();
+  KernelMemory::change_heap_end(byte_count + alignment);
+  return (void*)libk::align_to_next(ptr, alignment);
+}
+
+void kfree(void* ptr) {
+  (void)ptr;
+}
 #else
 using MetaPtr = struct MetaBlock*;
 

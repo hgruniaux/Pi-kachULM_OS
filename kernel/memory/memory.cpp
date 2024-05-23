@@ -51,3 +51,7 @@ PhysicalAddress KernelMemory::get_physical_vc_address(VirtualAddress vc_addr) {
 VirtualAddress KernelMemory::get_virtual_vc_address(PhysicalAddress vc_addr) {
   return vc_addr + VC_MEMORY;
 }
+
+VirtualAddress KernelMemory::get_fs_address() {
+  return RAM_FS_MEMORY;
+}

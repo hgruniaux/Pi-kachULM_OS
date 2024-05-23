@@ -10,6 +10,8 @@ Window::Window(const libk::SharedPointer<Task>& task) : m_task(task) {
 #ifdef CONFIG_USE_DMA
 #ifdef CONFIG_WINDOW_LARGE_FRAMEBUFFER
   m_framebuffer = libk::make_scoped<Buffer>(sizeof(uint32_t) * MAX_WIDTH * MAX_HEIGHT);
+  m_geometry = {0, 0, 0, 0};
+  m_framebuffer_pitch = 0;
 #endif  // CONFIG_WINDOW_LARGE_FRAMEBUFFER
 #endif  // CONFIG_USE_DMA
 }
@@ -54,6 +56,10 @@ void Window::fill_rect(uint32_t x, uint32_t y, uint32_t width, uint32_t height, 
 
 void Window::draw_text(uint32_t x, uint32_t y, const char* text, uint32_t argb) {
   m_painter.draw_text(x, y, text, argb);
+}
+
+void Window::blit(uint32_t x, uint32_t y, uint32_t width, uint32_t height, const uint32_t* argb_buffer) {
+  m_painter.blit(x, y, width, height, argb_buffer);
 }
 
 void Window::draw_frame() {

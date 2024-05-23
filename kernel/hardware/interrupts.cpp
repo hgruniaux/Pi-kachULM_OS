@@ -31,7 +31,7 @@ void jump_to_el1() {
 }
 
 static bool do_syscall(Registers& registers) {
-  auto current_task = TaskManager::get()->get_current_task();
+  auto current_task = TaskManager::get().get_current_task();
   // current_task is guaranteed to be non-null here.
 
   // The system call number is stored in w8 (lower 32-bits of x8).
@@ -43,7 +43,7 @@ static bool do_syscall(Registers& registers) {
 static bool do_dispatch_userspace_interrupt(Registers& registers) {
   const uint32_t ec = (registers.esr >> 26) & 0x3F;
 
-  auto current_task = TaskManager::get()->get_current_task();
+  auto current_task = TaskManager::get().get_current_task();
   // current_task is guaranteed to be non-null here.
 
   const auto pid = current_task->get_id();
@@ -79,9 +79,9 @@ static bool do_dispatch_userspace_interrupt(Registers& registers) {
 static bool do_userspace_interrupt(Registers& registers) {
   if (!do_dispatch_userspace_interrupt(registers)) {
     // Failed to handle the interrupt: probably a fatal error, kill the current task.
-    TaskManager* task_manager = TaskManager::get();
-    task_manager->kill_task(Task::current());
-    task_manager->schedule();
+    TaskManager& task_manager = TaskManager::get();
+    task_manager.kill_task(Task::current());
+    task_manager.schedule();
   }
 
   return true;
@@ -159,8 +159,12 @@ class ContextSwitcher {
   ContextSwitcher(Registers& regs) : m_regs(regs) { m_old_task = Task::current(); }
 
   ~ContextSwitcher() {
+    if (!TaskManager::get().is_ready()) {
+      return;
+    }
+
     if (m_old_task != nullptr && m_old_task->is_marked_to_be_killed())
-      TaskManager::get()->kill_task(m_old_task);
+      TaskManager::get().kill_task(m_old_task);
 
     auto current_task = Task::current();
     if (current_task == m_old_task)
@@ -214,9 +218,9 @@ extern "C" void exception_handler(InterruptSource source, InterruptKind kind, Re
   if (source == InterruptSource::LOWER_AARCH32) {
     LOG_WARNING("interrupt/exception from userspace aarch32 code (not supported)");
     // Kill the process.
-    TaskManager* task_manager = TaskManager::get();
-    task_manager->kill_task(Task::current(), 1);
-    task_manager->schedule();
+    TaskManager& task_manager = TaskManager::get();
+    task_manager.kill_task(Task::current(), 1);
+    task_manager.schedule();
     return;
   }
 

@@ -1,11 +1,13 @@
 #include "pika_syscalls.hpp"
 
+#include <sys/file.h>
 #include <sys/syscall.h>
 #include <sys/window.h>
 
 #include <libk/assert.hpp>
 #include <libk/log.hpp>
 
+#include "fs/filesystem.hpp"
 #include "task/task.hpp"
 #include "task/task_manager.hpp"
 #include "wm/window.hpp"
@@ -35,7 +37,7 @@ static void pika_sys_unknown(Registers& regs) {
 
 static void pika_sys_exit(Registers& regs) {
   const auto exit_code = (int)regs.gp_regs.x0;
-  TaskManager::get()->kill_task(Task::current(), exit_code);
+  TaskManager::get().kill_task(Task::current(), exit_code);
   // This sys does not return to the user process, no need to set the error code.
 }
 
@@ -44,7 +46,7 @@ static void pika_sys_sleep(Registers& regs) {
 
   if (time_in_us > 0) {
     set_error(regs, SYS_ERR_OK);
-    TaskManager::get()->sleep_task(Task::current(), time_in_us);
+    TaskManager::get().sleep_task(Task::current(), time_in_us);
     return;
   }
 
@@ -52,7 +54,7 @@ static void pika_sys_sleep(Registers& regs) {
 }
 
 static void pika_sys_yield(Registers& regs) {
-  TaskManager::get()->schedule();
+  TaskManager::get().schedule();
   set_error(regs, SYS_ERR_OK);
 }
 
@@ -81,12 +83,26 @@ static void pika_sys_sbrk(Registers& regs) {
   regs.gp_regs.x0 = previous_brk;
 }
 
+static void pika_sys_spawn(Registers& regs) {
+  const auto* path = (const char*)regs.gp_regs.x0;
+  if (!check_ptr(regs, (void*)path))
+    return;
+
+  auto task = TaskManager::get().create_task(path, Task::current().get());
+  if (task == nullptr) {
+    set_error(regs, SYS_ERR_GENERIC);
+  } else {
+    TaskManager::get().wake_task(task);
+    set_error(regs, SYS_ERR_OK);
+  }
+}
+
 static void pika_sys_sched_set_priority(Registers& regs) {
   //  const sys_pid_t pid = regs.gp_regs.x0;  // Unused
   const uint32_t priority = regs.gp_regs.x1;
 
   // TODO: use pid to set priority of another process
-  if (TaskManager::get()->set_task_priority(Task::current(), priority)) {
+  if (TaskManager::get().set_task_priority(Task::current(), priority)) {
     set_error(regs, SYS_ERR_OK);
     return;
   }
@@ -105,13 +121,116 @@ static void pika_sys_sched_get_priority(Registers& regs) {
   set_error(regs, SYS_ERR_OK);
 }
 
-static bool check_window(Registers& regs, Window* window) {
-  if (!WindowManager::get().is_valid(window) || window->get_task() != Task::current()) {
-    set_error(regs, SYS_ERR_INVALID_WINDOW);
-    return false;
-  }
+static bool check_file(Registers& regs, File* file) {
+  if (Task::current()->own_file(file))
+    return true;
 
-  return true;
+  set_error(regs, SYS_ERR_INVALID_FILE);
+  return false;
+}
+
+static void pika_sys_open_file(Registers& regs) {
+  const char* path = (const char*)regs.gp_regs.x0;
+  if (!check_ptr(regs, (void*)path))
+    return;
+
+  const sys_file_mode_t mode = (sys_file_mode_t)regs.gp_regs.x1;
+  auto* file = FileSystem::get().open(path, mode);
+  regs.gp_regs.x0 = (sys_word_t)file;
+  if (file == nullptr)
+    return;
+
+  Task::current()->register_file(file);
+}
+
+static void pika_sys_close_file(Registers& regs) {
+  File* file = (File*)regs.gp_regs.x0;
+  if (!check_file(regs, file))
+    return;
+
+  FileSystem::get().close(file);
+  Task::current()->unregister_file(file);
+  set_error(regs, SYS_ERR_OK);
+}
+
+static void pika_sys_read_file(Registers& regs) {
+  File* file = (File*)regs.gp_regs.x0;
+  if (!check_file(regs, file))
+    return;
+
+  void* buffer = (void*)regs.gp_regs.x1;
+  size_t* read_bytes = (size_t*)regs.gp_regs.x3;
+  if (!check_ptr(regs, buffer) || !check_ptr(regs, read_bytes))
+    return;
+
+  size_t bytes_to_read = regs.gp_regs.x2;
+  bool success = file->read(buffer, bytes_to_read, read_bytes);
+  if (success)
+    set_error(regs, SYS_ERR_OK);
+  else
+    set_error(regs, SYS_ERR_GENERIC);
+}
+
+static void pika_sys_get_file_size(Registers& regs) {
+  File* file = (File*)regs.gp_regs.x0;
+  if (!check_file(regs, file))
+    return;
+
+  regs.gp_regs.x0 = file->get_size();
+}
+
+static bool check_dir(Registers& regs, Dir* dir) {
+  if (Task::current()->own_dir(dir))
+    return true;
+
+  set_error(regs, SYS_ERR_INVALID_DIR);
+  return false;
+}
+
+static void pika_sys_open_dir(Registers& regs) {
+  const char* path = (const char*)regs.gp_regs.x0;
+  if (!check_ptr(regs, (void*)path))
+    return;
+
+  auto* dir = FileSystem::get().open_dir(path);
+  regs.gp_regs.x0 = (sys_word_t)dir;
+  if (dir == nullptr)
+    return;
+
+  Task::current()->register_dir(dir);
+}
+
+static void pika_sys_close_dir(Registers& regs) {
+  Dir* dir = (Dir*)regs.gp_regs.x0;
+  if (!check_dir(regs, dir))
+    return;
+
+  FileSystem::get().close_dir(dir);
+  Task::current()->unregister_dir(dir);
+  set_error(regs, SYS_ERR_OK);
+}
+
+static void pika_sys_read_dir(Registers& regs) {
+  Dir* dir = (Dir*)regs.gp_regs.x0;
+  if (!check_dir(regs, dir))
+    return;
+
+  sys_file_info_t* file_info = (sys_file_info_t*)regs.gp_regs.x1;
+  if (!check_dir(regs, dir))
+    return;
+
+  if (dir->read(file_info))
+    set_error(regs, SYS_ERR_OK);
+  else
+    set_error(regs, SYS_ERR_GENERIC);
+}
+
+static bool check_window(Registers& regs, Window* window) {
+  if (Task::current()->own_window(window))
+    return true;
+
+  set_error(regs, SYS_ERR_INVALID_WINDOW);
+  return false;
 }
 
 static void pika_sys_poll_msg(Registers& regs) {
@@ -263,7 +382,7 @@ static void pika_sys_window_set_geometry(Registers& regs) {
   const int32_t width = regs.gp_regs.x3;
   const int32_t height = regs.gp_regs.x4;
 
-  WindowManager::get().set_window_geometry(window, Rect::from_pos_and_size(x, y, width, height));
+  WindowManager::get().set_window_geometry(window, x, y, width, height);
   set_error(regs, SYS_ERR_OK);
 }
 
@@ -354,6 +473,24 @@ static void pika_sys_gfx_draw_text(Registers& regs) {
   set_error(regs, SYS_ERR_OK);
 }
 
+static void pika_sys_gfx_blit(Registers& regs) {
+  auto* window = (Window*)regs.gp_regs.x0;
+  if (!check_window(regs, window))
+    return;
+
+  uint32_t x, y;
+  uint32_t width, height;
+  unpack_couple(regs.gp_regs.x1, x, y);
+  unpack_couple(regs.gp_regs.x2, width, height);
+
+  const uint32_t* argb_buffer = (const uint32_t*)regs.gp_regs.x3;
+  if (!check_ptr(regs, (void*)argb_buffer))
+    return;
+
+  window->blit(x, y, width, height, argb_buffer);
+  set_error(regs, SYS_ERR_OK);
+}
+
 SyscallTable* create_pika_syscalls() {
   SyscallTable* table = new SyscallTable;
   KASSERT(table != nullptr);
@@ -362,6 +499,7 @@ SyscallTable* create_pika_syscalls() {
   table->register_syscall(SYS_EXIT, pika_sys_exit);
   table->register_syscall(SYS_PRINT, pika_sys_print);
   table->register_syscall(SYS_GETPID, pika_sys_getpid);
+  table->register_syscall(SYS_SPAWN, pika_sys_spawn);
   table->register_syscall(SYS_DEBUG, [](Registers& regs) {
     libk::print("Debug: {} from pid={}", regs.gp_regs.x0, Task::current()->get_id());
     set_error(regs, SYS_ERR_OK);
@@ -375,6 +513,15 @@ SyscallTable* create_pika_syscalls() {
   table->register_syscall(SYS_YIELD, pika_sys_yield);
   table->register_syscall(SYS_SCHED_SET_PRIORITY, pika_sys_sched_set_priority);
   table->register_syscall(SYS_SCHED_GET_PRIORITY, pika_sys_sched_get_priority);
+
+  // File system calls.
+  table->register_syscall(SYS_OPEN_FILE, pika_sys_open_file);
+  table->register_syscall(SYS_CLOSE_FILE, pika_sys_close_file);
+  table->register_syscall(SYS_READ_FILE, pika_sys_read_file);
+  table->register_syscall(SYS_GET_FILE_SIZE, pika_sys_get_file_size);
+  table->register_syscall(SYS_OPEN_DIR, pika_sys_open_dir);
+  table->register_syscall(SYS_CLOSE_DIR, pika_sys_close_dir);
+  table->register_syscall(SYS_READ_DIR, pika_sys_read_dir);
 
   // Window manager system calls.
   table->register_syscall(SYS_POLL_MESSAGE, pika_sys_poll_msg);
@@ -394,6 +541,7 @@ SyscallTable* create_pika_syscalls() {
   table->register_syscall(SYS_GFX_DRAW_RECT, pika_sys_gfx_draw_rect);
   table->register_syscall(SYS_GFX_FILL_RECT, pika_sys_gfx_fill_rect);
   table->register_syscall(SYS_GFX_DRAW_TEXT, pika_sys_gfx_draw_text);
+  table->register_syscall(SYS_GFX_BLIT, pika_sys_gfx_blit);
 
   return table;
 }

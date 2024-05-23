@@ -54,7 +54,6 @@ Checks: '
   misc-unused-using-decls,
   misc-unused-alias-decls,
   misc-header-include-cycle,
-  misc-include-cleaner,
   misc-misleading-identifier,
   misc-misleading-bidirectional,
   misc-const-correctness,

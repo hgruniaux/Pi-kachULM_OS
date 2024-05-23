@@ -4,6 +4,7 @@
 #include <libk/utils.hpp>
 
 #include "boot/mmu_utils.hpp"
+#include "fs/fat/ramdisk.hpp"
 #include "memory/mmu_table.hpp"
 
 #define resolve_symbol_pa(symbol)                     \
@@ -131,6 +132,12 @@ void inline setup_memory_mapping(MMUTable* tbl, const DeviceTree& dt, const MMUI
     enforce(change_attr_range(tbl, NORMAL_MEMORY + init_data->dtb_page_start,
                               NORMAL_MEMORY + init_data->dtb_page_end - PAGE_SIZE, ro_memory));
   }
+
+  {
+    // Mapping File System in read-only
+    enforce(change_attr_range(tbl, NORMAL_MEMORY + RAM_FS_PHYSICAL_LOAD_ADDRESS,
+                              NORMAL_MEMORY + RAM_FS_PHYSICAL_LOAD_ADDRESS + RAM_FS_BYTE_SIZE - PAGE_SIZE, ro_memory));
+  }
 }
 
 void inline setup_vc_mapping(MMUTable* tbl, const DeviceTree& dt) {
@@ -174,6 +181,10 @@ void inline setup_device_mapping(MMUTable* tbl, const DeviceTree& dt, const Devi
 void inline setup_stack_mapping(MMUTable* tbl) {
   enforce(map_range(tbl, KERNEL_STACK_PAGE_TOP((uint64_t)DEFAULT_CORE),
                     KERNEL_STACK_PAGE_BOTTOM((uint64_t)DEFAULT_CORE), PHYSICAL_STACK_TOP, rw_memory));
+}
+
+void inline setup_fs_mapping(MMUTable* tbl) {
+  enforce(map_range(tbl, RAM_FS_MEMORY, RAM_FS_MEMORY + RAM_FS_BYTE_SIZE - PAGE_SIZE, RAM_FS_PHYSICAL_LOAD_ADDRESS, rw_memory));
 }
 
 void inline setup_mair() {
@@ -304,6 +315,7 @@ extern "C" void mmu_init(uintptr_t dtb) {
   setup_vc_mapping(&tbl, dt);
   setup_device_mapping(&tbl, dt, init_data->mem_prop);
   setup_stack_mapping(&tbl);
+  setup_fs_mapping(&tbl);
 
   setup_mair();
   setup_tcr();

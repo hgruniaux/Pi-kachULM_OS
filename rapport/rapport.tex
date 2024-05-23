@@ -1,0 +1,132 @@
+\documentclass[french, 12pt]{article}
+\usepackage[a4paper, top=1cm, bottom=2cm, left=1cm, right=1cm]{geometry}
+
+\usepackage[mono=false]{libertine}
+\usepackage[french]{babel}
+\usepackage{hyperref}
+\usepackage{textcomp}
+
+\title{Pi-kachULM\_OS}
+% \author{Émile Sauvat, Hubert Gruniaux \& Gabriel Desfrene}  % Mettre en bas de page.
+\date{}
+
+\begin{document}
+\maketitle
+
+% \tableofcontents
+
+\section{Présentation}
+\subsection{Objectif}
+Nous nous sommes fixés comme objectif premier la réalisation d'un système
+d'exploitation en C++ s'exécutant sur une
+\href{https://www.raspberrypi.com/products/raspberry-pi-3-model-b-plus/}{\emph{Raspberry Pi 3B+}}.
+Ce choix était principalement motivé par le support de cette plateforme par
+l'émulateur \href{https://www.qemu.org/}{\emph{QEMU}}.
+
+Finalement, par curiosité et pour le fun\texttrademark, nous av ons finalement
+choisi de supporter plusieurs modèle de \emph{Raspberry Pi} :
+\begin{itemize}
+    \item \href{https://www.raspberrypi.com/products/raspberry-pi-3-model-b-plus/}{\emph{Raspberry Pi 3B+}}
+    \item \href{https://www.raspberrypi.com/products/raspberry-pi-4-model-b/}{\emph{Raspberry Pi 4 Model B}}
+    \item \href{https://www.raspberrypi.com/products/compute-module-4/?variant=raspberry-pi-cm4001000}{\emph{Raspberry Pi Compute Module 4}}
+\end{itemize}
+
+La totalité de ce qu'il suit à donc été testé et conçu afin d'être exécuté sur
+l'un de ces modèles. Ce projet compte environ XXX lignes de codes de C++, xx
+lignes de C et xx lignes d'assembleur. La totalité du code est disponible à
+l'adresse suivante : \url{https://github.com/hgruniaux/Pi-kachULM_OS}
+
+\subsection{Reconnaissance dynamique du matériel}
+Afin de supporter plusieurs machines, qui ne partagent pas toutes les mêmes
+caractéristiques et spécificités nous avons besoin d'un moyen de les déterminer
+dynamiquement, lors du démarrage du noyau. Pour ce faire, le noyau utilise et le
+\textit{DeviceTree} donné par le \textit{bootloader}. Nous avons donc développé une
+bibliothèque, \texttt{libdevice-tree} permettant d'interpreter cette structure.
+
+Un \textit{DeviceTree} est, comme son nom l'indique, un arbre, compilé sous la
+forme d'un fichier binaire, qui est chargé par le \textit{bootloader} lors du
+démarrage. Cet arbre est rempli par ce dernier, et informe le noyau du matériel
+présent. Une documentation est disponible sur cette
+\href{https://www.devicetree.org/specifications/}{page}.
+
+\section{Modèle mémoire}
+\subsection{Vue de la mémoire}
+Lors du démarrage du système d'exploitation, ce dernier récupère la taille de la
+mémoire disponible et s'occupe d'initialiser le \textit{Memory Management Unit (MMU)}
+pour que le noyau puisse s'abstraire de la mémoire physique. Cette configuration
+est effectuée au sein du fichier \texttt{mmu\_init.cpp}. Les pages ont une
+taille fixée à 4~kio.
+
+On utilise ici à bon escient les spécificités du \textit{MMU} de la plateforme
+ARM. Cette dernière nous permet d'avoir deux espaces d'adressage complètement
+distincts :
+
+\begin{itemize}
+    \item La mémoire des processus est dans l'espace d'adresse \texttt{0x0000000000000000} à \texttt{0x0000ffffffffffff}.
+    \item La mémoire du noyau est, elle, dans l'espace d'adresse \texttt{0xffff000000000000} à \texttt{0xffffffffffffffff}.
+\end{itemize}
+
+% Do a scheme of the memory mapping
+
+\subsection{Allocateurs de pages}
+Une fois que le noyau est passé en mémoire virtuelle, il nous faut un moyen
+de garder une trace des pages physiques libres ou utilisées par le noyau. Pour
+ce faire, nous avons implémenté deux allocateur de pages :
+\begin{itemize}
+    \item \texttt{page\_alloc.hpp} s'occupe de l'allocation de la grande
+          majorité des pages physiques de la mémoire. Cette allocation est
+          réalisée de manière optimisée par un arbre binaire. % Add some notes here ? Develop the algorithm ?
+    \item \texttt{contiguous\_page\_alloc.hpp} travaille sur une petite portion
+          de la mémoire physique et s'occupe d'allouée une liste de pages
+          contiguës. Cette allocation est utilisée pour les \textit{buffers}
+          utilisés lors des transferts DMA.
+\end{itemize}
+
+\subsection{Allocateurs de mémoire}
+À l'aide de l'allocateur de page principal et en modifiant les tables de
+translation du \textit{MMU} du noyaux
+
+
+\subsection{Système de fichier}
+Le RamFs et les fonctionnalités (FAT)
+
+\section{\textit{Drivers}}
+\subsection{GPIO}
+\subsection{Uart}
+\subsection{Mini Uart}
+\subsection{Mailbox}
+\subsection{Contrôleur IRQ}
+\subsection{Contrôleur DMA}
+\subsection{System Timer}
+\subsection{Timer ARM}
+
+\section{Processus}
+\subsection{Hiérarchie}
+Support des processus utilisateurs et noyaux leur \texttt{libc}.
+Pas de diff entre process et thread.
+
+\subsection{Appels systèmes}
+Liste des appels systèmes possibles (sycalls de \texttt{libsyscall})
+
+\section{Ordonnanceur}
+\subsection{Algorithme et Priorités}
+Comment l'ordonnateur fonctionne, qu'est-ce qu'il est capable de faire ?
+
+\subsection{Mise en pause de Processus}
+Comment et quand les processus font dodo ?
+
+\section{Écran et Fenêtres}
+\subsection{\textit{Framebuffer}}
+Rapidement comment on affiche des choses à l'écran.
+
+\subsection{Gestionnaire de fenêtres}
+Fonctionnalités et choix d'implementation (Processus Noyaux).
+
+\section{Clavier PS/2}
+Clavier PS2.
+
+\section{Conclusion}
+Quoi qu'on dit là ?
+
+
+\end{document}

@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.20)
 
 project(Pi-kachULM_OS LANGUAGES CXX C ASM)
 
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+
 # Enable C++23 (with GNU extensions)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -30,7 +32,7 @@ add_compile_options(-ffile-prefix-map=${CMAKE_SOURCE_DIR}/=./)
 # Some configurations that are supported by the kernel code:
 
 # Use the DMA hardware/driver to blit windows into the screen.
-add_compile_definitions(-DCONFIG_USE_DMA)
+#add_compile_definitions(-DCONFIG_USE_DMA)
 
 # Allocate a single large framebuffer per window (and do not reallocate and resize it when
 # the window is resized). This is intended to fix a bug in the DMA/page allocator.
@@ -49,9 +51,6 @@ add_compile_definitions(-DCONFIG_USE_NAIVE_WM_UPDATE)
 
 # Enable the use of double buffering for the screen framebuffer (using mailbox set virtual offset).
 # add_compile_definitions(-DCONFIG_USE_DOUBLE_BUFFERING)
-
-# Include the wallpaper data and display it as the background in the window manager.
-add_compile_definitions(-DCONFIG_INCLUDE_WALLPAPER)
 
 # Enable checks
 option(ENABLE_CHECKS "Enable checks using clang-tidy" OFF)
@@ -85,4 +84,5 @@ if (${TARGET_QEMU})
 endif ()
 
 add_subdirectory(lib)
+add_subdirectory(binuser)
 add_subdirectory(kernel)

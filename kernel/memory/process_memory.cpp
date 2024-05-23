@@ -57,16 +57,16 @@ size_t ProcessMemory::get_heap_byte_size() const {
 void ProcessMemory::activate() const {
   // First set TTBR0 to a null pointer, to invalidate all TBL with our ASID
   asm volatile("msr ttbr0_el1, xzr");
-  reload_tlb(&_tbl);
+  reload_tlb();
 
   // Next we set the correct value for TTBR0
   asm volatile("msr ttbr0_el1, %x0" ::"r"(memory_impl::resolve_table_pgd(_tbl)));
+  reload_tlb();
 }
 
 void ProcessMemory::deactivate() {
   asm volatile("msr ttbr0_el1, xzr");
-  asm volatile("tlbi vmalle1is");
-  asm volatile("dsb sy; isb" ::: "memory");
+  reload_tlb();
 }
 
 void ProcessMemory::free() {
@@ -88,12 +88,15 @@ bool ProcessMemory::map_chunk(MemoryChunk& chunk, const VirtualPA page_va, bool 
   if (chunk._pas == nullptr) {
     return false;
   }
+  //  LOG_DEBUG("Mapping chunck: {:#x}", chunk._kernel_va);
 
   const PagesAttributes attr = get_properties(read_only, executable);
 
   for (size_t page_id = 0; page_id < chunk._nb_pages; ++page_id) {
     const PhysicalPA page_pa = chunk._pas[page_id];
 
+    //    LOG_DEBUG("Mapping {:#x} -> {:#x} to {:#x}", page_va + page_id * PAGE_SIZE, page_va + page_id * PAGE_SIZE,
+    //    page_pa);
     if (!map_range(&_tbl, page_va + page_id * PAGE_SIZE, page_va + page_id * PAGE_SIZE, page_pa, attr)) {
       return false;
     }

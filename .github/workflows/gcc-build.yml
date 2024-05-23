@@ -30,7 +30,7 @@ jobs:
 
             -   uses: awalsh128/cache-apt-pkgs-action@latest
                 with:
-                    packages: qemu-system-arm
+                    packages: qemu-system-arm mtools
                     version: 1.0
 
             -   name: Configure Project

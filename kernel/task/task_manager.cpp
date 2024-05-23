@@ -1,4 +1,5 @@
 #include "task_manager.hpp"
+#include "fs/fat/ff.h"
 #include "hardware/interrupts.hpp"
 #include "hardware/system_timer.hpp"
 #include "memory/mem_alloc.hpp"
@@ -22,7 +23,7 @@ TaskManager::TaskManager() : m_delta_queue(this) {
     if (SystemTimer::is_used(timer_id))
       continue;
 
-    if (SystemTimer::set_recurrent_ms(timer_id, TICK_TIME, []() { TaskManager::get()->tick(); })) {
+    if (SystemTimer::set_recurrent_ms(timer_id, TICK_TIME, []() { TaskManager::get().tick(); })) {
       LOG_INFO("System timer {} used for scheduler with tick time {} ms", timer_id, TICK_TIME);
       timer_found = true;
       break;
@@ -155,6 +156,39 @@ TaskPtr TaskManager::create_task(const elf::Header* program_image, Task* parent)
   return task;
 }
 
+TaskPtr TaskManager::create_task(const char* path, Task* parent) {
+  // Load the init program ELF file.
+  FIL f = {};
+  if (f_open(&f, path, FA_READ) != FR_OK)
+    return nullptr;
+
+  const UINT file_size = f_size(&f);
+  uint8_t* elf_buffer = (uint8_t*)kmalloc(file_size, alignof(uint64_t));
+  if (elf_buffer == nullptr)
+    return nullptr;
+
+  UINT read_bytes = 0;
+  if (f_read(&f, elf_buffer, file_size, &read_bytes) != FR_OK) {
+    kfree(elf_buffer);
+    f_close(&f);
+    return nullptr;
+  }
+
+  f_close(&f);
+
+  auto* elf = (const elf::Header*)elf_buffer;
+  if (elf::check_header(elf) != elf::Error::NONE) {
+    kfree(elf_buffer);
+    return nullptr;
+  }
+
+  // Create the task itself.
+  auto task = create_task(elf, parent);
+  kfree(elf_buffer);
+
+  return task;
+}
+
 void TaskManager::sleep_task(const TaskPtr& task, uint64_t time_in_us) {
   KASSERT(task != nullptr);
   KASSERT(task->get_manager() == this);
@@ -218,12 +252,7 @@ void TaskManager::kill_task(const TaskPtr& task, int exit_code) {
 
   m_scheduler->remove_task(task);
 
-  // Destroy the windows.
-  auto& window_manager = WindowManager::get();
-  for (auto* window : task->m_windows) {
-    window_manager.destroy_window(window);
-  }
-
+  task->free_resources();
   task->m_state = Task::State::TERMINATED;
 }
 
@@ -251,4 +280,11 @@ void TaskManager::schedule() {
 void TaskManager::tick() {
   m_delta_queue.tick();
   m_scheduler->tick();
+}
+
+void TaskManager::mark_as_ready() {
+  m_ready = true;
+}
+bool TaskManager::is_ready() const {
+  return m_ready;
 }

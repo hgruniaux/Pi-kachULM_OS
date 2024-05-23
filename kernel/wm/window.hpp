@@ -60,6 +60,7 @@ class Window {
   void draw_rect(uint32_t x, uint32_t y, uint32_t width, uint32_t height, uint32_t argb);
   void fill_rect(uint32_t x, uint32_t y, uint32_t width, uint32_t height, uint32_t argb);
   void draw_text(uint32_t x, uint32_t y, const char* text, uint32_t argb);
+  void blit(uint32_t x, uint32_t y, uint32_t width, uint32_t height, const uint32_t* argb_buffer);
   // Draw the window frame decoration (title bar + borders).
   void draw_frame();
 

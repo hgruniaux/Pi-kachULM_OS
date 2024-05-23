@@ -4,6 +4,7 @@
 #include <libk/utils.hpp>
 #include "boot/mmu_utils.hpp"
 #include "contiguous_page_alloc.hpp"
+#include "fs/fat/ramdisk.hpp"
 #include "hardware/kernel_dt.hpp"
 #include "libk/log.hpp"
 
@@ -103,7 +104,7 @@ bool memory_impl::init() {
     }
 
     const size_t nb_pages = libk::div_round_down(_contiguous_stop - _contiguous_start + 1, PAGE_SIZE);
-    const size_t nb_used_page = libk::div_round_up(PageAlloc::memory_needed(nb_pages), PAGE_SIZE);
+    const size_t nb_used_page = libk::div_round_up(ContiguousPageAllocator::memory_needed(nb_pages), PAGE_SIZE);
 
     PhysicalPA contiguous_physical_memory;
     if (!allocate_pages(_lin_alloc, nb_used_page, &contiguous_physical_memory)) {
@@ -136,6 +137,9 @@ bool memory_impl::init() {
         mark_as_used_range(start, end);
       }
     }
+
+    // RamFs
+    mark_as_used_range(RAM_FS_PHYSICAL_LOAD_ADDRESS, RAM_FS_PHYSICAL_LOAD_ADDRESS + RAM_FS_BYTE_SIZE);
   }
 
   /* Set up the MMUTable */
