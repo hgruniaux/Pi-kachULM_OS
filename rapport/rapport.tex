@@ -1,5 +1,5 @@
 \documentclass[french, 12pt]{article}
-\usepackage[a4paper, top=1cm, bottom=2cm, left=1cm, right=1cm]{geometry}
+\usepackage[a4paper, top=2cm, bottom=2cm, left=2cm, right=2cm]{geometry}
 
 \usepackage[mono=false]{libertine}
 \usepackage[french]{babel}
@@ -11,6 +11,7 @@
 \usepackage{siunitx}
 \usepackage{multirow}
 \usepackage{makecell}
+\usepackage{booktabs}
 
 \DeclareSIUnit\octet{o}
 
@@ -302,32 +303,93 @@ reste très utile afin de récupérer à faible coût le temps écoulé depuis l
 démarrage du noyau.
 
 \section{Processus}
+
+Une implémentation de processus et threads est proposé dans notre OS. Celle-ci bien que imparfaite, propose tout de même de multiples fonctionnalités et reste flexible pour de futurs améliorations. Elle est lourdement inspiré de l'implémentation de Linux.
+
 \subsection{Hiérarchie}
-Support des processus utilisateurs et noyaux leur \texttt{libc}.
-Pas de diff entre process et thread.
-% Hubert
+
+Au niveau de notre noyau, la notion de processus n'existe pas, ni celle de thread. Tout est une tâche (représentée par la classe C++ \texttt{Task}). Une tâche est de façon générale une opération qui peut être préempté et ordonnancé : cela désigne donc tout objet qui sera manipulé par le scheduler.
+
+Une tâche a systématiquement son propre stack et peut avoir optionnellement sa propre mémoire virtuelle. Il peut tourner à la fois en espace utilisateur (niveau EL0) ou en espace noyau avec un stack distinct (niveau EL1t). Chaque tâche maintient aussi sa propre liste de fenêtre (pour le window manager) et de fichier ouverts.
+
+Un processus est alors simplement une tâche qui tourne en espace utilisateur avec sa propre mémoire virtuelle. Un thread est une tâche qui partage les mêmes fichiers/fenêtres et la même mémoire virtuelle qu'avec une autre tâche (qui joue le rôle de processus parent).
 
 \subsection{Appels systèmes}
-Liste des appels systèmes possibles (sycalls de \texttt{libsyscall})
-% Hubert
+
+Afin qu'une tâche puisse communiquer avec le noyau, un ensemble d'appels systèmes est supporté. Ces derniers se font avec la même convention que Linux: les arguments sont passés dans les registres \texttt{r0} à \texttt{r7}, l'identifiant de l'appel est passé dans \texttt{w8} et l'appel lui-même est effectué par l'instruction \texttt{svc \#0}.
+
+L'interprétation de l'identifiant et des arguments est fait par la table des syscalls. Cette dernière est spécifique à chaque tâche (aussi bien noyau qu'espace utilisateur). Toutefois, une seule table des syscalls a été implémenté dans notre noyau pour le moment. Elle est donnée dans \ref{syscall_table}.
+
+Tous les syscalls ne peuvent pas forcèment être appelé par des tâches noyaux.
+
+\begin{table}[]
+\label{syscall_table}
+\centering
+\begin{tabular}{@{}ll@{}}
+\toprule
+Fonction C  & Description \\ \midrule
+\texttt{sys\_exit}   & Tue la tâche avec un le code erreur donnée \\
+\texttt{sys\_print}  & Affiche du texte dans le log noyau \\
+\texttt{sys\_getpid}  & Renvoie l'identifiant de la tâche \\
+\texttt{sys\_debug}  & Affiche un entier dans le log noyau \\
+\texttt{sys\_spawn}  & Creé un nouveau processus enfant à partir du fichier ELF donnée \\
+\texttt{sys\_sleep}  & Mets en pause la tâche pour le temps donné au minimum \\
+\texttt{sys\_yield}  & Passes le contrôle à d'autres tâches \\
+\texttt{sys\_sched\_get\_priority}  & Recupère la priorité actuelle de la tâche \\
+\texttt{sys\_schet\_set\_priority}  & Définit la nouvelle priorité de la tâche \\
+\texttt{sys\_sbrk}  & Change la position du heap (allocation de mémoire) \\
+\texttt{sys\_open\_file} & Ouvre un fichier \\
+\texttt{sys\_close\_file} & Ferme un fichier \\
+\texttt{sys\_read\_file} & Lit des octects à partir d'un fichier ouvert \\
+\texttt{sys\_get\_file\_size} & Renvoie la taille d'un fichier ouvert \\
+\texttt{sys\_open\_dir} & Ouvre un répertoire \\
+\texttt{sys\_close\_dir} & Ferme un répertoire \\
+\texttt{sys\_read\_dir} & Lit une entrée du répertoire \\
+\texttt{sys\_poll\_message} & Récupère un message d'une fenêtre si disponible \\
+\texttt{sys\_wait\_message} & Comme \texttt{sys\_poll\_message} mais bloque si plus de message \\
+\texttt{sys\_window\_create} & Crée une fenêtre \\
+\texttt{sys\_window\_destroy} & Détruit une fenêtre \\
+\texttt{sys\_window\_set\_title} & Mets à jour le titre d'une fenêtre \\
+\texttt{sys\_window\_get\_visibility} & Récupère la visibilité actuelle d'une fenêtre \\
+\texttt{sys\_window\_set\_visibility} & Affiche ou cache une fenêtre \\
+\texttt{sys\_window\_get\_geometry} & Récupéré la position et la taille d'une fenêtre \\
+\texttt{sys\_window\_set\_geometry} & Déplace ou redimensionne une fenêtre \\
+\texttt{sys\_window\_present} & Redessine la fenêtre à l'écran \\
+\texttt{sys\_gfx\_clear} & Efface le contenu d'une fenêtre par une couleur \\
+\texttt{sys\_gfx\_draw\_line} & Affiche une ligne dans une fenêtre \\
+\texttt{sys\_gfx\_draw\_rect} & Affiche un rectangle dans une fenêtre \\
+\texttt{sys\_gfx\_fill\_rect} & Remplit un rectangle dans une fenêtre \\
+\texttt{sys\_gfx\_draw\_text} & Affiche du texte dans une fenêtre  \\
+\texttt{sys\_gfx\_blit} & Copie une image 2D dans une fenêtre \\ \bottomrule
+\end{tabular}
+\caption{Table des syscalls}
+\end{table}
 
 \section{Ordonnanceur}
 \subsection{Algorithme et Priorités}
-Comment l'ordonnateur fonctionne, qu'est-ce qu'il est capable de faire ?
-% Hubert & Émile
+
+Le noyau utilise un scheduler préemptif pour déterminer la prochaine tâche à exécuter. Son algorithme exact est donné ici.
+
+Toutes les tâches qui peuvent être actuellement exécutées sont réparties dans 32 queues en fonction de leur priorité. À chaque tick de l'horloge, s'il y a une tâche dans une queue de priorité plus élevée que la tâche actuelle, alors cette tâche est choisie pour être exécutée (même si le budget de temps n'est pas encore dépassé). Autrement, si le budget de temps de la tâche actuelle est dépassé (10 ms par défaut, dépend de la priorité de la tâche), alors la prochaine tâche est choisie dans la queue de priorité actuelle ou plus basse. La tâche précédente étant à nouveau ajoutée à la fin de la queue correspondant à sa priorité (algorithme round-robinn).
 
 \subsection{Mise en pause de Processus}
-Comment et quand les processus font dodo ?
-% Hubert & Émile
+
+Lorsqu'une tâche est mise en pause, on la retire des queues du scheduler. Pour la réveiller, il suffit de l'insérer un nouveau dans la queue correspondant à sa priorité.
+
+Dans le cas d'un endormissement pour une certaine durée, la tâche est mise dans une delta queue. Dans cette structure de donnée, on préserve seulement le temps restant (avant le réveil) \textbf{relativement} à la tâche précédente dans la delta queue. De cette façon, la mise à jour de la queue est faite en temps constant (il suffit de mettre à jour la tête de la queue). Une fois le temps écoulé, on replace la tâche dans une des queues d'exécution du scheduler.
 
 \section{Écran et Fenêtres}
 \subsection{\textit{Framebuffer}}
-Rapidement comment on affiche des choses à l'écran.
-% Hubert
+
+Au démarrage du noyau, une requête mailbox est effectuée pour allouer un framebuffer pour l'écran auprès du VideoCore (carte graphique intégrée de la Raspberry PI). Ce framebuffer n'est jamais réalloué plus tard et est directement modifié pour mettre à jour l'écran.
+
+Normalement, un mécanisme de détection de la taille de l'écran est en place, mais ne marche pas en pratique (renvoie des tailles d'écran qui ne correspondant pas à la résolution native). De plus, un système de double buffering est aussi implémenté en utilisant les virtuals offsets du VideoCore, mais il ne fonctionne pas non plus sur le hardware.
 
 \subsection{Gestionnaire de fenêtres}
-Fonctionnalités et choix d'implementation (Processus Noyaux).
-% Hubert
+
+Chaque tâche a la possibilité de créer une ou plusieurs fenêtres. Pour chaque fenêtre, un framebuffer est alloué en espace noyau pour stocker son contenu et une queue des messages est créé. La tâche utilisateur peut alors dessiner dans le framebuffer via des syscalls ou recevoir des messages du noyau sur les faits et gestes de la fenêtre (entrés claviers, déplacement, redimensionnement, fermeture demandée, etc.).
+
+Le window manager en lui-même est une tâche noyau qui vérifie régulièrement s'il y a eu des modifications (déplacement de fenêtre, changement de focus, fenêtre mise à jour, etc.) et compose les fenêtres à l'écran. C'est également ce dernier qui est responsable de dessiner l'arrière-plan (une image chargée à partir du système de fichier).  Les décorations d'une fenêtre sont dessinées par le window manager dans le framebuffer de la fenêtre juste avant le blit vers le framebuffer global de l'écran.
 
 \section{Clavier PS/2}
 Afin d'interagir facilement avec l'interface de notre noyau, nous avons
