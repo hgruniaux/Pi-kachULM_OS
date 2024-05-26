@@ -86,3 +86,7 @@ endif ()
 add_subdirectory(lib)
 add_subdirectory(binuser)
 add_subdirectory(kernel)
+
+add_custom_target(Pi-kachULM_OS-img
+        DEPENDS kernel-img
+        COMMAND sh "${CMAKE_CURRENT_SOURCE_DIR}/tools/create-boot-img.sh" "${CMAKE_CURRENT_BINARY_DIR}" "Pi-kachULM_OS.img")
