@@ -173,8 +173,20 @@ ce faire, nous avons implémenté deux allocateur de pages :
 \begin{itemize}
     \item \texttt{page\_alloc.hpp} s'occupe de l'allocation de la grande
           majorité des pages physiques de la mémoire. Cette allocation est
-          réalisée de manière optimisée par un arbre binaire.
-          % Émile
+          réalisée de manière optimisée par un arbre binaire. 
+
+          Chaque nœud est composé d'un bit de donné indiquant si au moins une
+          page (=une feuille) est libre parmis tout ses descendant, ou si la page 
+          est libre s'il s'agit d'une feuille. Ainsi on peut accéder à la disponibilité
+          de chaque page en temps constant. On peut également trouver une page disponible, 
+          sous réserve d'existence, en $\bigcirc (\log n)$ temps, étant donné qu'on élimine 
+          la moitié des page existantes à chaque étape de descente dans l'arbre, 
+          le tout en gardant constament une page libre au moins parmis les descendants 
+          envisagés. 
+          
+          La libération d'une page doit se faire en modifiant les ancêtre 
+          nécessaires pour prendre en compte la disponibilité de la page, donc en au plus 
+          $\bigcirc (\log n)$ temps également. 
 
     \item \texttt{contiguous\_page\_alloc.hpp} travaille sur une petite portion
           de la mémoire physique ($\approx \SI{100}{\mebi\octet}$) et s'occupe
@@ -187,8 +199,18 @@ ce faire, nous avons implémenté deux allocateur de pages :
 À l'aide de l'allocateur de page principal et en modifiant les tables de
 translation du \textit{MMU} du noyau, un \textit{heap} est simulé à partir des
 adresses \texttt{0xffff500000000000}.
-% Emile
+En utilisant une structure de liste doublement chainée de \textit{MetaBlock}, on alloue la mémoire requise 
+linéairement dans le heap, ainsi que les données suivantes :
+\begin{itemize}
+    \item La taille \textit{size} du bloc mémoire, sans compter le décalage permettant l'alignement 
+    du début du block si celui-ci est alloué.
+    \item Les block suiants et précédent \textit{next} et \textit{previous}
+    \item L'adresse de début de la mémoire allouée, sous la forme d'un pointeur et d'une adresse vers un tableau 
+    de charactères.
+\end{itemize}
 
+Ces block permettent de manipuler plus facilement les blocks mémoire, notamment pour les séparer en deux si le 
+block alloué est trop grand ou pour fusionner deux block libres consécutifs.
 
 \subsection{Système de fichier}
 Nous utilisons les \textit{bootloader} des \rpi{} afin de charger une
@@ -308,9 +330,9 @@ Une implémentation de processus et threads est proposé dans notre OS. Celle-ci
 
 \subsection{Hiérarchie}
 
-Au niveau de notre noyau, la notion de processus n'existe pas, ni celle de thread. Tout est une tâche (représentée par la classe C++ \texttt{Task}). Une tâche est de façon générale une opération qui peut être préempté et ordonnancé : cela désigne donc tout objet qui sera manipulé par le scheduler.
+Au niveau de notre noyau, la notion de processus n'existe pas, ni celle de thread. Tout est une tâche (représentée par la classe C++ \texttt{Task}). Une tâche est de façon générale une opération qui peut être préempté ou ordonnancé : cela désigne donc tout objet qui sera manipulé par le scheduler.
 
-Une tâche a systématiquement son propre stack et peut avoir optionnellement sa propre mémoire virtuelle. Il peut tourner à la fois en espace utilisateur (niveau EL0) ou en espace noyau avec un stack distinct (niveau EL1t). Chaque tâche maintient aussi sa propre liste de fenêtre (pour le window manager) et de fichier ouverts.
+Une tâche a systématiquement son propre stack et peut avoir optionnellement sa propre mémoire virtuelle. Il peut tourner à la fois en espace utilisateur (niveau EL0) ou en espace noyau avec un stack distinct (niveau EL1). Chaque tâche maintient aussi sa propre liste de fenêtre (pour le window manager) et de fichier ouverts.
 
 Un processus est alors simplement une tâche qui tourne en espace utilisateur avec sa propre mémoire virtuelle. Un thread est une tâche qui partage les mêmes fichiers/fenêtres et la même mémoire virtuelle qu'avec une autre tâche (qui joue le rôle de processus parent).
 
