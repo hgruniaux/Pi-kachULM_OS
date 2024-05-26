@@ -12,6 +12,14 @@
 \usepackage{multirow}
 \usepackage{makecell}
 \usepackage{booktabs}
+\usepackage{fancyhdr}
+
+\pagestyle{fancy}
+\renewcommand{\footrulewidth}{0.5pt}
+\fancyhead[L]{}
+\fancyfoot[L]{Gabriel \textsc{Desfrene}}
+\fancyfoot[C]{Hubert \textsc{Gruniaux}}
+\fancyfoot[R]{Émile \textsc{Sauvat}}
 
 \DeclareSIUnit\octet{o}
 
@@ -29,12 +37,12 @@
 \title{Pi-kachULM\_OS}
 \author{}
 % \author{Émile Sauvat, Hubert Gruniaux \& Gabriel Desfrene}  % Mettre en bas de page.
-\date{}
+\date{\today}
 
 \begin{document}
 \maketitle
 
-\section{Présentation}
+\section*{Présentation}
 \subsection{Objectif}
 Nous nous sommes fixés comme objectif premier la réalisation d'un système
 d'exploitation en C++ s'exécutant sur une
