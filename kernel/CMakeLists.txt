@@ -82,8 +82,8 @@ add_executable(kernel
         hardware/ps2_keyboard.cpp
         hardware/ps2_keyboard.hpp
 
-        hardware/ps2_keyboard.cpp
-        hardware/ps2_keyboard.hpp
+        hardware/uart_keyboard.cpp
+        hardware/uart_keyboard.hpp
 
         # IRQ
         hardware/irq/bcm2837_irq_manager.hpp
@@ -159,6 +159,12 @@ add_executable(kernel
         # Window manager data: icons and wallpaper
         wm/data/pika_icon.hpp
         wm/data/pika_icon.cpp
+
+        # Input management
+        input/keyboard_input.hpp
+        input/keyboard_input.cpp
+        input/mouse_input.hpp
+        input/mouse_input.cpp
 
         # Filesystem
         fs/filesystem.hpp

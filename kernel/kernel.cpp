@@ -5,6 +5,7 @@
 #include "hardware/interrupts.hpp"
 #include "hardware/kernel_dt.hpp"
 #include "hardware/ps2_keyboard.hpp"
+#include "hardware/uart_keyboard.hpp"
 
 #include "fs/filesystem.hpp"
 
@@ -12,28 +13,13 @@
 #include "task/task_manager.hpp"
 #include "wm/window_manager.hpp"
 
-#if defined(__GNUC__)
-#define COMPILER_NAME "GCC " __VERSION__
-#elif defined(__clang__)
+#if defined(__clang__)
 #define COMPILER_NAME __VERSION__
+#elif defined(__GNUC__)
+#define COMPILER_NAME "GCC " __VERSION__
 #else
 #define COMPILER_NAME "Unknown Compiler"
 #endif
-
-// Send a key event to the window manager.
-static void dispatch_key_event_to_wm(sys_key_event_t event) {
-  sys_message_t msg = {};
-  if (sys_is_press_event(event))
-    msg.id = SYS_MSG_KEYDOWN;
-  else if (sys_is_release_event(event))
-    msg.id = SYS_MSG_KEYUP;
-  else
-    return;
-
-  msg.param1 = event;
-  msg.param2 = 0;
-  WindowManager::get().post_message(msg);
-}
 
 // Load the init program and execute it! This is the entry point of the userspace world.
 [[noreturn]] static void load_init() {
@@ -77,8 +63,11 @@ static void dispatch_key_event_to_wm(sys_key_event_t event) {
   WindowManager* window_manager = new WindowManager;
   KASSERT(window_manager != nullptr);
 
-  PS2Keyboard::init();
-  PS2Keyboard::set_on_event(&dispatch_key_event_to_wm);
+  // PS2Keyboard::init();
+  // PS2Keyboard::set_on_event(&dispatch_key_event_to_wm);
+
+  UART uart0(2000000, "uart0", /* irqs= */true);
+  UARTKeyboard::init(&uart0);
 
   TaskManager* task_manager = new TaskManager;
   KASSERT(task_manager != nullptr);

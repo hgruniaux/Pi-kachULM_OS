@@ -6,55 +6,59 @@
 #include "hardware/mailbox.hpp"
 #include "kernel_dt.hpp"
 
-/** UART0 Data Register (size: 32) */
+/** UART Data Register (size: 32) */
 static inline constexpr int UART_DR = 0x0;
 
-/** UART0 Flag Register (size: 32) */
+/** UART Flag Register (size: 32) */
 static inline constexpr int UART_FR = 0x18;
 
-/** UART0 Integer Baud rate divisor (size: 32) */
+/** UART Integer Baud rate divisor (size: 32) */
 static inline constexpr int UART_IBRD = 0x24;
 
-/** UART0 Fractional Baud rate divisor (size: 32) */
+/** UART Fractional Baud rate divisor (size: 32) */
 static inline constexpr int UART_FBRD = 0x28;
 
-/** UART0 Line Control Register (size: 32) */
+/** UART Line Control Register (size: 32) */
 static inline constexpr int UART_LCRH = 0x2c;
 
-/** UART0 Control Register (size: 32) */
+/** UART Control Register (size: 32) */
 static inline constexpr int UART_CR = 0x30;
 
-/** UART0 Interrupt FIFO Level Select Register (size: 32) */
+/** UART Interrupt FIFO Level Select Register (size: 32) */
 // static inline constexpr int UART_IFLS = 0x34;
 
-/** UART0 Interrupt Mask Set Clear Register (size: 32) */
-// static inline constexpr int UART_IMSC = 0x38;
+/** UART Interrupt Mask Set Clear Register (size: 32) */
+static inline constexpr int UART_IMSC = 0x38;
 
-/** UART0 Raw Interrupt Status Register (size: 32) */
+/** UART Raw Interrupt Status Register (size: 32) */
 // static inline constexpr int UART_RIS = 0x3c;
 
-/** UART0 Masked Interrupt Status Register (size: 32) */
+/** UART Masked Interrupt Status Register (size: 32) */
 // static inline constexpr int UART_MIS = 0x40;
 
-/** UART0 Interrupt Clear Register (size: 32) */
+/** UART Interrupt Clear Register (size: 32) */
 // static inline constexpr int UART_ICR = 0x44;
 
-/** UART0 DMA Control Register (size: 32) */
+/** UART DMA Control Register (size: 32) */
 // static inline constexpr int UART_DMACR = 0x48;
 
-/** UART0 Test Control Register (size: 32) */
+/** UART Test Control Register (size: 32) */
 // static inline constexpr int UART_ITCR = 0x80;
 
-/** UART0 Integration Test Input Register (size: 32) */
+/** UART Integration Test Input Register (size: 32) */
 // static inline constexpr int UART_ITIP = 0x84;
 
-/** UART0 Integration Test Output Register (size: 32) */
+/** UART Integration Test Output Register (size: 32) */
 // static inline constexpr int UART_ITOP = 0x88;
 
-/** UART0 Test Data Register (size: 32) */
+/** UART Test Data Register (size: 32) */
 // static inline constexpr int UART_TDR = 0x8c;
 
-UART::UART(uint32_t baud_rate) : _uart_base(KernelDT::force_get_device_address("uart0")) {
+UART::UART(uint32_t baud_rate, libk::StringView name, bool enabling_irqs)
+    : _uart_base(KernelDT::force_get_device_address(name)) {
+  // We don't yet support IRQs for UART1 (UART1 is a bit different from the others).
+  KASSERT(!enabling_irqs || name != "uart1");
+
   // Get the UART Clock
   uint32_t uart_clock = Device::get_clock_rate(Device::UART);
 
@@ -78,11 +82,24 @@ UART::UART(uint32_t baud_rate) : _uart_base(KernelDT::force_get_device_address("
 
   // Enable UART0, receive & transfer part of UART.
   libk::write32(_uart_base + UART_CR, (1 << 0) | (1 << 8) | (1 << 9));
+
+  if (enabling_irqs) {
+    // Enable IRQs
+    libk::write32(_uart_base + UART_IMSC, (1 << 1) | (1 << 4));
+  }
+}
+
+bool UART::is_fifo_empty() const {
+  return (libk::read32(_uart_base + UART_FR) & (1 << 4)) != 0;
+}
+
+bool UART::is_fifo_full() const {
+  return (libk::read32(_uart_base + UART_FR) & (1 << 5)) != 0;
 }
 
 void UART::write_one(char value) const {
   // Wait for UART to become ready to transmit.
-  while ((libk::read32(_uart_base + UART_FR) & (1 << 5)) != 0) {
+  while (is_fifo_full()) {
     libk::yield();
   }
 
@@ -91,7 +108,7 @@ void UART::write_one(char value) const {
 
 char UART::read_one() const {
   // Wait for UART to have received something.
-  while ((libk::read32(_uart_base + UART_FR) & (1 << 4)) != 0) {
+  while (is_fifo_empty()) {
     libk::yield();
   }
 

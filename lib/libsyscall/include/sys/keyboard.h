@@ -104,6 +104,15 @@ typedef enum sys_keycode_t {
   SYS_KEY_COMMA = 0x41,
   SYS_KEY_DOT = 0x49,
   SYS_KEY_SLASH = 0x4A,
+  SYS_KEY_CAPS_LOCK = 0x58,
+  SYS_KEY_NUM_LOCK = 0x77,
+  SYS_KEY_LEFT_CTRL = 0x14,
+  SYS_KEY_RIGHT_CTRL = 0xe014,
+  SYS_KEY_LEFT_SHIFT = 0x12,
+  SYS_KEY_RIGHT_SHIFT = 0x59,
+  SYS_KEY_LEFT_ALT = 0x11,
+  SYS_KEY_RIGHT_ALT = 0xe011,
+  SYS_KEY_ALT_GR = SYS_KEY_RIGHT_ALT,
 } sys_key_code_t;
 
 typedef enum sys_key_modifier_t {
@@ -111,9 +120,10 @@ typedef enum sys_key_modifier_t {
   SYS_KEY_MOD_CTRL = 0x1,
   SYS_KEY_MOD_SHIFT = 0x2,
   SYS_KEY_MOD_ALT = 0x4,
-  SYS_KEY_MOD_NUM = 0x8,
-  SYS_KEY_MOD_CAPS = 0x10,
-  SYS_KEY_MOD_SCROLL = 0x20,
+  SYS_KEY_MOD_GUI = 0x8,
+  SYS_KEY_MOD_NUM = 0x10,
+  SYS_KEY_MOD_CAPS = 0x20,
+  SYS_KEY_MOD_SCROLL = 0x40,
 } sys_key_modifier_t;
 
 typedef uint32_t sys_key_modifiers_t;
@@ -123,6 +133,7 @@ typedef uint64_t sys_key_event_t;
 sys_bool_t sys_is_ctrl_pressed(sys_key_event_t event);
 sys_bool_t sys_is_shift_pressed(sys_key_event_t event);
 sys_bool_t sys_is_alt_pressed(sys_key_event_t event);
+sys_bool_t sys_is_gui_pressed(sys_key_event_t event);
 
 sys_bool_t sys_is_num_lock_on(sys_key_event_t event);
 sys_bool_t sys_is_caps_lock_on(sys_key_event_t event);

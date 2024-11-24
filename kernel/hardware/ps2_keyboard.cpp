@@ -256,6 +256,8 @@ void init() {
   GPIO::set_event_callback(CLOCK_PIN, &gpio_clock_handler);
 
   GPIO::set_falling_edge_async_detect(CLOCK_PIN, true);
+
+  LOG_INFO("PS/2 keyboard driver initialized");
 }
 
 void set_on_event(Event ev) {
