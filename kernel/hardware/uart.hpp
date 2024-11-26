@@ -24,7 +24,12 @@ class UART : public libk::Logger {
    *  - 1500000 [Tested]
    *  - 2000000 [Tested]
    */
-  explicit UART(uint32_t baud_rate);
+  explicit UART(uint32_t baud_rate, libk::StringView name = "uart0", bool enabling_irqs = false);
+
+  /** Returns true if the UART FIFO is empty (aka cannot read anymore from it). */
+  [[nodiscard]] bool is_fifo_empty() const;
+  /** Returns true if the UART FIFO is full (aka cannot write anymore to it). */
+  [[nodiscard]] bool is_fifo_full() const;
 
   /** Writes the given @a value into this UART. */
   void write_one(char value) const;

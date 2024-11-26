@@ -24,6 +24,15 @@ cmake -S . -Bbuild -DGCC_PREFIX=aarch64-linux-gnu- --toolchain=cmake/GCCToolchai
 make -j -C build kernel-img
 ```
 
+Or (for Clang):
+```shell
+# Change -17 by whatever version of Clang is installed on your system (or use nothing to call `clang` as is).
+cmake -S . -Bbuild -DCLANG_SUFFIX=-17 --toolchain=cmake/ClangToolchain.cmake
+make -j -C build kernel-img
+```
+
+You should specify `-DTARGET_QEMU=ON` when configuring CMake if you intend to build an image for QEMU.
+
 ## Testing the kernel
 
 You can either run the kernel on real Raspberry PI (at least version 3 required) hardware.
@@ -43,7 +52,24 @@ Then to run the kernel, just type:
 
 ```shell
 # You may need to change qemu-system-aarch64 by whatever is QEMU for aarch64 is named on your computer.
-qemu-system-aarch64 -M raspi3b -serial stdio -kernel build/kernel/kernel8.img -dtb doc/DeviceTree/pi3.dtb -device loader,file=build/binfs/fs.img,addr=0x18000000,force-raw=on
+qemu-system-aarch64 \
+    -M raspi3b \
+    -serial pipe:/tmp/uart-input \
+    -serial stdio \
+    -kernel build/kernel/kernel8.img \
+    -dtb doc/DeviceTree/pi3.dtb \
+    -device loader,file=build/binuser/fs.img,addr=0x18000000,force-raw=on
+```
+and launch `python tools/uart-input-server.py` (for the UART keyboard and mouse driver).
+
+If you don't want to use the UART keyboard and mouse driver (you will probably need to modify kernel.cpp):
+```shell
+qemu-system-aarch64 \
+    -M raspi3b \
+    -serial stdio \
+    -kernel build/kernel/kernel8.img \
+    -dtb doc/DeviceTree/pi3.dtb \
+    -device loader,file=build/binuser/fs.img,addr=0x18000000,force-raw=on
 ```
 
 ## The userspace file structure

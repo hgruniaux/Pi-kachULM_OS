@@ -211,7 +211,7 @@ uintptr_t KernelDT::convert_soc_address(uintptr_t soc_address) {
 uintptr_t KernelDT::force_get_device_address(libk::StringView device) {
   uintptr_t device_address;
   if (!KernelDT::get_device_address(device, &device_address)) {
-    LOG_ERROR("Unable to retrieved {} address.", device);
+    LOG_ERROR("Unable to retrieve {} address.", device);
     libk::panic("Kernel Device Tree Fatal Error.");
   }
 

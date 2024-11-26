@@ -25,6 +25,11 @@ enum {
   SYS_MSG_KEYDOWN,
   SYS_MSG_KEYUP,
 
+  /* Mouse messages. */
+  SYS_MSG_MOUSEMOVE,
+  SYS_MSG_MOUSECLICK,
+  SYS_MSG_MOUSESCROLL,
+
   /* Window messages. */
   SYS_MSG_SHOW,
   SYS_MSG_HIDE,

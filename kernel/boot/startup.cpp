@@ -96,7 +96,7 @@ extern "C" void _startup(uintptr_t dtb) {
   GPIO::init();
 
   // Try to initialize UART early as possible.
-  UART log(1000000);  // Set to a High Baud-rate, otherwise UART is THE bottleneck :/
+  UART log(1000000, "uart1", /* irqs= */false);  // Set to a High Baud-rate, otherwise UART is THE bottleneck :/
   libk::register_logger(log);
 
   // Set up the System Timer
