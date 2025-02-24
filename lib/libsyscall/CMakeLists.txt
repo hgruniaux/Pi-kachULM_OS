@@ -14,6 +14,8 @@ add_library(libsyscall STATIC
         src/sys/window.c
         src/sys/syscall.c
         src/sys/keyboard.c
+        src/sys/args.c
+        src/sys/pipe.c
 
         src/string/strlen.c
         src/string/memcmp.c

@@ -15,8 +15,18 @@ enum {
   SYS_SCHED_SET_PRIORITY,
   SYS_SCHED_GET_PRIORITY,
 
+  /* Pipe system calls. */
+  SYS_PIPE_OPEN,
+  SYS_PIPE_CLOSE,
+  SYS_PIPE_GET,
+  SYS_PIPE_READ,
+  SYS_PIPE_WRITE,
+
   /* Memory and heap segment system calls. */
   SYS_SBRK,
+
+  /* Framebuffer system calls. */
+  SYS_GET_FRAMEBUFFER,
 
   /* Filesystem system calls. */
   SYS_OPEN_FILE,

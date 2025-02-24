@@ -4,8 +4,8 @@
 #include <libk/linked_list.hpp>
 #include <libk/memory.hpp>
 #include "geometry.hpp"
-#include "task/task.hpp"
 #include "sys/keyboard.h"
+#include "task/task.hpp"
 
 #ifdef CONFIG_USE_DMA
 #include "hardware/dma/channel.hpp"
@@ -34,6 +34,9 @@ class WindowManager {
   void set_window_geometry(Window* window, int32_t x, int32_t y, int32_t w, int32_t h);
 
   void update();
+  void update(const Rect& rect);
+
+  void clip_rect_to_screen(Rect& rect);
 
   void focus_window(Window* window);
   void unfocus_window(Window* window);
@@ -42,23 +45,23 @@ class WindowManager {
   bool post_message(Window* window, sys_message_t message);
 
   void present_window(Window* window);
+  void present_window(Window* window, uint32_t x, uint32_t y, uint32_t width, uint32_t height);
 
   void mosaic_layout();
 
  private:
+  // Input events handler.
+#ifdef CONFIG_HAS_CURSOR
+  bool handle_mouse_move_event(int32_t dx, int32_t dy);
+  bool handle_mouse_click_event(int button_type, bool is_pressed);
+#endif // CONFIG_HAS_CURSOR
   bool handle_key_event(sys_key_event_t event);
+
   void switch_focus();
-  void move_focus_window_left();
-  void move_focus_window_right();
-  void move_focus_window_up();
-  void move_focus_window_down();
-  void resize_focus_window_left();
-  void resize_focus_window_right();
-  void resize_focus_window_up();
-  void resize_focus_window_down();
+  void move_focus_window(int32_t dx, int32_t dy);
+  void resize_focus_window(int32_t dx, int32_t dy);
 
   void read_wallpaper();
-  void fill_rect(const Rect& rect, uint32_t color);
 
 #ifdef CONFIG_USE_DMA
   struct DMARequestQueue {
@@ -100,11 +103,15 @@ class WindowManager {
   struct DMARequestQueue {};  // struct DMARequestQueue
 #endif  // CONFIG_USE_DMA
 
+  // Drawing functions.
   void draw_background(const Rect& rect, DMARequestQueue& request_queue);
-  void draw_window(Window* window, const Rect& dst_rect, DMARequestQueue& request_queue);
-  void draw_windows(libk::LinkedList<Window*>::Iterator it, const Rect& dst_rect, DMARequestQueue& request_queue);
+  void draw_window(Window* window, const Rect& rect, DMARequestQueue& request_queue);
+  void draw_windows_helper(libk::LinkedList<Window*>::Iterator it, const Rect& rect, DMARequestQueue& request_queue);
+  void draw_windows(const Rect& rect, DMARequestQueue& request_queue);
 
-  void draw_windows();
+#ifdef CONFIG_HAS_CURSOR
+  void draw_cursor();
+#endif // CONFIG_HAS_CURSOR
 
  private:
   static WindowManager* g_instance;
@@ -118,7 +125,7 @@ class WindowManager {
 #if defined(CONFIG_USE_DMA) && defined(CONFIG_USE_DMA_FOR_WALLPAPER)
   libk::ScopedPointer<Buffer> m_wallpaper;
 #else
-  const uint32_t* m_wallpaper;
+  const uint32_t* m_wallpaper = nullptr;
 #endif  // CONFIG_USE_DMA && CONFIG_USE_DMA_FOR_WALLPAPER
   uint32_t m_wallpaper_width, m_wallpaper_height;
 
@@ -126,13 +133,16 @@ class WindowManager {
   DMA::Channel m_dma_channel;
 #endif  // CONFIG_USE_DMA
 
-  uint32_t* m_screen_buffer;
+  uint32_t* m_screen_buffer = nullptr;
 #ifdef CONFIG_USE_DMA
   VirtualAddress m_screen_buffer_dma_addr;
 #endif  // CONFIG_USE_DMA
   size_t m_screen_pitch;
   int32_t m_screen_width, m_screen_height;
 
-  bool m_dirty = true;         // true when the windows need to be redrawn/updated.
+#ifdef CONFIG_HAS_CURSOR
+  int32_t m_cursor_x = 0, m_cursor_y = 0;
+#endif // CONFIG_HAS_CURSOR
+
   bool m_is_supported = true;  // is the window manager supported (screen connected)?
 };  // class WindowManager

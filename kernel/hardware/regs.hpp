@@ -13,14 +13,16 @@ struct GPRegisters {
   uint64_t x14, x15, x16, x17, x18, x19, x20;
   uint64_t x21, x22, x23, x24, x25, x26, x27;
   uint64_t x28, x29, x30, xzr;
+
+  // No save() or restore() functions here because the registers are saved and restored
+  // directly in the interrupts handler assembly code.
 };  // struct GPRegisters
 
 /** A single floating-point/SIMD register in Aarch64.
  * It should takes 128 bits on aarch64. */
-struct fpu_reg_t {
-  uint64_t low;
-  uint64_t high;
-};  // struct fpu_reg_t
+typedef struct fpu_reg_t {
+  uint8_t data[16];
+} fpu_reg_t;  // struct fpu_reg_t
 
 static_assert(sizeof(fpu_reg_t) == 16);
 
@@ -36,101 +38,56 @@ struct FPURegisters {
 
   /** Saves the current floating-point/SIMD registers into this structure. */
   void save() {
-#if 0
-#define SAVE_REG(number)          \
-  auto* ptr##number = &v##number; \
-  asm volatile("str v" #number ", %0" : "=m"(ptr##number))
-
-    SAVE_REG(0);
-    SAVE_REG(1);
-    SAVE_REG(2);
-    SAVE_REG(3);
-    SAVE_REG(4);
-    SAVE_REG(5);
-    SAVE_REG(6);
-    SAVE_REG(7);
-    SAVE_REG(8);
-    SAVE_REG(9);
-    SAVE_REG(10);
-    SAVE_REG(11);
-    SAVE_REG(12);
-    SAVE_REG(13);
-    SAVE_REG(14);
-    SAVE_REG(15);
-    SAVE_REG(16);
-    SAVE_REG(17);
-    SAVE_REG(18);
-    SAVE_REG(19);
-    SAVE_REG(20);
-    SAVE_REG(21);
-    SAVE_REG(22);
-    SAVE_REG(23);
-    SAVE_REG(24);
-    SAVE_REG(25);
-    SAVE_REG(26);
-    SAVE_REG(27);
-    SAVE_REG(28);
-    SAVE_REG(29);
-    SAVE_REG(30);
-    SAVE_REG(31);
-
-#undef SAVE_REG
-#endif
+    #ifdef __ARM_NEON__
+    // Save each of the 32 vector registers (v0-v31) into the structure using the "st1" instruction (store one 128-bit register)
+    asm volatile (
+      "st1 {v0.2d, v1.2d, v2.2d, v3.2d}, [%0]\n"
+      "st1 {v4.2d, v5.2d, v6.2d, v7.2d}, [%0], #64\n"
+      "st1 {v8.2d, v9.2d, v10.2d, v11.2d}, [%1]\n"
+      "st1 {v12.2d, v13.2d, v14.2d, v15.2d}, [%1], #64\n"
+      "st1 {v16.2d, v17.2d, v18.2d, v19.2d}, [%2]\n"
+      "st1 {v20.2d, v21.2d, v22.2d, v23.2d}, [%2], #64\n"
+      "st1 {v24.2d, v25.2d, v26.2d, v27.2d}, [%3]\n"
+      "st1 {v28.2d, v29.2d, v30.2d, v31.2d}, [%3], #64\n"
+      : // No output operands
+      : "r" (&this->v0), "r" (&this->v8), "r" (&this->v16), "r" (&this->v24)
+      : "memory"
+    );
+    #endif // __ARM_NEON__
   }
 
   /** Restores the saved floating-point/SIMD registers of this structure. */
   void restore() {
-#if 0
-#define RESTORE_REG(number)       \
-  auto* ptr##number = &v##number; \
-  asm volatile("ldr v" #number ", %0" : "=m"(ptr##number))
-
-    RESTORE_REG(0);
-    RESTORE_REG(1);
-    RESTORE_REG(2);
-    RESTORE_REG(3);
-    RESTORE_REG(4);
-    RESTORE_REG(5);
-    RESTORE_REG(6);
-    RESTORE_REG(7);
-    RESTORE_REG(8);
-    RESTORE_REG(9);
-    RESTORE_REG(10);
-    RESTORE_REG(11);
-    RESTORE_REG(12);
-    RESTORE_REG(13);
-    RESTORE_REG(14);
-    RESTORE_REG(15);
-    RESTORE_REG(16);
-    RESTORE_REG(17);
-    RESTORE_REG(18);
-    RESTORE_REG(19);
-    RESTORE_REG(20);
-    RESTORE_REG(21);
-    RESTORE_REG(22);
-    RESTORE_REG(23);
-    RESTORE_REG(24);
-    RESTORE_REG(25);
-    RESTORE_REG(26);
-    RESTORE_REG(27);
-    RESTORE_REG(28);
-    RESTORE_REG(29);
-    RESTORE_REG(30);
-    RESTORE_REG(31);
-
-#undef RESTORE_REG
-#endif
+    #ifdef __ARM_NEON__
+    // Restore each of the 32 vector registers (v0-v31) from the structure using the "ld1" instruction (load one 128-bit register)
+    asm volatile (
+      "ld1 {v0.2d, v1.2d, v2.2d, v3.2d}, [%0]\n"
+      "ld1 {v4.2d, v5.2d, v6.2d, v7.2d}, [%0], #64\n"
+      "ld1 {v8.2d, v9.2d, v10.2d, v11.2d}, [%1]\n"
+      "ld1 {v12.2d, v13.2d, v14.2d, v15.2d}, [%1], #64\n"
+      "ld1 {v16.2d, v17.2d, v18.2d, v19.2d}, [%2]\n"
+      "ld1 {v20.2d, v21.2d, v22.2d, v23.2d}, [%2], #64\n"
+      "ld1 {v24.2d, v25.2d, v26.2d, v27.2d}, [%3]\n"
+      "ld1 {v28.2d, v29.2d, v30.2d, v31.2d}, [%3], #64\n"
+      : // No output operands
+      : "r" (&this->v0), "r" (&this->v8), "r" (&this->v16), "r" (&this->v24)
+      : "memory"
+    );
+    #endif // __ARM_NEON__
   }
 };  // struct FPURegisters
 
 /**
- * Registers saved and restored during an interrupt.
+ * Registers saved and restored during an interrupt. This represent the structure
+ * stored in the stack by the assembly interrupt handler.
  */
 struct InterruptRegisters {
   GPRegisters gp_regs;
+  // FPU registers are not saved/restored by the assembly interrupt handler.
+  // They are handled by the TaskSavedState structure.
 
   uint64_t elr;   // Exception Link Register
   uint64_t spsr;  // Saved Program Status Register
-  uint64_t esr;
-  uint64_t far;
+  uint64_t esr;   // Exception Syndrome Register
+  uint64_t far;   // Fault Address Register
 };  // struct InterruptRegisters

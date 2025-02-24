@@ -14,6 +14,7 @@ static void draw_credits(sys_window_t* window) {
   DRAW_ITEM("Gabriel Desfrene");
   DRAW_ITEM("Hubert Gruniaux");
   DRAW_ITEM("Emile Sauvat");
+  sys_window_present(window);
 }
 
 int main() {

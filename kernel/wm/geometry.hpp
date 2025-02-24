@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <libk/utils.hpp>
 
 struct Rect {
   int32_t x1, y1, x2, y2;
@@ -88,6 +89,32 @@ struct Rect {
     if (t1 > b2 || t2 > b1)
       return false;
     return true;
+  }
+
+  bool contains(int32_t x, int32_t y) const { return x >= x1 && x < x2 && y >= y1 && y < y2; }
+
+  Rect union_with(const Rect& r) const {
+    if (is_null())
+      return r;
+    if (r.is_null())
+      return *this;
+    return {libk::min(x1, r.x1), libk::min(y1, r.y1), libk::max(x2, r.x2), libk::max(y2, r.y2)};
+  }
+
+  Rect intersection_with(const Rect& r) const {
+    if (is_null() || r.is_null())
+      return {};
+
+    Rect self = (*this);
+    Rect other = r;
+    self.normalize();
+    other.normalize();
+
+    if (self.x1 > other.x2 || other.x1 > self.x2 || self.y1 > other.y2 || other.y1 > self.y2)
+      return {};
+
+    return { libk::max(self.x1, other.x1), libk::max(self.y1, other.y1),
+             libk::min(self.x2, other.x2), libk::min(self.y2, other.y2) };
   }
 
   static Rect from_edges(int32_t left, int32_t top, int32_t right, int32_t bottom) {

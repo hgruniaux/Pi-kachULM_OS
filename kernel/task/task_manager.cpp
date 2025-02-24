@@ -5,6 +5,7 @@
 #include "memory/mem_alloc.hpp"
 #include "pika_syscalls.hpp"
 #include "wm/window_manager.hpp"
+#include <sys/syscall.h>
 
 #include <libk/log.hpp>
 
@@ -34,6 +35,20 @@ TaskManager::TaskManager() : m_delta_queue(this) {
     LOG_CRITICAL("Not found an available system timer for the scheduler");
     return;
   }
+}
+
+TaskPtr TaskManager::find_by_id(Task::id_t id) const {
+  if (id == SYS_PID_CURRENT) {
+    return get_current_task();
+  }
+
+  for (const auto& task : m_tasks) {
+    if (task->get_id() == id) {
+      return task;
+    }
+  }
+
+  return nullptr;
 }
 
 TaskPtr TaskManager::create_task_common(bool is_kernel, Task* parent) {

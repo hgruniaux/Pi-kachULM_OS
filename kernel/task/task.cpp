@@ -1,6 +1,8 @@
 #include "task.hpp"
 #include <algorithm>
 #include "task_manager.hpp"
+#include "pipe.hpp"
+#include <sys/syscall.h>
 
 #include "fs/filesystem.hpp"
 #include "wm/window.hpp"
@@ -40,6 +42,14 @@ Task::~Task() {
 
 TaskPtr Task::current() {
   return TaskManager::get().get_current_task();
+}
+
+MemoryChunk* Task::map_chunk(size_t nb_pages, VirtualAddress addr, bool executable, bool read_only) {
+  MemoryChunk& chunk = m_mapped_chunks.emplace_back(nb_pages);
+  const bool is_mapped = m_saved_state.memory->map_chunk(chunk, addr, read_only, executable);
+  if (!is_mapped)
+    return nullptr;
+  return &chunk;
 }
 
 bool Task::own_window(Window* window) const {
@@ -107,6 +117,68 @@ void Task::unregister_dir(Dir* dir) {
   m_open_dirs.erase(it);
 }
 
+/*
+ * Pipe resources
+ */
+
+bool Task::own_pipe(const PipeResource* pipe) const {
+  if (pipe == nullptr)
+    return false;
+
+  auto it = std::find(m_open_pipes.begin(), m_open_pipes.end(), pipe);
+  return it != m_open_pipes.end();
+}
+
+PipeResource* Task::get_pipe(const char* name) const {
+  // TODO: Maybe optimize this by using a hash table.
+  for (auto& pipe : m_open_pipes) {
+    if (pipe->m_parent != this || pipe->m_name == nullptr)
+      continue;
+
+    if (libk::strcmp(pipe->m_name, name) == 0)
+      return pipe;
+  }
+
+  return nullptr;
+}
+
+PipeResource* Task::create_pipe(const char* name, size_t capacity) {
+  KASSERT(name != nullptr && libk::strlen(name) < SYS_PIPE_NAME_MAX);
+  KASSERT(capacity > 0);
+
+  // Check if the pipe already exists.
+  if (get_pipe(name) != nullptr)
+    return nullptr;
+
+  // Create the pipe.
+  auto pipe = new PipeResource(capacity);
+  pipe->m_parent = this;
+  pipe->m_name = name;
+  register_pipe(pipe);
+  return pipe;
+}
+
+void Task::register_pipe(PipeResource* pipe) {
+  KASSERT(pipe != nullptr);
+
+  pipe->ref();
+  m_open_pipes.push_back(pipe);
+}
+
+void Task::unregister_pipe(PipeResource* pipe) {
+  KASSERT(pipe != nullptr);
+
+  if (pipe->m_parent == this) {
+    // The pipe is owned by this task. We close the pipe.
+    pipe->close();
+  }
+
+  auto it = std::find(m_open_pipes.begin(), m_open_pipes.end(), pipe);
+  KASSERT(it != m_open_pipes.end());
+  m_open_pipes.erase(it);
+  pipe->unref();
+}
+
 void Task::free_resources() {
   // Destroy the windows.
   auto& window_manager = WindowManager::get();
@@ -130,4 +202,10 @@ void Task::free_resources() {
   }
 
   m_open_dirs.clear();
+
+  // Free all open pipes.
+  for (auto* pipe : m_open_pipes) {
+    unregister_pipe(pipe);
+  }
+  m_open_pipes.clear();
 }

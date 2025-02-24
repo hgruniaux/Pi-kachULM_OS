@@ -6,7 +6,6 @@ Checks: '
   -bugprone-easily-swappable-parameters,
   readability-duplicate-include,
   readability-else-after-return,
-  readability-redundant-access-specifiers,
   readability-qualified-auto,
   readability-redundant-control-flow,
   readability-redundant-preprocessor,

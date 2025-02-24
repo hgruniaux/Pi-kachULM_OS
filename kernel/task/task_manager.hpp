@@ -20,6 +20,9 @@ class TaskManager {
   [[nodiscard]] SyscallTable* get_default_syscall_table() const { return m_default_syscall_table; }
   void set_default_syscall_table(SyscallTable* table) { m_default_syscall_table = table; }
 
+  /** Finds the task with the given @a id. If no such task if found, returns nullptr. */
+  TaskPtr find_by_id(Task::id_t id) const;
+
   TaskPtr create_kernel_task(void (*f)());
   TaskPtr create_task(const elf::Header* program_image, Task* parent = nullptr);
   TaskPtr create_task(const char* path, Task* parent = nullptr);

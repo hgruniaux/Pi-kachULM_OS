@@ -6,6 +6,11 @@
 #include "memory/heap_manager.hpp"
 #include "memory_chunk.hpp"
 
+/**
+ * This class represents the memory of a process.
+ *
+ * It is responsible for managing the stack, heap and memory chunks of a process.
+ */
 class ProcessMemory {
  public:
   explicit ProcessMemory(size_t minimum_stack_byte_size);

@@ -91,6 +91,26 @@ class LinkedList {
     m_tail = nullptr;
   }
 
+  const T& front() const {
+    KASSERT(!is_empty());
+    return m_head->data;
+  }
+
+  T& front() {
+    KASSERT(!is_empty());
+    return m_head->data;
+  }
+
+  const T& back() const {
+    KASSERT(!is_empty());
+    return m_tail->data;
+  }
+
+  T& back() {
+    KASSERT(!is_empty());
+    return m_tail->data;
+  }
+
   T pop_back() {
     KASSERT(!is_empty());
     T data = m_tail->data;

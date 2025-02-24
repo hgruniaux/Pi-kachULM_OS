@@ -38,7 +38,6 @@
     task_manager.schedule();
 
   // Enter userspace!
-  enable_fpu_and_neon();
   init_task->get_saved_state().memory->activate();
   task_manager.mark_as_ready();
   jump_to_el0(init_task->get_saved_state().pc, (uintptr_t)init_task->get_saved_state().sp);
@@ -71,17 +70,6 @@
 
   TaskManager* task_manager = new TaskManager;
   KASSERT(task_manager != nullptr);
-
-  // Run the window manager task (thread).
-  auto window_manager_task = task_manager->create_kernel_task([]() {
-    while (true) {
-      WindowManager::get().update();
-      sys_usleep(63333);
-    }
-  });
-
-  KASSERT(window_manager_task != nullptr);
-  task_manager->wake_task(window_manager_task);
 
   // Run the init program.
   load_init();

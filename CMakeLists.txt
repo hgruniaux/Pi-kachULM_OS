@@ -18,7 +18,7 @@ set(CMAKE_C_EXTENSIONS ON)
 add_compile_options(-Wall -Wextra)
 
 # Tell the compiler that we are in a freestanding environment.
-add_compile_options(-ffreestanding -nostdlib -fno-builtin -mno-outline-atomics -mgeneral-regs-only)
+add_compile_options(-ffreestanding -nostdlib -fno-builtin -mno-outline-atomics)
 
 # Disable exceptions and RTTI in C++
 set(EXTRA_CXX_FLAGS -fno-exceptions -fno-rtti)
@@ -32,17 +32,15 @@ add_compile_options(-ffile-prefix-map=${CMAKE_SOURCE_DIR}/=./)
 # Some configurations that are supported by the kernel code:
 
 # Use the DMA hardware/driver to blit windows into the screen.
-#add_compile_definitions(-DCONFIG_USE_DMA)
+# add_compile_definitions(-DCONFIG_USE_DMA)
 
 # Allocate a single large framebuffer per window (and do not reallocate and resize it when
 # the window is resized). This is intended to fix a bug in the DMA/page allocator.
 # If the DMA is disabled, this config is ignored.
 add_compile_definitions(-DCONFIG_WINDOW_LARGE_FRAMEBUFFER)
 
-# Use the naive algorithm (draw all windows in order) for the window manager update.
-# If not defined, a divide and conquer smarter algorithm is used that only set each pixel of
-# the screen exactly one time.
-add_compile_definitions(-DCONFIG_USE_NAIVE_WM_UPDATE)
+# Support cursor in the window manager.
+add_compile_definitions(-DCONFIG_HAS_CURSOR)
 
 # Use a naive malloc/free implementation that just allocate memory using the heap break
 # and never free memory. This is a really bad allocator (as it never free memory), but

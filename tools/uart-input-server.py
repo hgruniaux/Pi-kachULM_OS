@@ -268,6 +268,7 @@ FIFO_PATH = '/tmp/uart-input'
 try:
     mkfifo(FIFO_PATH)
 except OSError as oe:
+    print("ERROR")
     if oe.errno != errno.EEXIST:
         raise
 

@@ -114,6 +114,17 @@ void Painter::draw_rect(int32_t x, int32_t y, int32_t w, int32_t h) {
   draw_line(x + w - 1, y, x + w - 1, y + h - 1, color);  // right edge
 }
 
+[[gnu::hot]] void Painter::draw_rect(int32_t x, int32_t y, int32_t w, int32_t h, uint32_t line_width, Color color) {
+  while (line_width != 0) {
+    draw_rect(x, y, w, h, color);
+    x += 1;
+    y += 1;
+    w -= 2;
+    h -= 2;
+    line_width -= 1;
+  }
+}
+
 void Painter::fill_rect(int32_t x, int32_t y, int32_t w, int32_t h) {
   fill_rect(x, y, w, h, m_pen);
 }
@@ -213,11 +224,11 @@ uint32_t Painter::draw_text(int32_t x, int32_t y, int32_t w, const char* text, C
   }
 }
 
-void Painter::blit(uint32_t x, uint32_t y, uint32_t width, uint32_t height, const uint32_t* argb_buffer) {
+void Painter::blit(uint32_t x, uint32_t y, uint32_t width, uint32_t height, const uint32_t* pixels_buffer) {
   // TODO: Clipping
   for (uint32_t i = 0; i < width; ++i) {
     for (uint32_t j = 0; j < height; ++j) {
-      m_buffer[(x + i) + m_pitch * (y + j)] = argb_buffer[i + width * j];
+      m_buffer[(x + i) + m_pitch * (y + j)] = pixels_buffer[i + width * j];
     }
   }
 }

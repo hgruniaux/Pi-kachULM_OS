@@ -6,8 +6,8 @@
 namespace libk {
 template <class K, class T>
 class HashTable {
- public:
- private:
+public:
+private:
   size_t m_bucket_count;
   libk::LinkedList<T>* m_buckets;
 };  // class HashTable

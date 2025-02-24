@@ -37,6 +37,8 @@ sys_window_t* sys_window_create(const char* title,
     goto error;
   if (!SYS_IS_OK(sys_window_set_geometry(window, x, y, width, height)))
     goto error;
+  if (!SYS_IS_OK(sys_window_set_visibility(window, sys_true)))
+    goto error;
 
   // The kernel sends many messages at initialization. Most of the window
   // creation is done when receiving these messages, so poll all of them now.
@@ -138,7 +140,15 @@ sys_error_t sys_window_get_geometry(sys_window_t* window, uint32_t* x, uint32_t*
 sys_error_t sys_window_present(sys_window_t* window) {
   assert(window != NULL);
 
-  return __syscall1(SYS_WINDOW_PRESENT, window->kernel_handle);
+  uint32_t width, height;
+  sys_window_get_geometry(window, NULL, NULL, &width, &height);
+  return sys_window_present2(window, 0, 0, width, height);
+}
+
+sys_error_t sys_window_present2(sys_window_t* window, uint32_t x, uint32_t y, uint32_t width, uint32_t height) {
+  assert(window != NULL);
+
+  return __syscall5(SYS_WINDOW_PRESENT, window->kernel_handle, (sys_word_t)x, (sys_word_t)y, (sys_word_t)width, (sys_word_t)height);
 }
 
 sys_error_t sys_gfx_clear(sys_window_t* window, uint32_t argb) {

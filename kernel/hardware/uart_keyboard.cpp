@@ -38,6 +38,9 @@ void init(UART* uart) {
           case 0x2:  // mouse click
           {
             uint8_t button = (uint8_t)keyboard_uart->read_one();
+            const bool is_pressed = (header & (1 << 4)) != 0;
+
+            MouseSystem::notify_hardware_click_event((sys_mouse_button_t)button, is_pressed);
           } break;
           case 0x3:  // mouse scroll
           {
@@ -47,9 +50,9 @@ void init(UART* uart) {
             int16_t dx = dx_mag;
             int16_t dy = dy_mag;
 
-            if (header & (1 << 4) != 0)
+            if ((header & (1 << 4)) != 0)
               dx = -dx;
-            if (header & (1 << 5) != 0)
+            if ((header & (1 << 5)) != 0)
               dy = -dy;
 
             MouseSystem::notify_hardware_scroll_event(dx, dy);

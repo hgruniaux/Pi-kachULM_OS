@@ -1,0 +1,6 @@
+Hello World!
+
+This file was written
+on Linux using VSCode.
+
+Enjoy the experience of our OS!

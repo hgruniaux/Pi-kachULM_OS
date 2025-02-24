@@ -106,6 +106,7 @@ class Painter {
   // Rectangle drawing functions:
   void draw_rect(int32_t x, int32_t y, int32_t w, int32_t h);
   void draw_rect(int32_t x, int32_t y, int32_t w, int32_t h, Color color);
+  void draw_rect(int32_t x, int32_t y, int32_t w, int32_t h, uint32_t line_width, Color color);
   void fill_rect(int32_t x, int32_t y, int32_t w, int32_t h);
   void fill_rect(int32_t x, int32_t y, int32_t w, int32_t h, Color color);
 
@@ -116,7 +117,7 @@ class Painter {
   uint32_t draw_text(int32_t x, int32_t y, int32_t w, const char* text, Color color);
 
   // Image blit.
-  void blit(uint32_t x, uint32_t y, uint32_t width, uint32_t height, const uint32_t* argb_buffer);
+  void blit(uint32_t x, uint32_t y, uint32_t width, uint32_t height, const uint32_t* pixels_buffer);
 
   // Clipping functions:
   void revert_clipping();

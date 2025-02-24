@@ -2,6 +2,7 @@
 #include "graphics/graphics.hpp"
 #include "hardware/framebuffer.hpp"
 #include "hardware/timer.hpp"
+#include "input/mouse_input.hpp"
 #include "libk/log.hpp"
 #include "task/task_manager.hpp"
 #include "wm/window.hpp"
@@ -13,6 +14,29 @@
 #endif  // CONFIG_USE_DMA
 
 #include "graphics/stb_image.h"
+
+#ifdef CONFIG_HAS_CURSOR
+static constexpr uint32_t CURSOR_DATA[] = {
+    0xff000000, 0x00000100, 0x00000000, 0x00000000, 0x00000100, 0x00010000, 0x00000000, 0x00000000, 0x00000000,
+    0xff000000, 0xff000001, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000001, 0x00000100, 0x00010000,
+    0xff000001, 0xfffffeff, 0xff000000, 0x00000000, 0x00000100, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
+    0xff000000, 0xffffffff, 0xfffeffff, 0xff000000, 0x00000100, 0x00010000, 0x00000001, 0x00000100, 0x00010000,
+    0xff010000, 0xfffffeff, 0xffffffff, 0xfffffffe, 0xff010001, 0x00000000, 0x00000001, 0x00000100, 0x00000000,
+    0xff010001, 0xfffffeff, 0xfffeffff, 0xffffffff, 0xfffffeff, 0xff000000, 0x00000001, 0x00000000, 0x00010000,
+    0xff010001, 0xfffffeff, 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff, 0xff010000, 0x00000000, 0x00010000,
+    0xff000101, 0xfffffeff, 0xfffeffff, 0xffffffff, 0xfffffeff, 0xffffffff, 0xffffffff, 0xff000100, 0x00010000,
+    0xff000001, 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff, 0xfffeffff, 0xfffffffe, 0xfffffeff, 0xff000000,
+    0xff000000, 0xfffffeff, 0xfffeffff, 0xfffffffe, 0xfffffeff, 0xfffeffff, 0xff000000, 0xff000100, 0xff010000,
+    0xff000100, 0xffffffff, 0xfffeffff, 0xff000001, 0xffffffff, 0xfffeffff, 0xff000000, 0x00000000, 0x00000000,
+    0xff000000, 0xffffffff, 0xff010000, 0x00000001, 0xff000000, 0xfffeffff, 0xfffffffe, 0xff000100, 0x00010000,
+    0xff000000, 0xff000000, 0x00000000, 0x00000001, 0xff000100, 0xfffeffff, 0xfffffffe, 0xff000100, 0x00010000,
+    0x00000000, 0x00000100, 0x00000000, 0x00000000, 0x00000000, 0xff000000, 0xffffffff, 0xfffffeff, 0xff010000,
+    0x00000001, 0x00000000, 0x00000000, 0x00000001, 0x00000000, 0xff000000, 0xfffffffe, 0xffffffff, 0xff010000,
+    0x00000001, 0x00000100, 0x00000000, 0x00000000, 0x00000000, 0x00010000, 0xff000000, 0xff000100, 0x00000000};
+
+static constexpr uint32_t CURSOR_HEIGHT = 16;
+static constexpr uint32_t CURSOR_WIDTH = 9;
+#endif // CONFIG_HAS_CURSOR
 
 WindowManager* WindowManager::g_instance = nullptr;
 
@@ -35,6 +59,7 @@ WindowManager::WindowManager() {
   }
 
   read_wallpaper();
+  update();
 }
 
 [[nodiscard]] bool WindowManager::is_valid(Window* window) const {
@@ -60,10 +85,9 @@ Window* WindowManager::create_window(const libk::SharedPointer<Task>& task, uint
   ++m_window_count;
   m_windows.push_back(window);
 
-  if (m_focus_window == nullptr)
-    focus_window(window);
+  // Focus the window.
+  focus_window(window);
 
-  m_dirty = true;
   return window;
 }
 
@@ -81,9 +105,13 @@ void WindowManager::destroy_window(Window* window) {
   m_windows.erase(it);
 
   --m_window_count;
+  if (window->is_visible())
+    update(window->get_geometry());
   delete window;
 
-  m_dirty = true;
+  // Focus another window if needed.
+  if (!m_windows.is_empty())
+    focus_window(m_windows.back());
 }
 
 void WindowManager::set_window_visibility(Window* window, bool visible) {
@@ -94,13 +122,18 @@ void WindowManager::set_window_visibility(Window* window, bool visible) {
 
   window->m_visible = visible;
 
+  bool updated = false;
   // Update the focus window if needed.
   if (visible) {  // show the window
-    if (m_focus_window == nullptr)
+    if (m_focus_window == nullptr) {
       focus_window(window);
+      updated = true;
+    }
   } else {  // hide the window
-    if (m_focus_window == window)
+    if (m_focus_window == window) {
       unfocus_window(window);
+      updated = true;
+    }
   }
 
   // Send message.
@@ -109,21 +142,24 @@ void WindowManager::set_window_visibility(Window* window, bool visible) {
   message.id = visible ? SYS_MSG_SHOW : SYS_MSG_HIDE;
   post_message(window, message);
 
-  m_dirty = true;
+  if (!updated && visible)
+    update(window->get_geometry());
 }
 
 void WindowManager::set_window_geometry(Window* window, Rect rect) {
   KASSERT(is_valid(window));
 
   // Enforce constraints on window size.
-  rect.set_width(libk::clamp(rect.width(), Window::MIN_WIDTH, Window::MAX_WIDTH));
-  rect.set_height(libk::clamp(rect.height(), Window::MIN_HEIGHT, Window::MAX_HEIGHT));
+  rect.set_width(libk::clamp(rect.width(), Window::MIN_WIDTH, libk::min(Window::MAX_WIDTH, m_screen_width)));
+  rect.set_height(libk::clamp(rect.height(), Window::MIN_HEIGHT, libk::min(Window::MAX_HEIGHT, m_screen_height)));
+  const uint32_t width = rect.width();
+  const uint32_t height = rect.height();
 
   // Enforce constraints on window position.
-  rect.x1 = (libk::clamp(rect.x(), INT16_MIN, INT16_MAX));
-  rect.y1 = (libk::clamp(rect.y(), INT16_MIN, INT16_MAX));
-
-  rect.normalize();
+  rect.x1 = (libk::clamp(rect.x(), 0, m_screen_width - rect.width()));
+  rect.y1 = (libk::clamp(rect.y(), 0, m_screen_height - rect.height()));
+  rect.x2 = rect.x1 + width;
+  rect.y2 = rect.y1 + height;
 
   const auto old_rect = window->get_geometry();
 
@@ -151,7 +187,8 @@ void WindowManager::set_window_geometry(Window* window, Rect rect) {
     post_message(window, message);
   }
 
-  m_dirty = true;
+  if (moved || resized)
+    update(old_rect.union_with(rect));
 }
 
 void WindowManager::set_window_geometry(Window* window, int32_t x, int32_t y, int32_t w, int32_t h) {
@@ -195,12 +232,11 @@ void WindowManager::focus_window(Window* window) {
   m_focus_window = window;
   m_focus_window->m_focus = true;
 
-  // TODO: Move focus window to front
   auto it = std::find(m_windows.begin(), m_windows.end(), window);
   KASSERT(it != m_windows.end());
   m_windows.erase(it);
   m_windows.push_front(window);
-  m_dirty = true;
+  update(m_focus_window->get_geometry());
 }
 
 void WindowManager::unfocus_window(Window* window) {
@@ -238,16 +274,25 @@ void WindowManager::post_message(sys_message_t message) {
   if (!m_is_supported)
     return;
 
-  message.timestamp = GenericTimer::get_elapsed_time_in_ms();
-
   // Handle window manager specific shortcuts.
   if (message.id == SYS_MSG_KEYDOWN) {
     if (handle_key_event(message.param1))
       return;  // the key event was handled by the window manager, do not propagate it.
   }
 
-  for (auto* window : m_windows) {
-    window->get_message_queue().enqueue(message);
+#ifdef CONFIG_HAS_CURSOR
+  if (message.id == SYS_MSG_MOUSEMOVE) {
+    if (handle_mouse_move_event(message.param1, message.param2))
+      return;  // the mouse move event was handled by the window manager, do not propagate it.
+  } else if (message.id == SYS_MSG_MOUSECLICK) {
+    if (handle_mouse_click_event(message.param1, message.param2))
+      return;  // the mouse click event was handled by the window manager, do not propagate it.
+  }
+#endif // CONFIG_HAS_CURSOR
+
+  // Propagate the message to the focus window.
+  if (m_focus_window != nullptr) {
+    post_message(m_focus_window, message);
   }
 }
 
@@ -261,21 +306,22 @@ bool WindowManager::post_message(Window* window, sys_message_t message) {
 void WindowManager::present_window(Window* window) {
   KASSERT(is_valid(window));
 
-  if (!m_dirty && window->has_focus()) {
-    // If no update is required for now and the window is at front (has focus), then
-    // only redraw the window.
-    DMARequestQueue dma_request_queue;
-    draw_window(window, {0, 0, m_screen_width, m_screen_height}, dma_request_queue);
-#ifdef CONFIG_USE_DMA
-    dma_request_queue.execute_and_wait(m_dma_channel);
-#endif  // CONFIG_USE_DMA
-  } else {
-    // Let do a full update the next time.
-    // A partial update is more challenging as we should only draw the pixels that are visible on the screen.
-    // This is straightforward if the window is a top level window (e.g. has focus),
-    // but it becomes tricky if the window is behind other windows.
-    m_dirty = true;  // mark the screen as dirty and needs an update
-  }
+  // Redraw the window.
+  update(window->get_geometry());
+}
+
+void WindowManager::present_window(Window* window, uint32_t x, uint32_t y, uint32_t width, uint32_t height) {
+  KASSERT(is_valid(window));
+
+  const auto window_rect = window->get_geometry();
+  x = libk::min<uint32_t>(x, window_rect.width());
+  y = libk::min<uint32_t>(y, window_rect.height());
+
+  width = libk::min<uint32_t>(width, window_rect.width() - x);
+  height = libk::min<uint32_t>(height, window_rect.height() - y);
+
+  // Redraw the window.
+  update(Rect::from_pos_and_size(window_rect.x() + x, window_rect.y() + y, width, height));
 }
 
 void WindowManager::mosaic_layout() {
@@ -318,21 +364,46 @@ void WindowManager::mosaic_layout() {
 }
 
 void WindowManager::update() {
-  if (!m_dirty || !m_is_supported)
+  update({0, 0, m_screen_width, m_screen_height});
+}
+
+void WindowManager::update(const Rect& rect) {
+  if (!m_is_supported)
     return;
 
-  const auto start = GenericTimer::get_elapsed_time_in_micros();
-  draw_windows();
-  const auto end = GenericTimer::get_elapsed_time_in_micros();
+  DMARequestQueue request_queue{};
 
-  m_dirty = false;
-  LOG_DEBUG("Window manager update done in {} ms for {} window(s)", (end - start) / 1000, m_window_count);
+  // Draw the windows and the background.
+  draw_windows(rect, request_queue);
+
+#ifdef CONFIG_USE_DMA
+  request_queue.execute_and_wait(m_dma_channel);
+#endif  // CONFIG_USE_DMA
+
+#ifdef CONFIG_HAS_CURSOR
+  // Draw the cursor.
+  auto cursor_rect = Rect::from_pos_and_size(m_cursor_x, m_cursor_y, CURSOR_WIDTH, CURSOR_HEIGHT);
+  clip_rect_to_screen(cursor_rect);
+
+  if (cursor_rect.intersects(rect))
+    draw_cursor();
+#endif // CONFIG_HAS_CURSOR
+}
+
+void WindowManager::clip_rect_to_screen(Rect& rect) {
+  rect.x1 = libk::max(0, rect.x1);
+  rect.y1 = libk::max(0, rect.y1);
+  rect.x2 = libk::min(m_screen_width, rect.x2);
+  rect.y2 = libk::min(m_screen_height, rect.y2);
 }
 
 void WindowManager::draw_background(const Rect& rect, DMARequestQueue& request_queue) {
+  if (rect.is_null())
+    return;
+
   if (m_wallpaper == nullptr) {
     // No wallpaper found. Fill the background.
-    fill_rect(rect, 0xffffff);
+    // TODO
     return;
   }
 
@@ -355,29 +426,19 @@ void WindowManager::draw_background(const Rect& rect, DMARequestQueue& request_q
 #endif  // CONFIG_USE_DMA && CONFIG_USE_DMA_FOR_WALLPAPER
 }
 
-void WindowManager::fill_rect(const Rect& rect, uint32_t color) {
-  // TODO: replace this by an optimized function
-  for (int32_t x = rect.left(); x < rect.right(); ++x) {
-    for (int32_t y = rect.top(); y < rect.bottom(); ++y) {
-      m_screen_buffer[x + m_screen_pitch * y] = color;
-    }
-  }
-}
-
 void WindowManager::draw_window(Window* window, const Rect& dst_rect, DMARequestQueue& request_queue) {
 #ifndef CONFIG_USE_DMA
   (void)request_queue;
 #endif  // !CONFIG_USE_DMA
+
+  if (!window->is_visible())
+    return;
 
   const Rect& src_rect = window->m_geometry;
   if (!src_rect.intersects(dst_rect))
     return;
 
   window->draw_frame();
-
-  const uint32_t* framebuffer = window->get_framebuffer();
-  const uint32_t framebuffer_pitch = window->get_geometry().width();
-  KASSERT(framebuffer != nullptr);
 
   uint32_t x1 = 0, x2 = src_rect.width();
   uint32_t y1 = 0, y2 = src_rect.height();
@@ -395,8 +456,12 @@ void WindowManager::draw_window(Window* window, const Rect& dst_rect, DMARequest
   if (x1 == x2 || y1 == y2)
     return;
 
-    // Blit the framebuffer into the screen.
-#if CONFIG_USE_DMA
+  const uint32_t* framebuffer = window->get_framebuffer();
+  const uint32_t framebuffer_pitch = window->get_geometry().width();
+  KASSERT(framebuffer != nullptr);
+
+  // Blit the framebuffer into the screen.
+#ifdef CONFIG_USE_DMA
   const auto framebuffer_dma_addr =
       window->get_framebuffer_dma_addr() + sizeof(uint32_t) * (x1 + framebuffer_pitch * y1);
   const auto screen_dma_addr =
@@ -420,104 +485,141 @@ void WindowManager::draw_window(Window* window, const Rect& dst_rect, DMARequest
     graphics::Painter painter(m_screen_buffer, m_screen_width, m_screen_height, m_screen_pitch);
     painter.set_clipping(dst_rect.x1, dst_rect.y1, dst_rect.x2, dst_rect.y2);
     const auto window_rect = window->get_geometry();
-    painter.draw_rect(window_rect.x() - 1, window_rect.y() - 1, window_rect.width() + 2, window_rect.height() + 2,
+    painter.draw_rect(window_rect.x(), window_rect.y(), window_rect.width(), window_rect.height(), 3,
                       0xAA6BA4B8);
   }
 }
 
-void WindowManager::draw_windows(libk::LinkedList<Window*>::Iterator it,
-                                 const Rect& dst_rect,
-                                 DMARequestQueue& request_queue) {
-  KASSERT(dst_rect.left() >= 0 && dst_rect.right() <= m_screen_width && dst_rect.top() >= 0 &&
-          dst_rect.bottom() <= m_screen_height);
-
-#ifndef CONFIG_USE_DMA
-  (void)request_queue;
-#endif  // !CONFIG_USE_DMA
-
-  if (!dst_rect.has_surface())
+void WindowManager::draw_windows_helper(libk::LinkedList<Window*>::Iterator it,
+                                        const Rect& rect,
+                                        DMARequestQueue& request_queue) {
+  if (rect.is_null())
     return;
 
-  if (it == m_windows.end()) {
-    // No more windows, we hit the background image!
-    // draw_background(dst_rect);
-    return;  // end of recursion
+  auto* window = *it;
+  const auto window_rect = window->get_geometry();
+  const auto intersection = rect.intersection_with(window_rect);
+  if (!window->is_visible() || intersection.is_null()) {
+    if (it.has_next())
+      return draw_windows_helper(++it, rect, request_queue);
+
+    // No more windows. Draw the background.
+    draw_background(rect, request_queue);
+    return;
   }
 
-  Rect src_rect = (*it)->m_geometry;
+  // We decompose the update rectangle into 5 rectangles:
+  // A, B, C, D, and E with E the part of the update rectangle that
+  // intersects with the current window (e.g. E = intersection).
+  // --------------------
+  // |     |  C   |     |
+  // |     --------     |
+  // |  A  |  E   |  B  |
+  // |     --------     |
+  // |     |  D   |     |
+  // --------------------
+  // We then draw the current window with the rect E, and recursively
+  // update A, B, C and D with the next window.
 
-  // Draw the current window (into the destination rectangle):
-  draw_window(*it, dst_rect, request_queue);
+  const Rect A = {rect.x(), rect.y(), intersection.left(), rect.bottom()};
+  const Rect B = {intersection.right(), rect.y(), rect.right(), rect.bottom()};
+  const Rect C = {intersection.left(), rect.y(), intersection.right(), intersection.top()};
+  const Rect D = {intersection.left(), intersection.bottom(), intersection.right(), rect.bottom()};
 
-  // Recursively draw the windows behind:
-  // dst_rect:
-  //  |---------------------------------------------------------|
-  //  |               |         TOP           |                 |
-  //  |               |                       |                 |
-  //  |               |-----------------------|                 |
-  //  |               |                       |                 |
-  //  |     LEFT      |        CENTER         |      RIGHT      |
-  //  |               |       src_rect        |                 |
-  //  |               |-----------------------|                 |
-  //  |               |                       |                 |
-  //  |               |        BOTTOM         |                 |
-  //  |               |                       |                 |
-  //  |---------------------------------------------------------|
+  // Draw the window.
+  draw_window(window, intersection, request_queue);
 
-  if (src_rect.right() > dst_rect.right())
-    src_rect.set_right(dst_rect.right());
-  if (src_rect.left() < dst_rect.left())
-    src_rect.set_left(dst_rect.left());
-  if (src_rect.bottom() > dst_rect.bottom())
-    src_rect.set_bottom(dst_rect.bottom());
-  if (src_rect.top() < dst_rect.top())
-    src_rect.set_top(dst_rect.top());
+  if (!it.has_next()) {
+    // No more windows. Draw the background.
+    draw_background(A, request_queue);
+    draw_background(B, request_queue);
+    draw_background(C, request_queue);
+    draw_background(D, request_queue);
+    return;
+  }
 
-  const Rect left = Rect::from_edges(dst_rect.left(), dst_rect.top(), src_rect.left(), dst_rect.bottom());
-  const Rect top = Rect::from_edges(src_rect.left(), dst_rect.top(), src_rect.right(), src_rect.top());
-  const Rect right = Rect::from_edges(src_rect.right(), dst_rect.top(), dst_rect.right(), dst_rect.bottom());
-  const Rect bottom = Rect::from_edges(src_rect.left(), src_rect.bottom(), src_rect.right(), dst_rect.bottom());
+  ++it;
 
-  // get the next visible window (windows are sorted from front to back).
-  do {
-    it++;
-  } while (it != m_windows.end() && !(*it)->is_visible());
-
-  draw_windows(it, left, request_queue);
-  draw_windows(it, top, request_queue);
-  draw_windows(it, right, request_queue);
-  draw_windows(it, bottom, request_queue);
+  // Update the other parts.
+  draw_windows_helper(it, A, request_queue);
+  draw_windows_helper(it, B, request_queue);
+  draw_windows_helper(it, C, request_queue);
+  draw_windows_helper(it, D, request_queue);
 }
 
-void WindowManager::draw_windows() {
-#ifdef CONFIG_USE_DMA
-  m_dma_channel.abort_previous();
-#endif  // CONFIG_USE_DMA
+void WindowManager::draw_windows(const Rect& rect, DMARequestQueue& request_queue) {
+  if (m_windows.is_empty()) {
+    draw_background(rect, request_queue);
+    return;
+  }
 
-  DMARequestQueue dma_request_queue;
-  draw_background({0, 0, m_screen_width, m_screen_height}, dma_request_queue);
+  // Draw the windows from the top to the bottom.
+  draw_windows_helper(m_windows.begin(), rect, request_queue);
+}
 
-  if (!m_windows.is_empty()) {
-#if CONFIG_USE_NAIVE_WM_UPDATE
-    auto it = m_windows.begin();
-    while (it.has_next())
-      ++it;
+#ifdef CONFIG_HAS_CURSOR
+void WindowManager::draw_cursor() {
+  const uint32_t x = m_cursor_x;
+  const uint32_t y = m_cursor_y;
 
-    while (it != m_windows.end()) {
-      draw_window(*it, {0, 0, m_screen_width, m_screen_height}, dma_request_queue);
-      --it;
+  // Clip the cursor to the screen (to avoid drawing outside the framebuffer...).
+  const uint32_t cursor_width = libk::min(CURSOR_WIDTH, m_screen_width - x);
+  const uint32_t cursor_height = libk::min(CURSOR_HEIGHT, m_screen_height - y);
+
+  // Draw the cursor.
+  for (uint32_t i = 0; i < cursor_width; ++i) {
+    for (uint32_t j = 0; j < cursor_height; ++j) {
+      const uint32_t color = CURSOR_DATA[i + j * CURSOR_WIDTH];
+      if ((color & 0xff000000) == 0)
+        continue;
+      m_screen_buffer[x + i + (y + j) * m_screen_pitch] = color;
     }
-#else
-    draw_windows(m_windows.begin(), {0, 0, m_screen_width, m_screen_height}, dma_request_queue);
-#endif  // CONFIG_USE_NAIVE_WM_UPDATE
+  }
+}
+
+bool WindowManager::handle_mouse_move_event(int32_t dx, int32_t dy) {
+  const int32_t previous_x = m_cursor_x;
+  const int32_t previous_y = m_cursor_y;
+
+  // Update cursor position.
+  m_cursor_x += dx;
+  m_cursor_y += dy;
+
+  // Clamp the cursor position.
+  m_cursor_x = libk::clamp(m_cursor_x, 0, m_screen_width);
+  m_cursor_y = libk::clamp(m_cursor_y, 0, m_screen_height);
+
+  // Check if the cursor has moved.
+  if (m_cursor_x == previous_x && m_cursor_y == previous_y)
+    return false;
+
+  // Update the previous cursor position.
+  auto previous_rect = Rect::from_pos_and_size(previous_x, previous_y, CURSOR_WIDTH, CURSOR_HEIGHT);
+  clip_rect_to_screen(previous_rect);
+
+  // Redraw the windows and background at the previous cursor position.
+  // The update function will also draw the cursor at the new position.
+  update(previous_rect);
+  return false;
+}
+
+bool WindowManager::handle_mouse_click_event(int button_type, bool is_pressed) {
+  if (button_type == SYS_MOUSE_BUTTON_LEFT && is_pressed) {
+    // Check if the cursor is on a window.
+    for (auto* window : m_windows) {
+      if (window->get_geometry().contains(m_cursor_x, m_cursor_y)) {
+        focus_window(window);
+        return true;
+      }
+    }
   }
 
-#ifdef CONFIG_USE_DMA
-  dma_request_queue.execute_and_wait(m_dma_channel);
-#endif  // CONFIG_USE_DMA
-
-  FrameBuffer::get().present();
+  return false;
 }
+#endif // #ifdef CONFIG_HAS_CURSOR
+
+constexpr uint32_t WINDOW_MOVE_STEP = 10;
+constexpr uint32_t WINDOW_RESIZE_STEP = 10;
 
 bool WindowManager::handle_key_event(sys_key_event_t event) {
   if (!sys_is_press_event(event))
@@ -527,32 +629,32 @@ bool WindowManager::handle_key_event(sys_key_event_t event) {
     return false;
 
   switch (sys_get_key_code(event)) {
-    case SYS_KEY_TAB:  // Alt+Tab -> switch focus
+    case SYS_KEY_T:  // Alt+T -> switch focus
       switch_focus();
       return true;
     case SYS_KEY_LEFT_ARROW:  // Alt+Left -> move window to the left
       if (sys_is_shift_pressed(event))
-        resize_focus_window_left();
+        resize_focus_window(-WINDOW_RESIZE_STEP, 0);
       else
-        move_focus_window_left();
+        move_focus_window(-WINDOW_MOVE_STEP, 0);
       return true;
     case SYS_KEY_RIGHT_ARROW:  // Alt+Right -> move window to the right
       if (sys_is_shift_pressed(event))
-        resize_focus_window_right();
+        resize_focus_window(WINDOW_RESIZE_STEP, 0);
       else
-        move_focus_window_right();
+        move_focus_window(WINDOW_MOVE_STEP, 0);
       return true;
     case SYS_KEY_UP_ARROW:  // Alt+Arrow -> move window up
       if (sys_is_shift_pressed(event))
-        resize_focus_window_up();
+        resize_focus_window(0, -WINDOW_RESIZE_STEP);
       else
-        move_focus_window_up();
+        move_focus_window(0, -WINDOW_MOVE_STEP);
       return true;
     case SYS_KEY_DOWN_ARROW:  // Alt+Down -> move window down
       if (sys_is_shift_pressed(event))
-        resize_focus_window_down();
+        resize_focus_window(0, WINDOW_RESIZE_STEP);
       else
-        move_focus_window_down();
+        move_focus_window(0, WINDOW_MOVE_STEP);
       return true;
     case SYS_KEY_F:  // Alt+F -> toggle fullscreen
                      // TODO: better fullscreen support (for example, when focus out, the window should not be
@@ -560,8 +662,7 @@ bool WindowManager::handle_key_event(sys_key_event_t event) {
       if (m_focus_window != nullptr)
         set_window_geometry(m_focus_window, Rect::from_pos_and_size(0, 0, m_screen_width, m_screen_height));
       return true;
-      // SYS_KEY_A instead of SYS_KEY_Q because of AZERTY <-> QWERTY layouts
-    case SYS_KEY_A:  // Alt+Q -> close window
+    case SYS_KEY_Q:  // Alt+Q -> close window
       if (m_focus_window != nullptr) {
         sys_message_t message = {};
         message.id = SYS_MSG_CLOSE;
@@ -569,8 +670,7 @@ bool WindowManager::handle_key_event(sys_key_event_t event) {
       }
 
       return true;
-      // SYS_KEY_SEMI_COLON instead of SYS_KEY_M because of AZERTY <-> QWERTY layouts
-    case SYS_KEY_SEMI_COLON:  // Alt+M -> mosaic layout
+    case SYS_KEY_M:  // Alt+M -> mosaic layout
       mosaic_layout();
       return true;
     case SYS_KEY_E: {  // Alt+E -> spawn the file explorer
@@ -639,91 +739,41 @@ void WindowManager::switch_focus() {
     m_windows.erase(old_window_it);
     m_windows.push_back(old_window);
 
-    m_dirty = true;
+    update(new_window->get_geometry());
   }
 }
 
-constexpr uint32_t WINDOW_MOVE_STEP = 10;
-
-void WindowManager::move_focus_window_left() {
+void WindowManager::move_focus_window(int32_t dx, int32_t dy) {
   if (m_focus_window == nullptr)
     return;
 
   auto rect = m_focus_window->get_geometry();
-  rect.x1 -= WINDOW_MOVE_STEP;
-  rect.x2 -= WINDOW_MOVE_STEP;
+  rect.x1 += dx;
+  rect.x2 += dx;
+  rect.y1 += dy;
+  rect.y2 += dy;
   set_window_geometry(m_focus_window, rect);
 }
 
-void WindowManager::move_focus_window_right() {
+void WindowManager::resize_focus_window(int32_t dx, int32_t dy) {
   if (m_focus_window == nullptr)
     return;
 
   auto rect = m_focus_window->get_geometry();
-  rect.x1 += WINDOW_MOVE_STEP;
-  rect.x2 += WINDOW_MOVE_STEP;
-  set_window_geometry(m_focus_window, rect);
-}
 
-void WindowManager::move_focus_window_up() {
-  if (m_focus_window == nullptr)
-    return;
+  if (rect.width() + dx < Window::MIN_WIDTH)
+    dx = Window::MIN_WIDTH - rect.width();
+  rect.x2 += dx;
 
-  auto rect = m_focus_window->get_geometry();
-  rect.y1 -= WINDOW_MOVE_STEP;
-  rect.y2 -= WINDOW_MOVE_STEP;
-  set_window_geometry(m_focus_window, rect);
-}
+  if (rect.height() + dy < Window::MIN_HEIGHT)
+    dy = Window::MIN_HEIGHT - rect.height();
+  rect.y2 += dy;
 
-void WindowManager::move_focus_window_down() {
-  if (m_focus_window == nullptr)
-    return;
-
-  auto rect = m_focus_window->get_geometry();
-  rect.y1 += WINDOW_MOVE_STEP;
-  rect.y2 += WINDOW_MOVE_STEP;
-  set_window_geometry(m_focus_window, rect);
-}
-
-constexpr uint32_t WINDOW_RESIZE_STEP = 10;
-
-void WindowManager::resize_focus_window_left() {
-  if (m_focus_window == nullptr)
-    return;
-
-  auto rect = m_focus_window->get_geometry();
-  rect.x1 -= WINDOW_RESIZE_STEP;
-  set_window_geometry(m_focus_window, rect);
-}
-
-void WindowManager::resize_focus_window_right() {
-  if (m_focus_window == nullptr)
-    return;
-
-  auto rect = m_focus_window->get_geometry();
-  rect.x2 += WINDOW_RESIZE_STEP;
-  set_window_geometry(m_focus_window, rect);
-}
-
-void WindowManager::resize_focus_window_up() {
-  if (m_focus_window == nullptr)
-    return;
-
-  auto rect = m_focus_window->get_geometry();
-  rect.y1 -= WINDOW_RESIZE_STEP;
-  set_window_geometry(m_focus_window, rect);
-}
-
-void WindowManager::resize_focus_window_down() {
-  if (m_focus_window == nullptr)
-    return;
-
-  auto rect = m_focus_window->get_geometry();
-  rect.y2 += WINDOW_RESIZE_STEP;
   set_window_geometry(m_focus_window, rect);
 }
 
 #include "fs/fat/ff.h"
+#include "window_manager.hpp"
 
 void WindowManager::read_wallpaper() {
   constexpr const char* WALLPAPER_PATH = "/wallpaper.jpg";

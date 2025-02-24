@@ -16,8 +16,18 @@ static bool begin_show = false;
 static const uint32_t* slide_pixels = NULL;
 static int slide_width = 0, slide_height = 0;
 
+static const uint32_t* next_slide_pixels = NULL;
+static int next_slide_width = 0, next_slide_height = 0;
+
+static void draw_welcome_page() {
+  sys_gfx_clear(window, 0x000000);
+  sys_gfx_draw_text(window, 50, 50, "Press 'B' to begin the show", 0xffffff);
+  sys_window_present(window);
+}
+
 static void draw_slide() {
-  if (!begin_show) {
+  if (!begin_show || slide_pixels == NULL) {
+    draw_welcome_page();
     return;
   }
 
@@ -74,9 +84,9 @@ static const char* get_slide_path(int idx) {
   return buffer;
 }
 
-static uint8_t* load_slide_image(int idx, int* buffer_length) {
+static uint8_t* load_slide_image_data(int idx, int* buffer_length) {
   const char* path = get_slide_path(idx);
-  sys_print("Loading...");
+  sys_print("Reading file...");
   sys_print(path);
   sys_file_t* file = sys_open_file(path, SYS_FM_READ);
   if (file == NULL)
@@ -93,7 +103,7 @@ static uint8_t* load_slide_image(int idx, int* buffer_length) {
   *buffer_length = file_size;
 
   sys_close_file(file);
-  sys_print("Done.");
+  sys_print("Reading done.");
 
   return buffer;
 }
@@ -108,39 +118,61 @@ static void convert_to_argb(uint32_t* pixels, int width, int height) {
   }
 }
 
-static void update_current_slide() {
+static int load_next_image_slide(int idx) {
   int slide_buffer_len = 0;
-  uint8_t* slide_buffer = load_slide_image(current_slide, &slide_buffer_len);
+  uint8_t* slide_buffer = load_slide_image_data(current_slide, &slide_buffer_len);
   if (slide_buffer == NULL) {
     if (current_slide > 0)
       current_slide--;
 
     sys_print("Failed to open next slide (invalid file)");
-    return;
+    goto error;
   }
 
   int width, height;
   uint32_t* new_slide_pixels =
       (uint32_t*)stbi_load_from_memory(slide_buffer, slide_buffer_len, &width, &height, NULL, 4);
-  free(slide_buffer);
+  free((void*)slide_buffer);
 
   if (new_slide_pixels == NULL) {
     if (current_slide > 0)
       current_slide--;
 
+
     sys_print("Failed to open next slide (invalid image)");
-    return;
+    goto error;
   }
 
   free((void*)slide_pixels);
 
+  sys_print("Converting to ARGB");
   convert_to_argb(new_slide_pixels, width, height);
+  sys_print("Done. Ready to draw slide.");
 
-  slide_pixels = new_slide_pixels;
-  slide_width = width;
-  slide_height = height;
+  next_slide_pixels = new_slide_pixels;
+  next_slide_width = width;
+  next_slide_height = height;
+  return 1;
 
-  draw_slide();
+error:
+  next_slide_pixels = NULL;
+  next_slide_width = 0;
+  next_slide_height = 0;
+  return 0;
+}
+
+static void update_current_slide() {
+  if (next_slide_pixels != NULL) {
+    free((void*)slide_pixels);
+    slide_pixels = next_slide_pixels;
+    slide_width = next_slide_width;
+    slide_height = next_slide_height;
+    draw_slide();
+  }
+
+  if (!load_next_image_slide(current_slide)) {
+    current_slide--;
+  }
 }
 
 static void handle_key_event(sys_key_event_t event) {
@@ -151,6 +183,7 @@ static void handle_key_event(sys_key_event_t event) {
     case SYS_KEY_B: {
       if (!begin_show) {
         begin_show = true;
+        current_slide++;
         update_current_slide();
       }
       break;
@@ -184,13 +217,19 @@ static void handle_key_event(sys_key_event_t event) {
 int main() {
   sys_print("SLIDES");
 
-  window = sys_window_create("Slides", SYS_POS_CENTERED, SYS_POS_CENTERED, 800, 600, SYS_WF_DEFAULT);
+  window = sys_window_create("Slides", SYS_POS_CENTERED, SYS_POS_CENTERED, 1231 + 20, 724 + 20, SYS_WF_DEFAULT);
   if (window == NULL) {
     sys_print("Failed to create window for slides");
     return 1;
   }
 
-  update_current_slide();
+  if (begin_show) {
+    load_next_image_slide(current_slide);
+    update_current_slide();
+  } else {
+    draw_welcome_page();
+    load_next_image_slide(current_slide);
+  }
 
   bool should_close = false;
   while (!should_close) {

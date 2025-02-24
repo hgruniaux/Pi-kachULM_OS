@@ -1,14 +1,23 @@
-add_executable(kernel
-        # Boot
-        boot/boot.S
+add_executable(kernel-boot
+  boot/boot.S
 
-        boot/mmu_init.cpp
-        boot/startup.cpp
-        boot/cxxabi.cpp
+  boot/mmu_init.cpp
+  boot/startup.cpp
+  boot/cxxabi.cpp
 
-        boot/mmu_utils.hpp
-        boot/mmu_utils.cpp
+  boot/mmu_utils.hpp
+  boot/mmu_utils.cpp
 
+  boot/jump_utils.hpp
+  boot/jump_utils.cpp
+  boot/jump_utils.S
+)
+
+target_include_directories(kernel-boot PUBLIC .)
+target_link_libraries(kernel-boot PRIVATE libk device-tree)
+target_compile_options(kernel-boot PRIVATE -mgeneral-regs-only)
+
+add_library(kernel STATIC
         # C++ Body
         kernel.cpp
 
@@ -135,6 +144,11 @@ add_executable(kernel
         task/task.hpp
         task/task.cpp
 
+        task/pipe.hpp
+        task/pipe.cpp
+
+        task/resource.hpp
+
         task/pika_syscalls.hpp
         task/pika_syscalls.cpp
 
@@ -183,9 +197,11 @@ add_executable(kernel
 )
 
 target_include_directories(kernel PUBLIC .)
-set_target_properties(kernel PROPERTIES OUTPUT_NAME "kernel8.elf")
 
 target_link_libraries(kernel PRIVATE libk libsyscall libelf device-tree)
+
+target_link_libraries(kernel-boot PRIVATE kernel)
+set_target_properties(kernel-boot PROPERTIES OUTPUT_NAME "kernel8.elf")
 
 # Use the linker script.
 set(LINKER_SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/boot/link.ld)
@@ -193,13 +209,13 @@ add_custom_target(linker_script
         DEPENDS ${LINKER_SCRIPT}
         COMMAND ${CMAKE_C_COMPILER} -D__ASSEMBLER__ -E -P -x c ${LINKER_SCRIPT} -o ${CMAKE_CURRENT_BINARY_DIR}/link-gen.ld
 )
-target_link_options(kernel PRIVATE -nostdlib -T ${CMAKE_CURRENT_BINARY_DIR}/link-gen.ld)
+target_link_options(kernel-boot PRIVATE -nostdlib -T ${CMAKE_CURRENT_BINARY_DIR}/link-gen.ld)
 # In order to be compatible with MAKE
 # See: https://discourse.cmake.org/t/link-depends-on-output-of-add-custom-command-no-rule-to-make-target/10179
-add_dependencies(kernel linker_script fs-img)
+add_dependencies(kernel-boot linker_script fs-img)
 
 # Extracting the elf file to a binary one
 add_custom_target(kernel-img
         COMMAND ${CMAKE_OBJCOPY} -O binary ${CMAKE_CURRENT_BINARY_DIR}/kernel8.elf ${CMAKE_CURRENT_BINARY_DIR}/kernel8.img
-        DEPENDS kernel
+        DEPENDS kernel-boot
         COMMENT "Converting ELF to binary")

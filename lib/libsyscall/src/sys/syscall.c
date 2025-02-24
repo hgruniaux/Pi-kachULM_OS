@@ -19,7 +19,12 @@ sys_error_t sys_print(const char* msg) {
 }
 
 sys_error_t sys_spawn(const char* path) {
-  return __syscall1(SYS_SPAWN, (sys_word_t)path);
+  const char* argv[] = { path };
+  return sys_spawn2(path, 1, argv);
+}
+
+sys_error_t sys_spawn2(const char* path, size_t argc, const char** argv) {
+  return __syscall3(SYS_SPAWN, (sys_word_t)path, (sys_word_t)argc, (sys_word_t)argv);
 }
 
 sys_error_t sys_yield() {
@@ -44,4 +49,9 @@ sys_error_t sys_debug(uint64_t x) {
 
 void* sys_sbrk(ptrdiff_t __increment) {
   return (void*)__syscall1(SYS_SBRK, __increment);
+}
+
+
+sys_error_t sys_get_framebuffer(void** pixels, uint32_t* width, uint32_t* height, uint32_t* stride) {
+  return __syscall4(SYS_GET_FRAMEBUFFER, (sys_word_t)pixels, (sys_word_t)width, (sys_word_t)height, (sys_word_t)stride);
 }

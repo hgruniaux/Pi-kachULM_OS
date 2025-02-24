@@ -5,6 +5,7 @@
 #include "hardware/regs.hpp"
 #include "memory/process_memory.hpp"
 #include "task/syscall_table.hpp"
+#include "task/resource.hpp"
 
 struct TaskSavedState {
   GPRegisters gp_regs;
@@ -12,6 +13,8 @@ struct TaskSavedState {
   libk::SharedPointer<ProcessMemory> memory;
   uint64_t pc;  // program counter
   uint64_t sp;  // stack pointer
+
+  // Is the task a kernel task or a userspace task?
   bool is_kernel;
 
   void save(const Registers& current_regs);
@@ -22,6 +25,7 @@ class TaskManager;
 class Window;
 class File;
 class Dir;
+class PipeResource;
 
 /**
  * Represents a runnable task in the system. This can be a user process, a thread, etc.
@@ -91,6 +95,8 @@ class Task {
 
   /** Gets the task virtual memory. */
   [[nodiscard]] libk::SharedPointer<ProcessMemory> get_memory() const { return m_saved_state.memory; }
+  [[nodiscard]] MemoryChunk& alloc_chunk(size_t nb_pages) { return m_mapped_chunks.emplace_back(nb_pages); }
+  [[nodiscard]] MemoryChunk* map_chunk(size_t nb_pages, VirtualAddress addr, bool executable = false, bool read_only = false);
 
   /** Forward to `get_syscall_table()->call_syscall(id, registers)`. */
   void call_syscall(uint32_t id, Registers& registers) { m_syscall_table->call_syscall(id, registers); }
@@ -116,6 +122,23 @@ class Task {
   [[nodiscard]] bool own_dir(Dir* dir) const;
   void register_dir(Dir* dir);
   void unregister_dir(Dir* dir);
+
+  /*
+   * Pipe resources
+   */
+
+  [[nodiscard]] bool own_pipe(const PipeResource* pipe) const;
+  [[nodiscard]] PipeResource* get_pipe(const char* name) const;
+  [[nodiscard]] PipeResource* get_stdin_pipe() const { return get_pipe("stdin"); }
+  [[nodiscard]] PipeResource* get_stdout_pipe() const { return get_pipe("stdout"); }
+  [[nodiscard]] PipeResource* get_stderr_pipe() const { return get_pipe("stderr"); }
+  PipeResource* create_pipe(const char* name, size_t capacity = 4096);
+  void register_pipe(PipeResource* pipe);
+  void unregister_pipe(PipeResource* pipe);
+
+  /*
+   * Preempt control
+   */
 
   [[nodiscard]] bool can_preempt() const { return m_preempt_count == 0; }
   void disable_preempt() { m_preempt_count++; }
@@ -151,7 +174,10 @@ class Task {
   libk::LinkedList<Window*> m_windows;
   libk::LinkedList<File*> m_open_files;
   libk::LinkedList<Dir*> m_open_dirs;
+  libk::LinkedList<PipeResource*> m_open_pipes;
   libk::LinkedList<MemoryChunk> m_mapped_chunks;
+
+  libk::LinkedList<libk::SharedPointer<Resource>> m_resources;
 };  // class Task
 
 using TaskPtr = libk::SharedPointer<Task>;

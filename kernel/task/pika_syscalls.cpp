@@ -12,6 +12,8 @@
 #include "task/task_manager.hpp"
 #include "wm/window.hpp"
 #include "wm/window_manager.hpp"
+#include "hardware/framebuffer.hpp"
+#include "task/pipe.hpp"
 
 static void set_error(Registers& regs, sys_error_t error) {
   regs.gp_regs.x0 = error;
@@ -28,7 +30,12 @@ static void step_back_one_inst(Registers& regs) {
 
 static bool check_ptr(Registers& regs, void* ptr, bool needs_write = false) {
   // FIXME: check if pointer is accessible by current task
-  return true;
+  // TODO: Missing API in ProcessMemory to check if address is mapped (of the given size)
+  // We need to check if the pointer points to a large enough region, we are missing a SIZE parameter in this function.
+  (void)needs_write;
+  (void)regs;
+
+  return ptr != nullptr;
 }
 
 static void pika_sys_unknown(Registers& regs) {
@@ -85,20 +92,64 @@ static void pika_sys_sbrk(Registers& regs) {
 
 static void pika_sys_spawn(Registers& regs) {
   const auto* path = (const char*)regs.gp_regs.x0;
+  const size_t argc = (size_t)regs.gp_regs.x1;
+  const auto** argv = (const char**)regs.gp_regs.x2;
+
+  // Check arguments
   if (!check_ptr(regs, (void*)path))
     return;
+  if (!check_ptr(regs, (void*)argv))
+    return;
+
+  for (size_t i = 0; i < argc; ++i) {
+    if (!check_ptr(regs, (void*)argv[i]))
+      return;
+  }
 
   auto task = TaskManager::get().create_task(path, Task::current().get());
   if (task == nullptr) {
     set_error(regs, SYS_ERR_GENERIC);
-  } else {
-    TaskManager::get().wake_task(task);
-    set_error(regs, SYS_ERR_OK);
+    return;
   }
+
+  auto args_chunk = task->map_chunk(1, SYS_ARGS_ADDRESS, false, true);
+  if (args_chunk == nullptr) {
+    set_error(regs, SYS_ERR_OUT_OF_MEM);
+    return;
+  }
+
+  // Write the arguments in the new task memory
+  // Structure of arguments in args_chunk:
+  //   [     ARGC     ]   -> UINT64
+  //   [    ARGV[0]   ]   -> UINT64, points to the end of argv
+  //          ...
+  //   [ ARGV[ARGC-1] ]   -> UINT64,
+  //   [ Data of ARGV[0] ] -> NUL terminated string
+  //          ...
+  //   [ Data of ARGV[ARGC-1] ] -> NUL terminated string
+
+  (void)args_chunk->write(0, &argc, sizeof(argc));
+
+  size_t argv_size = sizeof(uintptr_t) * (argc + 1);
+  size_t argv_data_offset = size_t(argc) + argv_size;
+  for (size_t i = 0; i < argc; ++i) {
+    const char* data = argv[i];
+    size_t data_len = libk::strlen(data) + 1;
+    (void)args_chunk->write(argv_data_offset, data, data_len);
+    uintptr_t argv_addr = SYS_ARGS_ADDRESS + argv_data_offset;
+    (void)args_chunk->write(sizeof(argc) + sizeof(uintptr_t) * i, &argv_addr, sizeof(argv_addr));
+    argv_data_offset += data_len;
+  }
+
+  LOG_TRACE("spawned new task pid={} from path={}", task->get_id(), path);
+
+  TaskManager::get().wake_task(task);
+  set_error(regs, SYS_ERR_OK);
 }
 
 static void pika_sys_sched_set_priority(Registers& regs) {
-  //  const sys_pid_t pid = regs.gp_regs.x0;  // Unused
+  // FIXME: What is the first parameter (PID of some other application)?
+  // const sys_pid_t pid = regs.gp_regs.x0;  // Unused
   const uint32_t priority = regs.gp_regs.x1;
 
   // TODO: use pid to set priority of another process
@@ -111,7 +162,8 @@ static void pika_sys_sched_set_priority(Registers& regs) {
 }
 
 static void pika_sys_sched_get_priority(Registers& regs) {
-  //  const sys_pid_t pid = regs.gp_regs.x0;  // Unused
+  // FIXME: What is the first parameter (PID of some other application)?
+  // const sys_pid_t pid = regs.gp_regs.x0;  // Unused
   uint32_t* priority = (uint32_t*)regs.gp_regs.x1;
   if (!check_ptr(regs, (void*)priority, /* needs_write= */ true))
     return;
@@ -391,7 +443,12 @@ static void pika_sys_window_present(Registers& regs) {
   if (!check_window(regs, window))
     return;
 
-  WindowManager::get().present_window(window);
+  const uint32_t x = (uint32_t)regs.gp_regs.x1;
+  const uint32_t y = (uint32_t)regs.gp_regs.x2;
+  const uint32_t width = (uint32_t)regs.gp_regs.x3;
+  const uint32_t height = (uint32_t)regs.gp_regs.x4;
+
+  WindowManager::get().present_window(window, x, y, width, height);
   set_error(regs, SYS_ERR_OK);
 }
 
@@ -473,6 +530,48 @@ static void pika_sys_gfx_draw_text(Registers& regs) {
   set_error(regs, SYS_ERR_OK);
 }
 
+static void pika_sys_get_framebuffer(Registers& reg) {
+  void** pixels = (void**)reg.gp_regs.x0;
+  uint32_t* width = (uint32_t*)reg.gp_regs.x1;
+  uint32_t* height = (uint32_t*)reg.gp_regs.x2;
+  uint32_t* stride = (uint32_t*)reg.gp_regs.x3;
+
+  if (pixels != nullptr && !check_ptr(reg, pixels, true))
+    return;
+  if (width != nullptr && !check_ptr(reg, width, true))
+    return;
+  if (height != nullptr && !check_ptr(reg, height, true))
+    return;
+  if (stride != nullptr && !check_ptr(reg, stride, true))
+    return;
+
+  auto& fb = FrameBuffer::get();
+
+  // Trivial properties to get from the framebuffer.
+  if (width != nullptr)
+    *width = fb.get_width();
+  if (height != nullptr)
+    *height = fb.get_width();
+  if (stride != nullptr)
+    *stride = fb.get_pitch();
+
+  // If the user wan the pixels buffer, then we need to map it in its memory space.
+  if (pixels != nullptr) {
+    // FIXME: Map the framebuffer physical address to an address in userspace
+    auto* pixels_chunk = Task::current()->map_chunk(1, 0, false, true);
+    if (pixels_chunk == nullptr) {
+      set_error(reg, SYS_ERR_OUT_OF_MEM);
+      return;
+    }
+
+    // Write the framebuffer buffer in the user memory.
+    (void)pixels_chunk->write(0, fb.get_buffer(), fb.get_width() * fb.get_height() * sizeof(uint32_t));
+    *pixels = (void*)0;
+  }
+
+  set_error(reg, SYS_ERR_OK);
+}
+
 static void pika_sys_gfx_blit(Registers& regs) {
   auto* window = (Window*)regs.gp_regs.x0;
   if (!check_window(regs, window))
@@ -488,6 +587,129 @@ static void pika_sys_gfx_blit(Registers& regs) {
     return;
 
   window->blit(x, y, width, height, argb_buffer);
+  set_error(regs, SYS_ERR_OK);
+}
+
+/*
+ * Pipe system calls.
+ */
+
+// Signature: sys_pipe_t* sys_pipe_open(const char* name);
+static void pika_sys_pipe_open(Registers& regs) {
+  const char* name = (const char*)regs.gp_regs.x0;
+  if (!check_ptr(regs, (void*)name))
+    return; // FIXME: Check if name is not too long (see SYS_PIPE_NAME_MAX).
+
+  auto current_task = Task::current();
+  KASSERT(current_task != nullptr);
+  auto* pipe = current_task->create_pipe(name);
+  regs.gp_regs.x0 = (sys_word_t)pipe;
+}
+
+// Signature: sys_error_t sys_pipe_close(sys_pipe_t* pipe);
+static void pika_sys_pipe_close(Registers& regs) {
+  auto current_task = Task::current();
+  KASSERT(current_task != nullptr);
+
+  auto* pipe = (PipeResource*)regs.gp_regs.x0;
+  if (!current_task->own_pipe(pipe)) {
+    set_error(regs, SYS_ERR_INVALID_PIPE);
+    return;
+  }
+
+  current_task->unregister_pipe(pipe);
+  set_error(regs, SYS_ERR_OK);
+}
+
+// Signature: sys_pipe_t* sys_pipe_get(sys_pid_t pid, const char* name);
+static void pika_sys_pipe_get(Registers& regs) {
+  const sys_pid_t pid = regs.gp_regs.x0;
+  const char* name = (const char*)regs.gp_regs.x1;
+  if (!check_ptr(regs, (void*)name))
+    return; // FIXME: Check if name is not too long (see SYS_PIPE_NAME_MAX).
+
+  TaskPtr task = TaskManager::get().find_by_id(pid);
+  if (task == nullptr) {
+    // Task not found, PID invalid.
+    regs.gp_regs.x0 = 0; // NULL pointer as return value
+    return;
+  }
+
+  auto pipe = task->get_pipe(name);
+  regs.gp_regs.x0 = (sys_word_t)pipe;
+}
+
+// Signature: sys_error_t sys_pipe_read(sys_pipe_t* pipe, void* buffer, size_t size, size_t* read_bytes);
+static void pika_sys_pipe_read(Registers& regs) {
+  auto current_task = Task::current();
+  KASSERT(current_task != nullptr);
+
+  auto* pipe = (PipeResource*)regs.gp_regs.x0;
+  if (!current_task->own_pipe(pipe)) {
+    set_error(regs, SYS_ERR_INVALID_PIPE);
+    return;
+  }
+
+  const size_t size = regs.gp_regs.x2;
+
+  // FIXME: Check if buffer is at least 'size' bytes long.
+  uint8_t* buffer = (uint8_t*)regs.gp_regs.x1;
+  if (!check_ptr(regs, buffer, true))
+    return;
+
+  size_t* read_bytes = (size_t*)regs.gp_regs.x3;
+  if (read_bytes != nullptr && !check_ptr(regs, read_bytes, true))
+    return;
+
+  // TODO: Allow non-blocking pipes
+  if (!pipe->wait_read(current_task)) {
+    // The pipe is empty, we need to block the task.
+    // Step back at the SVC instruction, so the next time this task
+    // is scheduled, the system call is resubmitted.
+    step_back_one_inst(regs);
+    return;
+  }
+
+  const size_t read_bytes_value = pipe->read(buffer, size);
+  if (read_bytes != nullptr)
+    *read_bytes = read_bytes_value;
+  set_error(regs, SYS_ERR_OK);
+}
+
+// Signature: sys_error_t sys_pipe_write(sys_pipe_t* pipe, const void* buffer, size_t size, size_t* written_bytes);
+static void pika_sys_pipe_write(Registers& regs) {
+  auto current_task = Task::current();
+  KASSERT(current_task != nullptr);
+
+  auto* pipe = (PipeResource*)regs.gp_regs.x0;
+  if (!current_task->own_pipe(pipe)) {
+    set_error(regs, SYS_ERR_INVALID_PIPE);
+    return;
+  }
+
+  const size_t size = regs.gp_regs.x2;
+
+  // FIXME: Check if buffer is at least 'size' bytes long.
+  const uint8_t* buffer = (const uint8_t*)regs.gp_regs.x1;
+  if (!check_ptr(regs, (void*)buffer))
+    return;
+
+  size_t* written_bytes = (size_t*)regs.gp_regs.x3;
+  if (written_bytes != nullptr && !check_ptr(regs, written_bytes, true))
+    return;
+
+  // TODO: Allow non-blocking pipes
+  if (!pipe->wait_write(current_task)) {
+    // The pipe is full, we need to block the task.
+    // Step back at the SVC instruction, so the next time this task
+    // is scheduled, the system call is resubmitted.
+    step_back_one_inst(regs);
+    return;
+  }
+
+  const size_t written_bytes_value = pipe->write(buffer, size);
+  if (written_bytes != nullptr)
+    *written_bytes = written_bytes_value;
   set_error(regs, SYS_ERR_OK);
 }
 
@@ -508,11 +730,21 @@ SyscallTable* create_pika_syscalls() {
   // Memory system calls.
   table->register_syscall(SYS_SBRK, pika_sys_sbrk);
 
+  // Framebuffer system calls.
+  table->register_syscall(SYS_GET_FRAMEBUFFER, pika_sys_get_framebuffer);
+
   // Scheduler system calls.
   table->register_syscall(SYS_SLEEP, pika_sys_sleep);
   table->register_syscall(SYS_YIELD, pika_sys_yield);
   table->register_syscall(SYS_SCHED_SET_PRIORITY, pika_sys_sched_set_priority);
   table->register_syscall(SYS_SCHED_GET_PRIORITY, pika_sys_sched_get_priority);
+
+  // Pipe system calls.
+  table->register_syscall(SYS_PIPE_OPEN, pika_sys_pipe_open);
+  table->register_syscall(SYS_PIPE_CLOSE, pika_sys_pipe_close);
+  table->register_syscall(SYS_PIPE_GET, pika_sys_pipe_get);
+  table->register_syscall(SYS_PIPE_READ, pika_sys_pipe_read);
+  table->register_syscall(SYS_PIPE_WRITE, pika_sys_pipe_write);
 
   // File system calls.
   table->register_syscall(SYS_OPEN_FILE, pika_sys_open_file);
